@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ohno local state (project-specific, not shared)
+.ohno/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code local state
+.claude/

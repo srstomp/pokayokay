@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <script>window.KANBAN_DATA = {};</script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #475569;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+            --accent-red: #ef4444;
+            --accent-purple: #a855f7;
+            --accent-orange: #f97316;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .sync-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+        }
+        
+        /* Progress bar */
+        .progress-container {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .progress-done {
+            background: var(--accent-green);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-review {
+            background: var(--accent-purple);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-in-progress {
+            background: var(--accent-blue);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-blocked {
+            background: var(--accent-red);
+            transition: width 0.3s ease;
+        }
+        
+        /* Filters */
+        .filters {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .filter-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.375rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        /* Board */
+        .board {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            overflow-x: auto;
+            min-height: calc(100vh - 180px);
+        }
+        
+        .column {
+            min-width: 300px;
+            max-width: 300px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .column-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .column-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .column-count {
+            background: var(--bg-card);
+            padding: 0.125rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .column-cards {
+            padding: 0.5rem;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-id {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+        
+        .card-priority {
+            font-size: 0.625rem;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        .priority-P0 { background: var(--accent-red); color: white; }
+        .priority-P1 { background: var(--accent-orange); color: white; }
+        .priority-P2 { background: var(--accent-yellow); color: black; }
+        .priority-P3 { background: var(--text-muted); color: white; }
+        
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .card-type {
+            background: var(--bg-secondary);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+        }
+        
+        .card-estimate {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .card-epic {
+            font-size: 0.625rem;
+            color: var(--accent-blue);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Audit level badge */
+        .audit-badge {
+            font-size: 0.625rem;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-left: 0.25rem;
+        }
+        
+        .audit-0 { background: #6b7280; color: white; }
+        .audit-1 { background: #ef4444; color: white; }
+        .audit-2 { background: #f97316; color: white; }
+        .audit-3 { background: #eab308; color: black; }
+        .audit-4 { background: #22c55e; color: white; }
+        .audit-5 { background: #3b82f6; color: white; }
+        
+        /* Empty state */
+        .empty-column {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Column colors */
+        .column-todo .column-header { border-left: 3px solid var(--text-muted); }
+        .column-in_progress .column-header { border-left: 3px solid var(--accent-blue); }
+        .column-review .column-header { border-left: 3px solid var(--accent-purple); }
+        .column-done .column-header { border-left: 3px solid var(--accent-green); }
+        .column-blocked .column-header { border-left: 3px solid var(--accent-red); }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .stats-bar {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .column {
+                min-width: 280px;
+            }
+        }
+        
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+        }
+        
+        /* No data state */
+        .no-data {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 100px);
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .no-data h2 {
+            margin-bottom: 1rem;
+        }
+        
+        .no-data p {
+            max-width: 400px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading kanban board...</div>
+    </div>
+
+    <script>
+        // Configuration
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+        const COLUMNS = [
+            { id: 'todo', title: 'To Do', status: 'todo' },
+            { id: 'in_progress', title: 'In Progress', status: 'in_progress' },
+            { id: 'review', title: 'Review', status: 'review' },
+            { id: 'done', title: 'Done', status: 'done' },
+            { id: 'blocked', title: 'Blocked', status: 'blocked' },
+        ];
+        
+        // State
+        let currentData = window.KANBAN_DATA || {};
+        let lastSyncTime = currentData.synced_at || null;
+        let filterEpic = '';
+        let filterPriority = '';
+        let filterType = '';
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (Object.keys(currentData).length > 0 && currentData.tasks) {
+                render();
+            } else {
+                renderNoData();
+            }
+            startAutoRefresh();
+        });
+        
+        // Auto-refresh
+        function startAutoRefresh() {
+            setInterval(checkForUpdates, REFRESH_INTERVAL);
+        }
+        
+        async function checkForUpdates() {
+            try {
+                const resp = await fetch(`kanban.html?_=${Date.now()}`);
+                const text = await resp.text();
+                
+                // Extract sync timestamp
+                const match = text.match(/"synced_at":\s*"([^"]+)"/);
+                if (match) {
+                    const newSyncTime = match[1];
+                    if (lastSyncTime && newSyncTime !== lastSyncTime) {
+                        console.log('Kanban updated, refreshing...');
+                        location.reload();
+                    }
+                    lastSyncTime = newSyncTime;
+                }
+            } catch (e) {
+                console.warn('Update check failed:', e);
+            }
+        }
+        
+        // Render functions
+        function render() {
+            const app = document.getElementById('app');
+            const data = currentData;
+            const stats = data.stats || computeStats(data);
+            
+            app.innerHTML = `
+                <header class="header">
+                    <div class="header-left">
+                        <h1>${getProjectName()}</h1>
+                        <div class="sync-status">
+                            <span class="sync-dot"></span>
+                            <span>Synced ${formatTime(data.synced_at)}</span>
+                        </div>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stat">
+                            <span class="stat-value">${stats.done_tasks}/${stats.total_tasks}</span>
+                            <span class="stat-label">Tasks</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${stats.completion_pct}%</span>
+                            <span class="stat-label">Complete</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${stats.in_progress_tasks}</span>
+                            <span class="stat-label">In Progress</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${stats.blocked_tasks}</span>
+                            <span class="stat-label">Blocked</span>
+                        </div>
+                    </div>
+                </header>
+                
+                ${renderProgressBar(stats)}
+                ${renderFilters(data)}
+                
+                <div class="board">
+                    ${COLUMNS.map(col => renderColumn(col, data)).join('')}
+                </div>
+            `;
+            
+            // Attach filter listeners
+            attachFilterListeners();
+        }
+        
+        function renderProgressBar(stats) {
+            const total = stats.total_tasks || 1;
+            const doneWidth = (stats.done_tasks / total * 100).toFixed(1);
+            const reviewWidth = (stats.review_tasks / total * 100).toFixed(1);
+            const inProgressWidth = (stats.in_progress_tasks / total * 100).toFixed(1);
+            const blockedWidth = (stats.blocked_tasks / total * 100).toFixed(1);
+            
+            return `
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-done" style="width: ${doneWidth}%"></div>
+                        <div class="progress-review" style="width: ${reviewWidth}%"></div>
+                        <div class="progress-in-progress" style="width: ${inProgressWidth}%"></div>
+                        <div class="progress-blocked" style="width: ${blockedWidth}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderFilters(data) {
+            const epics = data.epics || [];
+            const types = [...new Set((data.tasks || []).map(t => t.task_type).filter(Boolean))];
+            
+            return `
+                <div class="filters">
+                    <div class="filter-group">
+                        <span class="filter-label">Epic</span>
+                        <select class="filter-select" id="filterEpic">
+                            <option value="">All Epics</option>
+                            ${epics.map(e => `<option value="${e.id}">${e.title}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Priority</span>
+                        <select class="filter-select" id="filterPriority">
+                            <option value="">All Priorities</option>
+                            <option value="P0">P0 - Critical</option>
+                            <option value="P1">P1 - High</option>
+                            <option value="P2">P2 - Medium</option>
+                            <option value="P3">P3 - Low</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Type</span>
+                        <select class="filter-select" id="filterType">
+                            <option value="">All Types</option>
+                            ${types.map(t => `<option value="${t}">${t}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderColumn(column, data) {
+            const tasks = getFilteredTasks(data).filter(t => t.status === column.status);
+            
+            return `
+                <div class="column column-${column.id}">
+                    <div class="column-header">
+                        <span class="column-title">${column.title}</span>
+                        <span class="column-count">${tasks.length}</span>
+                    </div>
+                    <div class="column-cards">
+                        ${tasks.length > 0 
+                            ? tasks.map(t => renderCard(t, data)).join('')
+                            : '<div class="empty-column">No tasks</div>'
+                        }
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderCard(task, data) {
+            const story = (data.stories || []).find(s => s.id === task.story_id) || {};
+            const epic = (data.epics || []).find(e => e.id === story.epic_id) || {};
+            
+            return `
+                <div class="card" data-task-id="${task.id}">
+                    <div class="card-header">
+                        <span class="card-id">${task.id}</span>
+                        ${epic.priority ? `<span class="card-priority priority-${epic.priority}">${epic.priority}</span>` : ''}
+                    </div>
+                    <div class="card-title">${escapeHtml(task.title)}</div>
+                    <div class="card-meta">
+                        ${task.task_type ? `<span class="card-type">${task.task_type}</span>` : '<span></span>'}
+                        ${task.estimate_hours ? `<span class="card-estimate">⏱ ${task.estimate_hours}h</span>` : ''}
+                    </div>
+                    ${epic.title ? `
+                        <div class="card-epic">
+                            ${escapeHtml(epic.title)}
+                            ${typeof epic.audit_level === 'number' ? `<span class="audit-badge audit-${epic.audit_level}">L${epic.audit_level}</span>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        function renderNoData() {
+            document.getElementById('app').innerHTML = `
+                <header class="header">
+                    <div class="header-left">
+                        <h1>Kanban Board</h1>
+                    </div>
+                </header>
+                <div class="no-data">
+                    <h2>No Data Yet</h2>
+                    <p>
+                        Run <code>prd-analyzer</code> to create tasks, or check that 
+                        <code>.claude/tasks.db</code> exists and has been synced.
+                    </p>
+                    <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem;">
+                        Auto-refreshing every ${REFRESH_INTERVAL/1000} seconds...
+                    </p>
+                </div>
+            `;
+        }
+        
+        // Helper functions
+        function getProjectName() {
+            const projects = currentData.projects || [];
+            return projects[0]?.name || 'Project Kanban';
+        }
+        
+        function getFilteredTasks(data) {
+            let tasks = data.tasks || [];
+            const stories = data.stories || [];
+            const epics = data.epics || [];
+            
+            // Build lookup maps
+            const storyToEpic = {};
+            stories.forEach(s => storyToEpic[s.id] = s.epic_id);
+            
+            const epicPriority = {};
+            epics.forEach(e => epicPriority[e.id] = e.priority);
+            
+            // Apply filters
+            if (filterEpic) {
+                const epicStories = new Set(stories.filter(s => s.epic_id === filterEpic).map(s => s.id));
+                tasks = tasks.filter(t => epicStories.has(t.story_id));
+            }
+            
+            if (filterPriority) {
+                tasks = tasks.filter(t => {
+                    const epicId = storyToEpic[t.story_id];
+                    return epicPriority[epicId] === filterPriority;
+                });
+            }
+            
+            if (filterType) {
+                tasks = tasks.filter(t => t.task_type === filterType);
+            }
+            
+            return tasks;
+        }
+        
+        function computeStats(data) {
+            const tasks = data.tasks || [];
+            return {
+                total_tasks: tasks.length,
+                done_tasks: tasks.filter(t => t.status === 'done').length,
+                blocked_tasks: tasks.filter(t => t.status === 'blocked').length,
+                in_progress_tasks: tasks.filter(t => t.status === 'in_progress').length,
+                review_tasks: tasks.filter(t => t.status === 'review').length,
+                completion_pct: tasks.length > 0 
+                    ? Math.round(100 * tasks.filter(t => t.status === 'done').length / tasks.length)
+                    : 0
+            };
+        }
+        
+        function formatTime(isoString) {
+            if (!isoString) return 'never';
+            const date = new Date(isoString);
+            return date.toLocaleTimeString();
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function attachFilterListeners() {
+            document.getElementById('filterEpic')?.addEventListener('change', (e) => {
+                filterEpic = e.target.value;
+                render();
+            });
+            
+            document.getElementById('filterPriority')?.addEventListener('change', (e) => {
+                filterPriority = e.target.value;
+                render();
+            });
+            
+            document.getElementById('filterType')?.addEventListener('change', (e) => {
+                filterType = e.target.value;
+                render();
+            });
+        }
+    </script>
+</body>
+</html>

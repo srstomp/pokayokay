@@ -1,0 +1,17 @@
+{
+  "name": "pokayokay",
+  "version": "0.1.0",
+  "description": "Claude Code plugin with skills for PRD analysis, project orchestration, and development workflows",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "ai",
+    "development"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

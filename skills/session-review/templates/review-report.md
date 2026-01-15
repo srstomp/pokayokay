@@ -1,0 +1,222 @@
+# Session Review: {{PROJECT_NAME}}
+
+**Review Date**: {{DATE}}
+**Sessions Analyzed**: {{SESSION_IDS}}
+**Period**: {{START_DATE}} to {{END_DATE}}
+
+---
+
+## Executive Summary
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Sessions | {{SESSION_COUNT}} | |
+| Tasks Planned | {{TASKS_PLANNED}} | |
+| Tasks Completed | {{TASKS_COMPLETED}} | {{COMPLETION_RATE}}% |
+| Time Estimated | {{TIME_ESTIMATED}}h | |
+| Time Actual | {{TIME_ACTUAL}}h | {{TIME_VARIANCE}} |
+| Build Failures | {{BUILD_FAILURES}} | {{BUILD_ASSESSMENT}} |
+| Reverts | {{REVERT_COUNT}} | {{REVERT_ASSESSMENT}} |
+
+**Overall Assessment**: {{OVERALL_GRADE}}
+
+---
+
+## What Went Well
+
+<!-- List 2-4 positive patterns observed -->
+
+### ✓ {{GOOD_PATTERN_1_TITLE}}
+
+{{GOOD_PATTERN_1_DESCRIPTION}}
+
+**Evidence**: {{GOOD_PATTERN_1_EVIDENCE}}
+
+### ✓ {{GOOD_PATTERN_2_TITLE}}
+
+{{GOOD_PATTERN_2_DESCRIPTION}}
+
+**Evidence**: {{GOOD_PATTERN_2_EVIDENCE}}
+
+---
+
+## What Went Wrong
+
+<!-- List 2-4 problems identified -->
+
+### ✗ {{BAD_PATTERN_1_TITLE}}
+
+{{BAD_PATTERN_1_DESCRIPTION}}
+
+**Evidence**: {{BAD_PATTERN_1_EVIDENCE}}
+
+**Impact**: {{BAD_PATTERN_1_IMPACT}}
+
+**Recommendation**: {{BAD_PATTERN_1_RECOMMENDATION}}
+
+### ✗ {{BAD_PATTERN_2_TITLE}}
+
+{{BAD_PATTERN_2_DESCRIPTION}}
+
+**Evidence**: {{BAD_PATTERN_2_EVIDENCE}}
+
+**Impact**: {{BAD_PATTERN_2_IMPACT}}
+
+**Recommendation**: {{BAD_PATTERN_2_RECOMMENDATION}}
+
+---
+
+## Time Analysis
+
+### By Task Type
+
+| Type | Planned | Actual | Variance | Accuracy |
+|------|---------|--------|----------|----------|
+| Frontend | {{FE_PLANNED}}h | {{FE_ACTUAL}}h | {{FE_VARIANCE}} | {{FE_ACCURACY}} |
+| Backend | {{BE_PLANNED}}h | {{BE_ACTUAL}}h | {{BE_VARIANCE}} | {{BE_ACCURACY}} |
+| Database | {{DB_PLANNED}}h | {{DB_ACTUAL}}h | {{DB_VARIANCE}} | {{DB_ACCURACY}} |
+| Testing | {{QA_PLANNED}}h | {{QA_ACTUAL}}h | {{QA_VARIANCE}} | {{QA_ACCURACY}} |
+| Other | {{OT_PLANNED}}h | {{OT_ACTUAL}}h | {{OT_VARIANCE}} | {{OT_ACCURACY}} |
+
+### Recommended Estimate Multipliers
+
+Based on this project's data:
+
+| Task Type | Current Multiplier | Suggested | Reason |
+|-----------|-------------------|-----------|--------|
+| {{TYPE_1}} | {{MULT_1_CURRENT}} | {{MULT_1_SUGGESTED}} | {{MULT_1_REASON}} |
+| {{TYPE_2}} | {{MULT_2_CURRENT}} | {{MULT_2_SUGGESTED}} | {{MULT_2_REASON}} |
+
+---
+
+## Session-by-Session Analysis
+
+### Session {{SESSION_1_ID}} ({{SESSION_1_DATE}})
+
+**Duration**: {{SESSION_1_DURATION}}
+**Tasks**: {{SESSION_1_TASKS_COMPLETED}}/{{SESSION_1_TASKS_PLANNED}}
+**Checkpoints**: {{SESSION_1_CHECKPOINTS}}
+
+**Highlights**:
+- {{SESSION_1_HIGHLIGHT_1}}
+- {{SESSION_1_HIGHLIGHT_2}}
+
+**Issues**:
+- {{SESSION_1_ISSUE_1}}
+
+---
+
+## Git Analysis
+
+### Commit Patterns
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Total commits | {{COMMIT_COUNT}} | | |
+| Avg lines/commit | {{AVG_LINES}} | <100 | {{LINES_STATUS}} |
+| Reverts | {{REVERT_COUNT}} | <10% | {{REVERT_STATUS}} |
+| Fix commits | {{FIX_COUNT}} | <20% | {{FIX_STATUS}} |
+
+### Notable Commits
+
+<!-- List any concerning or exemplary commits -->
+
+**Concerning**:
+- `{{BAD_COMMIT_HASH}}`: {{BAD_COMMIT_REASON}}
+
+**Exemplary**:
+- `{{GOOD_COMMIT_HASH}}`: {{GOOD_COMMIT_REASON}}
+
+---
+
+## Checkpoint Analysis
+
+### Checkpoint Distribution
+
+| Event Type | Count | Action Taken |
+|------------|-------|--------------|
+| task_complete | {{CP_TASK}} | {{CP_TASK_ACTIONS}} |
+| error_encountered | {{CP_ERROR}} | {{CP_ERROR_ACTIONS}} |
+| ambiguity_found | {{CP_AMBIG}} | {{CP_AMBIG_ACTIONS}} |
+| scope_change | {{CP_SCOPE}} | {{CP_SCOPE_ACTIONS}} |
+
+### Human Decisions
+
+| Decision | Context | Outcome |
+|----------|---------|---------|
+| {{DECISION_1}} | {{CONTEXT_1}} | {{OUTCOME_1}} |
+| {{DECISION_2}} | {{CONTEXT_2}} | {{OUTCOME_2}} |
+
+---
+
+## Recommendations
+
+### Immediate (Apply Now)
+
+1. **{{REC_IMMEDIATE_1_TITLE}}**
+   
+   {{REC_IMMEDIATE_1_DESCRIPTION}}
+   
+   ```yaml
+   # Suggested config change
+   {{REC_IMMEDIATE_1_CONFIG}}
+   ```
+
+2. **{{REC_IMMEDIATE_2_TITLE}}**
+   
+   {{REC_IMMEDIATE_2_DESCRIPTION}}
+
+### For Future Projects
+
+1. **{{REC_FUTURE_1_TITLE}}**
+   
+   {{REC_FUTURE_1_DESCRIPTION}}
+
+2. **{{REC_FUTURE_2_TITLE}}**
+   
+   {{REC_FUTURE_2_DESCRIPTION}}
+
+### Skill Improvements
+
+| Skill | Improvement | Priority |
+|-------|-------------|----------|
+| {{SKILL_1}} | {{SKILL_1_IMPROVEMENT}} | {{SKILL_1_PRIORITY}} |
+| {{SKILL_2}} | {{SKILL_2_IMPROVEMENT}} | {{SKILL_2_PRIORITY}} |
+
+---
+
+## Known Issues to Track
+
+Add these to `.claude/known-issues.md`:
+
+```markdown
+## {{KNOWN_ISSUE_1_TITLE}}
+
+**First seen**: {{DATE}}
+**Symptoms**: {{KNOWN_ISSUE_1_SYMPTOMS}}
+**Root cause**: {{KNOWN_ISSUE_1_CAUSE}}
+**Prevention**: {{KNOWN_ISSUE_1_PREVENTION}}
+```
+
+---
+
+## Appendix: Raw Data
+
+### Session Logs Analyzed
+- {{SESSION_LOG_1}}
+- {{SESSION_LOG_2}}
+
+### Git Range
+```
+{{GIT_FIRST_COMMIT}}..{{GIT_LAST_COMMIT}}
+```
+
+### Queries Used
+```sql
+-- Task completion by type
+{{SQL_QUERY}}
+```
+
+---
+
+*Generated by session-review skill on {{GENERATION_DATE}}*
