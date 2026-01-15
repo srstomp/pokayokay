@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Kanban Board</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --bg-hover: #2a2a2a;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --border-color: #333;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            
+            /* Task type colors */
+            --type-frontend: #3b82f6;
+            --type-backend: #22c55e;
+            --type-database: #8b5cf6;
+            --type-design: #ec4899;
+            --type-devops: #f97316;
+            --type-qa: #06b6d4;
+            --type-documentation: #a855f7;
+            --type-other: #6b7280;
+            
+            /* Priority colors */
+            --priority-p0: #ef4444;
+            --priority-p1: #f97316;
+            --priority-p2: #eab308;
+            --priority-p3: #6b7280;
+            
+            /* Status colors */
+            --status-blocked: #ef4444;
+            --status-done: #22c55e;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .project-name {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .search-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            width: 240px;
+            font-size: 14px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+        
+        .btn:hover {
+            background: var(--bg-hover);
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+        
+        /* Filters */
+        .filters-bar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            overflow-x: auto;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            background: var(--bg-secondary);
+            padding: 12px 24px;
+            display: flex;
+            gap: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Kanban Board */
+        .board-container {
+            padding: 24px;
+            overflow-x: auto;
+        }
+        
+        .board {
+            display: flex;
+            gap: 16px;
+            min-width: max-content;
+        }
+        
+        /* Column */
+        .column {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            width: 320px;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 220px);
+        }
+        
+        .column-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .column-title {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .column-count {
+            background: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .column-body {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .column-body.drag-over {
+            background: var(--bg-tertiary);
+        }
+        
+        /* Task Card */
+        .task-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            cursor: grab;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        
+        .task-card:hover {
+            border-color: var(--accent);
+        }
+        
+        .task-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .task-card.blocked {
+            border-left: 3px solid var(--status-blocked);
+        }
+        
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .task-id {
+            font-size: 11px;
+            font-family: monospace;
+            color: var(--text-muted);
+        }
+        
+        .task-type {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .task-type.frontend { background: var(--type-frontend); color: white; }
+        .task-type.backend { background: var(--type-backend); color: white; }
+        .task-type.database { background: var(--type-database); color: white; }
+        .task-type.design { background: var(--type-design); color: white; }
+        .task-type.devops { background: var(--type-devops); color: white; }
+        .task-type.qa { background: var(--type-qa); color: white; }
+        .task-type.documentation { background: var(--type-documentation); color: white; }
+        .task-type.other { background: var(--type-other); color: white; }
+        
+        .task-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .task-epic {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        
+        .task-estimate {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .task-priority {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        .task-priority.p0 { background: var(--priority-p0); color: white; }
+        .task-priority.p1 { background: var(--priority-p1); color: white; }
+        .task-priority.p2 { background: var(--priority-p2); color: black; }
+        .task-priority.p3 { background: var(--priority-p3); color: white; }
+        
+        .task-blocked-badge {
+            background: var(--status-blocked);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        
+        .task-dependencies {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .dependency-item {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .detail-row {
+            margin-bottom: 16px;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .detail-value {
+            font-size: 14px;
+        }
+        
+        /* Empty State */
+        .empty-column {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 24px;
+            font-size: 14px;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">📋 Kanban</div>
+            <div class="project-name" id="projectName">Loading...</div>
+        </div>
+        <div class="header-right">
+            <input type="text" class="search-box" placeholder="Search tasks... (/)" id="searchBox">
+            <button class="btn" onclick="exportData()">
+                <span>↓</span> Export
+            </button>
+            <button class="btn" onclick="loadFromFile()">
+                <span>↑</span> Import
+            </button>
+        </div>
+    </header>
+    
+    <!-- Filters -->
+    <div class="filters-bar">
+        <div class="filter-group">
+            <span class="filter-label">Epic</span>
+            <select class="filter-select" id="filterEpic">
+                <option value="">All Epics</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Type</span>
+            <select class="filter-select" id="filterType">
+                <option value="">All Types</option>
+                <option value="frontend">Frontend</option>
+                <option value="backend">Backend</option>
+                <option value="database">Database</option>
+                <option value="design">Design</option>
+                <option value="devops">DevOps</option>
+                <option value="qa">QA</option>
+                <option value="documentation">Documentation</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Priority</span>
+            <select class="filter-select" id="filterPriority">
+                <option value="">All Priorities</option>
+                <option value="P0">P0 - Must Have</option>
+                <option value="P1">P1 - Should Have</option>
+                <option value="P2">P2 - Nice to Have</option>
+                <option value="P3">P3 - Won't Have</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat">
+            <span class="stat-value" id="statTotal">0</span>
+            <span class="stat-label">Total Tasks</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="statTodo">0</span>
+            <span class="stat-label">To Do</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="statInProgress">0</span>
+            <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="statDone">0</span>
+            <span class="stat-label">Done</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="statBlocked">0</span>
+            <span class="stat-label">Blocked</span>
+        </div>
+    </div>
+    
+    <!-- Board -->
+    <div class="board-container">
+        <div class="board" id="board">
+            <!-- Columns will be rendered here -->
+        </div>
+    </div>
+    
+    <!-- Task Detail Modal -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Task Details</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Task details will be rendered here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" accept=".json" style="display: none" onchange="handleFileSelect(event)">
+    
+    <script>
+        // Data store
+        let data = {
+            projects: [],
+            epics: [],
+            stories: [],
+            tasks: [],
+            dependencies: []
+        };
+        
+        const columns = [
+            { id: 'todo', title: 'To Do', status: 'todo' },
+            { id: 'in_progress', title: 'In Progress', status: 'in_progress' },
+            { id: 'review', title: 'Review', status: 'review' },
+            { id: 'done', title: 'Done', status: 'done' },
+            { id: 'blocked', title: 'Blocked', status: 'blocked' }
+        ];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupEventListeners();
+        });
+        
+        function loadData() {
+            // Try localStorage first
+            const stored = localStorage.getItem('kanban_data');
+            if (stored) {
+                data = JSON.parse(stored);
+                render();
+                return;
+            }
+            
+            // Try loading tasks.json
+            fetch('tasks.json')
+                .then(res => res.json())
+                .then(json => {
+                    data = json;
+                    saveData();
+                    render();
+                })
+                .catch(() => {
+                    // Use embedded data or empty state
+                    if (window.EMBEDDED_DATA) {
+                        data = window.EMBEDDED_DATA;
+                        saveData();
+                    }
+                    render();
+                });
+        }
+        
+        function saveData() {
+            localStorage.setItem('kanban_data', JSON.stringify(data));
+        }
+        
+        function render() {
+            renderProjectName();
+            renderEpicFilter();
+            renderBoard();
+            updateStats();
+        }
+        
+        function renderProjectName() {
+            const project = data.projects[0];
+            document.getElementById('projectName').textContent = project?.name || 'Untitled Project';
+        }
+        
+        function renderEpicFilter() {
+            const select = document.getElementById('filterEpic');
+            select.innerHTML = '<option value="">All Epics</option>';
+            data.epics.forEach(epic => {
+                const option = document.createElement('option');
+                option.value = epic.id;
+                option.textContent = epic.title;
+                select.appendChild(option);
+            });
+        }
+        
+        function getFilteredTasks() {
+            const epicFilter = document.getElementById('filterEpic').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const priorityFilter = document.getElementById('filterPriority').value;
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            return data.tasks.filter(task => {
+                // Epic filter
+                if (epicFilter) {
+                    const story = data.stories.find(s => s.id === task.story_id);
+                    if (!story || story.epic_id !== epicFilter) return false;
+                }
+                
+                // Type filter
+                if (typeFilter && task.task_type !== typeFilter) return false;
+                
+                // Priority filter (from epic)
+                if (priorityFilter) {
+                    const story = data.stories.find(s => s.id === task.story_id);
+                    const epic = story ? data.epics.find(e => e.id === story.epic_id) : null;
+                    if (!epic || epic.priority !== priorityFilter) return false;
+                }
+                
+                // Search
+                if (searchTerm && !task.title.toLowerCase().includes(searchTerm)) return false;
+                
+                return true;
+            });
+        }
+        
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            const filteredTasks = getFilteredTasks();
+            
+            columns.forEach(column => {
+                const columnEl = document.createElement('div');
+                columnEl.className = 'column';
+                columnEl.dataset.columnId = column.id;
+                
+                const columnTasks = filteredTasks.filter(t => t.status === column.status);
+                
+                columnEl.innerHTML = `
+                    <div class="column-header">
+                        <div class="column-title">
+                            ${column.title}
+                            <span class="column-count">${columnTasks.length}</span>
+                        </div>
+                    </div>
+                    <div class="column-body" data-status="${column.status}">
+                        ${columnTasks.length === 0 ? '<div class="empty-column">No tasks</div>' : ''}
+                    </div>
+                `;
+                
+                const body = columnEl.querySelector('.column-body');
+                
+                // Drag and drop events
+                body.addEventListener('dragover', handleDragOver);
+                body.addEventListener('dragleave', handleDragLeave);
+                body.addEventListener('drop', handleDrop);
+                
+                columnTasks.forEach(task => {
+                    body.appendChild(createTaskCard(task));
+                });
+                
+                board.appendChild(columnEl);
+            });
+        }
+        
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'task-card' + (task.status === 'blocked' ? ' blocked' : '');
+            card.draggable = true;
+            card.dataset.taskId = task.id;
+            
+            // Get story and epic
+            const story = data.stories.find(s => s.id === task.story_id);
+            const epic = story ? data.epics.find(e => e.id === story.epic_id) : null;
+            
+            // Get dependencies
+            const blockedBy = data.dependencies
+                .filter(d => d.blocked_task_id === task.id)
+                .map(d => data.tasks.find(t => t.id === d.blocker_task_id))
+                .filter(Boolean);
+            
+            const incompleteBlockers = blockedBy.filter(t => t.status !== 'done');
+            
+            card.innerHTML = `
+                <div class="task-header">
+                    <span class="task-id">${task.id}</span>
+                    <span class="task-type ${task.task_type || 'other'}">${task.task_type || 'other'}</span>
+                </div>
+                ${epic ? `<div class="task-epic">${epic.title}</div>` : ''}
+                <div class="task-title">${task.title}</div>
+                <div class="task-meta">
+                    <span class="task-estimate">⏱ ${task.estimate_hours || '?'}h</span>
+                    ${epic ? `<span class="task-priority ${epic.priority?.toLowerCase()}">${epic.priority}</span>` : ''}
+                </div>
+                ${incompleteBlockers.length > 0 ? `
+                    <div class="task-dependencies">
+                        ${incompleteBlockers.map(b => `
+                            <div class="dependency-item">⛔ Blocked by: ${b.title}</div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+            
+            // Events
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            card.addEventListener('click', () => openTaskModal(task));
+            
+            return card;
+        }
+        
+        // Drag and Drop
+        let draggedTask = null;
+        
+        function handleDragStart(e) {
+            draggedTask = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.column-body').forEach(col => {
+                col.classList.remove('drag-over');
+            });
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedTask) return;
+            
+            const taskId = draggedTask.dataset.taskId;
+            const newStatus = e.currentTarget.dataset.status;
+            
+            // Update task status
+            const task = data.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = newStatus;
+                if (newStatus === 'done' && !task.completed_at) {
+                    task.completed_at = new Date().toISOString();
+                }
+                if (newStatus === 'in_progress' && !task.started_at) {
+                    task.started_at = new Date().toISOString();
+                }
+                saveData();
+                render();
+            }
+        }
+        
+        // Modal
+        function openTaskModal(task) {
+            const story = data.stories.find(s => s.id === task.story_id);
+            const epic = story ? data.epics.find(e => e.id === story.epic_id) : null;
+            
+            document.getElementById('modalTitle').textContent = task.title;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-row">
+                    <div class="detail-label">ID</div>
+                    <div class="detail-value">${task.id}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Type</div>
+                    <div class="detail-value">${task.task_type || 'Not specified'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">${task.status}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Estimate</div>
+                    <div class="detail-value">${task.estimate_hours || '?'} hours</div>
+                </div>
+                ${epic ? `
+                <div class="detail-row">
+                    <div class="detail-label">Epic</div>
+                    <div class="detail-value">${epic.title} (${epic.priority})</div>
+                </div>
+                ` : ''}
+                ${story ? `
+                <div class="detail-row">
+                    <div class="detail-label">Story</div>
+                    <div class="detail-value">${story.title}</div>
+                </div>
+                ` : ''}
+                ${task.description ? `
+                <div class="detail-row">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value">${task.description}</div>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                    <div class="detail-label">Change Status</div>
+                    <div class="detail-value">
+                        <select class="filter-select" onchange="updateTaskStatus('${task.id}', this.value)">
+                            ${columns.map(c => `
+                                <option value="${c.status}" ${task.status === c.status ? 'selected' : ''}>${c.title}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('taskModal').classList.add('visible');
+        }
+        
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('visible');
+        }
+        
+        function updateTaskStatus(taskId, status) {
+            const task = data.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = status;
+                saveData();
+                render();
+                closeModal();
+            }
+        }
+        
+        // Stats
+        function updateStats() {
+            const tasks = data.tasks;
+            document.getElementById('statTotal').textContent = tasks.length;
+            document.getElementById('statTodo').textContent = tasks.filter(t => t.status === 'todo').length;
+            document.getElementById('statInProgress').textContent = tasks.filter(t => t.status === 'in_progress').length;
+            document.getElementById('statDone').textContent = tasks.filter(t => t.status === 'done').length;
+            document.getElementById('statBlocked').textContent = tasks.filter(t => t.status === 'blocked').length;
+        }
+        
+        // Import/Export
+        function exportData() {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tasks.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function loadFromFile() {
+            document.getElementById('fileInput').click();
+        }
+        
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    data = JSON.parse(event.target.result);
+                    saveData();
+                    render();
+                } catch (err) {
+                    alert('Invalid JSON file');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Event Listeners
+        function setupEventListeners() {
+            // Filters
+            ['filterEpic', 'filterType', 'filterPriority'].forEach(id => {
+                document.getElementById(id).addEventListener('change', render);
+            });
+            
+            // Search
+            document.getElementById('searchBox').addEventListener('input', render);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    document.getElementById('searchBox').focus();
+                }
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.getElementById('searchBox').blur();
+                }
+            });
+            
+            // Close modal on overlay click
+            document.getElementById('taskModal').addEventListener('click', (e) => {
+                if (e.target.id === 'taskModal') closeModal();
+            });
+        }
+    </script>
+    
+    <!-- Embed data here when generating -->
+    <script>
+        // EMBEDDED_DATA will be set when this template is populated
+        // window.EMBEDDED_DATA = { projects: [...], epics: [...], ... };
+    </script>
+</body>
+</html>

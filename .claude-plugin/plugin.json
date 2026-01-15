@@ -1,0 +1,22 @@
+{
+  "name": "pokayokay",
+  "version": "0.1.0",
+  "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows. Integrates with ohno for task management.",
+  "author": {
+    "name": "Steve Stomp",
+    "url": "https://github.com/srstomp"
+  },
+  "repository": "https://github.com/srstomp/pokayokay",
+  "license": "MIT",
+  "keywords": [
+    "prd",
+    "project-management",
+    "skills",
+    "orchestration",
+    "ohno",
+    "task-management"
+  ],
+  "dependencies": {
+    "mcp": ["ohno"]
+  }
+}
