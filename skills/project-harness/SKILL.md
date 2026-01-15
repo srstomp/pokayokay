@@ -1,6 +1,6 @@
 ---
 name: project-harness
-description: Orchestrates long-running AI development sessions with human checkpoint control. Reads project state from `.claude/` folder, manages progress tracking, routes work to appropriate skills, and implements supervised/semi-auto/autonomous modes. Use this skill when starting work sessions, resuming interrupted work, or managing multi-session projects.
+description: Orchestrates long-running AI development sessions with human checkpoint control. Uses ohno for task management, manages progress tracking, routes work to appropriate skills, and implements supervised/semi-auto/autonomous modes. Use this skill when starting work sessions, resuming interrupted work, or managing multi-session projects.
 ---
 
 # Project Harness
@@ -11,21 +11,24 @@ Orchestrate AI-assisted development with configurable human control.
 
 This skill bridges the gap between fully manual Claude Code sessions and runaway autonomous agents. It provides structured handoffs between sessions while giving you control over when to intervene.
 
+**Integrated with [ohno](https://github.com/srstomp/ohno)** for task management via MCP.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    SESSION START                            │
 │                          │                                  │
 │                          ▼                                  │
 │              ┌──────────────────────┐                       │
-│              │ Read .claude/ state  │                       │
+│              │ ohno: get_session_   │                       │
+│              │       context()      │                       │
 │              └──────────┬───────────┘                       │
 │                          │                                  │
 │              ┌──────────────────────┐                       │
-│              │ Start kanban server  │◄── Browser access     │
+│              │ ohno serve           │◄── Browser access     │
 │              └──────────┬───────────┘                       │
 │                          │                                  │
 │              ┌──────────────────────┐                       │
-│              │ Pick next feature    │                       │
+│              │ ohno: get_next_task()│                       │
 │              └──────────┬───────────┘                       │
 │                          │                                  │
 │              ┌──────────────────────┐                       │
@@ -37,8 +40,7 @@ This skill bridges the gap between fully manual Claude Code sessions and runaway
 │              └──────────┬───────────┘                       │
 │                          │                                  │
 │              ┌──────────────────────┐                       │
-│              │ Update progress      │                       │
-│              │ Sync kanban          │◄── Auto-refresh       │
+│              │ ohno: done + sync    │                       │
 │              │ Git commit           │                       │
 │              └──────────────────────┘                       │
 └─────────────────────────────────────────────────────────────┘
@@ -46,198 +48,48 @@ This skill bridges the gap between fully manual Claude Code sessions and runaway
 
 ## Quick Start
 
-### 1. Initialize Project Harness
-
-If `.claude/` doesn't exist or needs initialization:
+### 1. Initialize ohno
 
 ```bash
-mkdir -p .claude/sessions .claude/checkpoints
+npx @stevestomp/ohno-cli init
 ```
 
-Then create `.claude/config.yaml`:
+### 2. Create Project Context (optional)
 
-```yaml
-mode: supervised  # supervised | semi-auto | autonomous
-project_name: "My Project"
+Create `.claude/PROJECT.md` for shared project context:
 
-checkpoints:
-  task_complete: pause      # pause | review | notify | skip
-  story_complete: pause
-  epic_complete: pause
-  error_encountered: pause
-  
-kanban:
-  auto_sync: true           # Sync after every task.db change
-  serve_locally: true       # Start local server for browser access
-  port: 3333                # Port for kanban server
-  
-git:
-  commit_per_task: true
-  commit_message_prefix: "[claude]"
-  
-skills:
-  auto_route: true  # Use skill_hint from features.json
-```
-
-### 2. Start Session
-
-At the beginning of every session:
-
-```
-1. Read .claude/config.yaml       → Understand mode
-2. Read .claude/progress.md       → What happened before
-3. Read .claude/features.json     → What needs doing
-4. Start kanban server            → Browser access at localhost:3333
-5. Run basic verification         → Is project in good state?
-6. Pick next task                 → Based on priority + deps
-7. Announce plan                  → Tell human what you'll do
-```
-
-### 3. Work Loop
-
-```
-WHILE features remain:
-  1. Select next feature (P0 first, respect dependencies)
-  2. Route to appropriate skill (via skill_hint)
-  3. Complete ONE task
-  4. Git commit with descriptive message
-  5. SYNC KANBAN                    ← Automatic after every change
-  6. Update .claude/progress.md
-  7. CHECKPOINT based on mode
-  8. IF checkpoint == PAUSE: Stop and wait
-     ELSE: Continue to next task
-```
-
----
-
-## Kanban Live View
-
-### Why Live Kanban?
-
-The kanban.html file is your visual dashboard during development. It should always reflect the current state of tasks.db — not stale data from when prd-analyzer first ran.
-
-### How It Works
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    KANBAN SYNC FLOW                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  tasks.db ──► Export JSON ──► Embed in HTML ──► Browser     │
-│      │                             │               │        │
-│      │                             ▼               │        │
-│   (SQLite)                   kanban.html          │        │
-│      │                             │               │        │
-│      └──────── On change ──────────┘               │        │
-│                                                    │        │
-│                    localhost:3333 ◄────────────────┘        │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Starting the Kanban Server
-
-At session start, launch a simple HTTP server:
-
-```bash
-# Start server in background
-cd .claude && python3 -m http.server 3333 &
-KANBAN_PID=$!
-echo $KANBAN_PID > .kanban.pid
-
-# Now accessible at:
-# http://localhost:3333/kanban.html
-```
-
-Or using Node:
-```bash
-cd .claude && npx serve -p 3333 &
-```
-
-**Tell the user:**
 ```markdown
-## 📊 Kanban Board Live
+# Project Name
 
-**URL**: http://localhost:3333/kanban.html
-**Auto-refresh**: Enabled (syncs after every task)
+## Overview
+Brief description of the project.
 
-Open in your browser to track progress visually.
+## Tech Stack
+- Framework: Next.js 14
+- Database: PostgreSQL
+- Styling: Tailwind CSS
+
+## Conventions
+- Use TypeScript strict mode
+- Follow existing patterns in codebase
 ```
 
-### Syncing the Kanban
+### 3. Start Session
 
-After ANY change to tasks.db, run sync:
+Use ohno MCP tools or CLI:
 
 ```bash
-# Sync script (inline or from .claude/scripts/sync-kanban.sh)
-python3 << 'EOF'
-import sqlite3
-import json
-from pathlib import Path
+# Get context from previous sessions
+npx @stevestomp/ohno-cli context
 
-db_path = ".claude/tasks.db"
-html_path = ".claude/kanban.html"
-template_path = ".claude/templates/kanban-template.html"
+# See all tasks
+npx @stevestomp/ohno-cli tasks
 
-# Export data from SQLite
-conn = sqlite3.connect(db_path)
-conn.row_factory = sqlite3.Row
+# Get recommended next task
+npx @stevestomp/ohno-cli next
 
-data = {
-    "synced_at": __import__('datetime').datetime.now().isoformat(),
-    "projects": [dict(r) for r in conn.execute("SELECT * FROM projects").fetchall()],
-    "epics": [dict(r) for r in conn.execute("SELECT * FROM epics ORDER BY priority, sort_order").fetchall()],
-    "stories": [dict(r) for r in conn.execute("SELECT * FROM stories").fetchall()],
-    "tasks": [dict(r) for r in conn.execute("SELECT * FROM tasks").fetchall()],
-    "dependencies": [dict(r) for r in conn.execute("SELECT * FROM dependencies").fetchall()],
-}
-conn.close()
-
-# Read template and embed data
-template = Path(template_path).read_text() if Path(template_path).exists() else Path(html_path).read_text()
-updated_html = template.replace(
-    "window.KANBAN_DATA = {};",
-    f"window.KANBAN_DATA = {json.dumps(data, default=str)};"
-)
-
-# Write updated HTML
-Path(html_path).write_text(updated_html)
-print(f"✓ Kanban synced ({len(data['tasks'])} tasks)")
-EOF
-```
-
-### When to Sync
-
-| Event | Sync? | Reason |
-|-------|-------|--------|
-| Session start | ✅ | Fresh state |
-| Task status change | ✅ | Progress visible |
-| Task created | ✅ | New work appears |
-| Story/epic complete | ✅ | Milestone visible |
-| Error encountered | ✅ | Blocked status shown |
-| Session end | ✅ | Final state saved |
-| Git commit | ❌ | No DB change |
-| Checkpoint pause | ❌ | Already synced |
-
-### Auto-Refresh in Browser
-
-The kanban.html includes auto-refresh to pick up changes:
-
-```html
-<!-- Add to kanban.html <head> -->
-<script>
-  // Check for updates every 5 seconds
-  let lastSync = null;
-  setInterval(async () => {
-    const resp = await fetch('kanban.html?nocache=' + Date.now());
-    const text = await resp.text();
-    const match = text.match(/synced_at":\s*"([^"]+)"/);
-    if (match && match[1] !== lastSync) {
-      lastSync = match[1];
-      location.reload();
-    }
-  }, 5000);
-</script>
+# Start kanban board
+npx @stevestomp/ohno-cli serve
 ```
 
 ---
@@ -248,12 +100,10 @@ The kanban.html includes auto-refresh to pick up changes:
 
 Human reviews after every task. Maximum control, slower pace.
 
-```yaml
-checkpoints:
-  task_complete: pause
-  story_complete: pause
-  epic_complete: pause
-```
+**Checkpoint behavior:**
+- Task complete → PAUSE
+- Story complete → PAUSE
+- Epic complete → PAUSE
 
 **Use when**: Starting new projects, unfamiliar domains, critical code.
 
@@ -261,12 +111,10 @@ checkpoints:
 
 Human reviews at story/epic boundaries. Good balance.
 
-```yaml
-checkpoints:
-  task_complete: notify    # Log but continue
-  story_complete: pause    # Stop for review
-  epic_complete: pause
-```
+**Checkpoint behavior:**
+- Task complete → Log and continue
+- Story complete → PAUSE
+- Epic complete → PAUSE
 
 **Use when**: Established patterns, routine implementation.
 
@@ -274,97 +122,12 @@ checkpoints:
 
 Human reviews at epic boundaries only. Maximum speed.
 
-```yaml
-checkpoints:
-  task_complete: skip
-  story_complete: notify
-  epic_complete: pause
-```
+**Checkpoint behavior:**
+- Task complete → Skip
+- Story complete → Log and continue
+- Epic complete → PAUSE
 
 **Use when**: Well-defined specs, trusted patterns, time pressure.
-
----
-
-## `.claude/` Folder Structure
-
-```
-.claude/
-├── config.yaml           # Harness configuration
-├── features.json         # What to build (from prd-analyzer)
-├── tasks.db              # Detailed breakdown (SQLite)
-├── progress.md           # Session history (human-readable)
-├── kanban.html           # Visual board (auto-synced)
-├── .kanban.pid           # Server process ID
-├── scripts/
-│   └── sync-kanban.py    # Sync script
-├── templates/
-│   └── kanban-template.html  # Base template
-├── sessions/             # Per-session logs
-│   ├── 2025-01-10-001.md
-│   └── 2025-01-10-002.md
-└── checkpoints/          # Human decision records
-    └── pending-review.md
-```
-
-### config.yaml
-
-```yaml
-mode: supervised
-project_name: "Authentication System"
-created_at: "2025-01-10T12:00:00Z"
-
-checkpoints:
-  task_complete: pause
-  story_complete: pause  
-  epic_complete: pause
-  error_encountered: pause
-  ambiguity_found: pause
-
-kanban:
-  auto_sync: true
-  serve_locally: true
-  port: 3333
-  auto_refresh_seconds: 5
-
-git:
-  commit_per_task: true
-  commit_message_prefix: "[claude]"
-  branch_per_epic: false
-
-skills:
-  auto_route: true
-  default_skill: null
-  
-session:
-  max_tasks_per_session: 10
-  require_verification: true
-```
-
-### progress.md
-
-```markdown
-# Project Progress
-
-## Current State
-- **Active Feature**: F002 - User Dashboard
-- **Active Story**: S003 - Dashboard Layout
-- **Last Task Completed**: T007 - Create grid component
-- **Overall Progress**: 12/47 tasks (25%)
-- **Kanban**: http://localhost:3333/kanban.html
-
-## Session History
-
-### Session 2025-01-10-002 (14:30 - 15:45)
-- Completed: T005, T006, T007
-- Feature F001 marked done
-- Started F002
-- Checkpoint: Awaiting review of dashboard approach
-
-### Session 2025-01-10-001 (09:00 - 11:30)
-- Completed: T001, T002, T003, T004
-- Set up project structure
-- Implemented auth endpoints
-```
 
 ---
 
@@ -375,40 +138,36 @@ session:
 ```markdown
 ## Session Start Checklist
 
-1. [ ] Read config.yaml - confirm mode
-2. [ ] Read progress.md - understand state
-3. [ ] Read features.json - know what's next
-4. [ ] Start kanban server - browser access
-5. [ ] Sync kanban - ensure current state
-6. [ ] Check git status - clean working directory?
-7. [ ] Run verification - does app work?
-8. [ ] Announce plan - tell human what you'll do
+1. [ ] Get session context: `ohno context` or MCP get_session_context()
+2. [ ] Read .claude/PROJECT.md if exists
+3. [ ] Check task list: `ohno tasks`
+4. [ ] Start kanban: `ohno serve`
+5. [ ] Check git status - clean working directory?
+6. [ ] Get next task: `ohno next`
+7. [ ] Announce plan - tell human what you'll do
 ```
 
-### Session Start Script
+**Using ohno MCP:**
+```
+1. get_session_context() → Understand previous session
+2. get_tasks() → See all work
+3. get_next_task() → Pick what to do
+```
 
-```bash
-#!/bin/bash
-# .claude/scripts/start-session.sh
+### Work Loop
 
-echo "🚀 Starting project harness session..."
-
-# Start kanban server if not running
-if [ ! -f .claude/.kanban.pid ] || ! kill -0 $(cat .claude/.kanban.pid) 2>/dev/null; then
-    echo "📊 Starting kanban server..."
-    cd .claude && python3 -m http.server 3333 > /dev/null 2>&1 &
-    echo $! > .kanban.pid
-    cd ..
-fi
-
-# Initial sync
-echo "🔄 Syncing kanban..."
-python3 .claude/scripts/sync-kanban.py
-
-echo ""
-echo "✅ Session ready!"
-echo "📊 Kanban: http://localhost:3333/kanban.html"
-echo ""
+```
+WHILE tasks remain:
+  1. Get next task (ohno next)
+  2. Start task (ohno start <id>)
+  3. Route to appropriate skill if needed
+  4. Complete ONE task
+  5. Git commit with descriptive message
+  6. Mark done (ohno done <id> --notes "...")
+  7. Sync kanban (ohno sync)
+  8. CHECKPOINT based on mode
+  9. IF checkpoint == PAUSE: Stop and wait
+     ELSE: Continue to next task
 ```
 
 ### During Work
@@ -416,7 +175,7 @@ echo ""
 For each task:
 
 ```markdown
-## Task: [T007] Create grid component
+## Task: [task-id] Create grid component
 
 ### Plan
 - Create responsive grid using CSS Grid
@@ -432,11 +191,10 @@ For each task:
 - [ ] Exported from index
 
 ### Post-Task
-1. Git commit: `[claude] feat(dashboard): add responsive grid component`
-2. Update tasks.db: T007 status → done
-3. **Sync kanban** ← Automatic
-4. Update progress.md
-5. Checkpoint (based on mode)
+1. Git commit: `feat(dashboard): add responsive grid component`
+2. Mark done: `ohno done <task-id> --notes "Created GridLayout component"`
+3. Sync kanban: `ohno sync`
+4. Checkpoint (based on mode)
 ```
 
 ### Ending a Session
@@ -445,39 +203,12 @@ For each task:
 ## Session End Checklist
 
 1. [ ] All changes committed
-2. [ ] tasks.db status current
-3. [ ] **Kanban synced** (final state)
-4. [ ] progress.md updated
+2. [ ] Current task marked done or in-progress
+3. [ ] Kanban synced: `ohno sync`
+4. [ ] Session notes logged via ohno
 5. [ ] No broken code left
-6. [ ] Stop kanban server (optional)
-7. [ ] Clear summary of what was done
-8. [ ] Clear next steps documented
-```
-
-### Session End Script
-
-```bash
-#!/bin/bash
-# .claude/scripts/end-session.sh
-
-echo "🏁 Ending session..."
-
-# Final sync
-echo "🔄 Final kanban sync..."
-python3 .claude/scripts/sync-kanban.py
-
-# Optionally stop server
-read -p "Stop kanban server? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if [ -f .claude/.kanban.pid ]; then
-        kill $(cat .claude/.kanban.pid) 2>/dev/null
-        rm .claude/.kanban.pid
-        echo "📊 Kanban server stopped"
-    fi
-fi
-
-echo "✅ Session ended"
+6. [ ] Clear summary of what was done
+7. [ ] Clear next steps documented
 ```
 
 ---
@@ -489,11 +220,11 @@ echo "✅ Session ended"
 Agent stops completely and waits for human input.
 
 ```markdown
-## 🛑 CHECKPOINT: Task Complete
+## CHECKPOINT: Task Complete
 
-**Completed**: T007 - Create grid component
+**Completed**: task-abc123 - Create grid component
 **Status**: Awaiting your review
-**Kanban**: http://localhost:3333/kanban.html (updated)
+**Kanban**: http://localhost:3456 (run `ohno serve`)
 
 ### What I Did
 - Created `GridLayout.tsx` component
@@ -501,14 +232,13 @@ Agent stops completely and waits for human input.
 - Exported from components/index.ts
 
 ### What I'd Do Next
-- T008: Create dashboard header
-- Estimated: 2 hours
+- task-def456: Create dashboard header
 
 ### Your Options
-1. **Continue** - Proceed to T008
+1. **Continue** - Proceed to next task
 2. **Modify** - Change approach before continuing
 3. **Pause** - Stop session here
-4. **Switch** - Work on different feature
+4. **Switch** - Work on different task
 
 Waiting for your decision...
 ```
@@ -518,13 +248,13 @@ Waiting for your decision...
 Agent continues but flags work for later review.
 
 ```markdown
-## 📋 REVIEW FLAG: Story Complete
+## REVIEW FLAG: Story Complete
 
-**Completed**: S003 - Dashboard Layout (3 tasks)
-**Continuing to**: S004 - Dashboard Widgets
+**Completed**: Dashboard Layout (3 tasks)
+**Continuing to**: Dashboard Widgets
 **Kanban**: Synced ✓
 
-Flagged for review in `.claude/checkpoints/pending-review.md`
+Flagged for review.
 ```
 
 ### NOTIFY Checkpoint
@@ -532,31 +262,15 @@ Flagged for review in `.claude/checkpoints/pending-review.md`
 Agent logs and continues without stopping.
 
 ```markdown
-## ✓ Task Complete: T007 - Create grid component
-Kanban synced → Continuing to T008...
+## ✓ Task Complete: task-abc123 - Create grid component
+Kanban synced → Continuing to next task...
 ```
 
 ---
 
 ## Skill Routing
 
-### Automatic Routing
-
-When `auto_route: true`, use `skill_hint` from features.json:
-
-```json
-{
-  "id": "F003",
-  "title": "API Endpoints",
-  "skill_hint": "api-design, api-testing"
-}
-```
-
-Route to suggested skill(s) in order.
-
-### Manual Routing
-
-When `auto_route: false` or no hint:
+Based on task type, load relevant skill for domain knowledge:
 
 | Task Type | Skill |
 |-----------|-------|
@@ -577,8 +291,8 @@ When routing to a skill:
 ```markdown
 ## Invoking Skill: api-design
 
-**Context**: Feature F003 - API Endpoints
-**Task**: T012 - Design user endpoints
+**Context**: Feature - API Endpoints
+**Task**: task-xyz - Design user endpoints
 
 Reading skill documentation...
 [Skill takes over for this task]
@@ -586,61 +300,43 @@ Reading skill documentation...
 
 ---
 
-## Kanban Sync Integration
+## ohno Integration
 
-### Sync After Database Changes
+### MCP Tools Available
 
-Any operation that modifies tasks.db should trigger sync:
+**Query Tools:**
+- `get_session_context()` - Previous session notes, blockers, in-progress tasks
+- `get_project_status()` - Overall project statistics
+- `get_tasks()` - List all tasks
+- `get_task(id)` - Get specific task details
+- `get_next_task()` - Recommended next task
+- `get_blocked_tasks()` - Tasks with blockers
 
-```python
-# After any DB modification
-def update_task_status(task_id: str, status: str):
-    conn = sqlite3.connect(".claude/tasks.db")
-    conn.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
-    conn.commit()
-    conn.close()
-    
-    # Always sync after DB change
-    sync_kanban()
+**Update Tools:**
+- `start_task(id)` - Mark task in-progress
+- `complete_task(id, notes)` - Mark task done
+- `log_activity(message)` - Log session activity
+- `set_blocker(id, reason)` - Block a task
+- `resolve_blocker(id)` - Unblock a task
 
-def create_task(task_data: dict):
-    conn = sqlite3.connect(".claude/tasks.db")
-    # ... insert task ...
-    conn.commit()
-    conn.close()
-    
-    # Always sync after DB change
-    sync_kanban()
-```
+### CLI Commands
 
-### Integration with product-manager
+```bash
+# Session management
+ohno context              # Get session context
+ohno status               # Project statistics
 
-When product-manager adds remediation tasks:
+# Task management
+ohno tasks                # List all tasks
+ohno next                 # Get recommended next task
+ohno start <id>           # Start working on task
+ohno done <id> --notes    # Complete task with notes
+ohno block <id> <reason>  # Set blocker
+ohno unblock <id>         # Resolve blocker
 
-```markdown
-## product-manager: Remediation Tasks Added
-
-Added 5 new tasks to tasks.db for frontend gaps.
-
-**Syncing kanban...** ✓
-
-View updated board: http://localhost:3333/kanban.html
-```
-
-### Integration with prd-analyzer
-
-When prd-analyzer creates initial structure:
-
-```markdown
-## prd-analyzer: Project Initialized
-
-Created:
-- .claude/tasks.db (47 tasks)
-- .claude/features.json (8 features)
-- .claude/kanban.html (synced)
-
-**Starting kanban server...**
-📊 http://localhost:3333/kanban.html
+# Kanban
+ohno serve                # Start kanban server
+ohno sync                 # Sync kanban HTML
 ```
 
 ---
@@ -660,26 +356,23 @@ Created:
 2. Identify breaking change
 3. Fix type error
 4. Verify build passes
-5. **Sync kanban** (mark task blocked if needed)
-6. Continue with task
+5. Block task if needed: `ohno block <id> "Build failure"`
+6. Continue or escalate
 
 Proceeding with recovery...
 ```
 
-### Kanban Server Issues
+### Blocked Tasks
 
-```markdown
-## ⚠️ Kanban Server Not Running
-
-The kanban server appears to be stopped.
-
-**Restarting...**
 ```bash
-cd .claude && python3 -m http.server 3333 &
-echo $! > .kanban.pid
-```
+# Block a task
+ohno block task-abc123 "Waiting for API spec"
 
-✓ Server restarted: http://localhost:3333/kanban.html
+# View blocked tasks
+ohno tasks --status blocked
+
+# Resolve blocker
+ohno unblock task-abc123
 ```
 
 ---
@@ -690,12 +383,11 @@ echo $! > .kanban.pid
 |--------------|---------|-----|
 | Skipping verification | Start on broken code | Always verify first |
 | No git commits | Can't recover from errors | Commit every task |
-| **No kanban sync** | Stale visual state | Sync after every DB change |
+| No kanban sync | Stale visual state | Run `ohno sync` after changes |
 | Giant tasks | Lose progress on failure | Keep tasks ≤8 hours |
 | Ignoring checkpoints | Lose human control | Respect mode settings |
-| No progress.md update | Next session confused | Update after every task |
+| No session context | Next session confused | Use `ohno context` |
 | Autonomous on new project | Bad patterns amplified | Start supervised |
-| **Manual kanban opens** | Forget to check | Keep browser tab open |
 
 ---
 
@@ -704,7 +396,3 @@ echo $! > .kanban.pid
 - [references/session-protocol.md](references/session-protocol.md) — Detailed session management
 - [references/checkpoint-types.md](references/checkpoint-types.md) — Checkpoint configuration
 - [references/skill-routing.md](references/skill-routing.md) — Skill selection logic
-- [references/kanban-sync.md](references/kanban-sync.md) — Kanban synchronization details
-- [templates/config.yaml](templates/config.yaml) — Default configuration
-- [templates/progress.md](templates/progress.md) — Progress file template
-- [scripts/sync-kanban.py](scripts/sync-kanban.py) — Kanban sync script
