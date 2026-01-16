@@ -9,7 +9,7 @@
     "ai",
     "development"
   ],
-  "author": "",
+  "author": "Steve Stomp <https://github.com/srstomp>",
   "license": "MIT",
   "engines": {
     "node": ">=18"
