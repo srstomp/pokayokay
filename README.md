@@ -14,12 +14,12 @@ Claude Code plugin for PRD analysis, project orchestration, and development work
 ## Installation
 
 ```bash
-claude plugin install github:srstomp/pokayokay
+git clone https://github.com/srstomp/pokayokay.git
+claude plugin install ./pokayokay --scope user
 ```
 
-For development:
+For development (loads plugin without installing):
 ```bash
-git clone https://github.com/srstomp/pokayokay.git
 claude --plugin-dir ./pokayokay
 ```
 
