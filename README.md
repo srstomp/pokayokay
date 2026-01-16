@@ -14,13 +14,14 @@ Claude Code plugin for PRD analysis, project orchestration, and development work
 ## Installation
 
 ```bash
-git clone https://github.com/srstomp/pokayokay.git
-claude plugin install ./pokayokay --scope user
+claude plugin marketplace add https://github.com/srstomp/pokayokay
+claude plugin install pokayokay
 ```
 
-For development (loads plugin without installing):
+For development:
 ```bash
-claude --plugin-dir ./pokayokay
+git clone https://github.com/srstomp/pokayokay.git
+claude --plugin-dir ./pokayokay/plugins/pokayokay
 ```
 
 ### Required: ohno MCP Server
@@ -113,23 +114,14 @@ Checks levels L0-L5:
 ```
 pokayokay/
 ├── .claude-plugin/
-│   └── plugin.json         # Plugin manifest
-├── .mcp.json               # MCP server config (ohno)
-├── commands/               # Slash commands (/pokayokay:*)
-│   ├── plan.md
-│   ├── work.md
-│   ├── audit.md
-│   ├── review.md
-│   ├── api.md
-│   ├── ux.md
-│   ├── ui.md
-│   └── arch.md
-├── skills/                 # Skill definitions
-│   ├── prd-analyzer/
-│   ├── project-harness/
-│   ├── product-manager/
-│   └── ...
-├── package.json
+│   └── marketplace.json    # Marketplace manifest
+├── plugins/
+│   └── pokayokay/          # Plugin content
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       ├── .mcp.json
+│       ├── commands/       # Slash commands (/pokayokay:*)
+│       └── skills/         # Skill definitions
 └── README.md
 ```
 

@@ -1,14 +1,18 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "pokayokay",
+  "version": "0.1.0",
   "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows",
   "owner": {
     "name": "Steve Stomp",
-    "url": "https://github.com/srstomp"
+    "email": "steve@stevestomp.com"
   },
   "plugins": [
     {
       "name": "pokayokay",
-      "source": "../"
+      "description": "PRD analysis, project orchestration, and development workflows with ohno integration",
+      "source": "./plugins/pokayokay",
+      "category": "productivity"
     }
   ]
 }
