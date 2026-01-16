@@ -14,14 +14,13 @@ Claude Code plugin for PRD analysis, project orchestration, and development work
 ## Installation
 
 ```bash
-# Clone the repo
+claude plugin install github:srstomp/pokayokay
+```
+
+For development:
+```bash
 git clone https://github.com/srstomp/pokayokay.git
-
-# Load as plugin (development)
 claude --plugin-dir ./pokayokay
-
-# Or install globally
-claude plugin install ./pokayokay --scope user
 ```
 
 ### Required: ohno MCP Server
@@ -52,6 +51,7 @@ Once installed, these commands are available in Claude Code:
 /pokayokay:ux <task>          # UX design
 /pokayokay:ui <task>          # Visual design
 /pokayokay:arch <task>        # Architecture review
+/pokayokay:handoff            # Session handoff protocol
 ```
 
 ## Workflow
