@@ -1,0 +1,10 @@
+{
+  "name": "pokayokay",
+  "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows",
+  "plugins": [
+    {
+      "name": "pokayokay",
+      "path": "."
+    }
+  ]
+}
