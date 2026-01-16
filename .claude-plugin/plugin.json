@@ -15,8 +15,5 @@
     "orchestration",
     "ohno",
     "task-management"
-  ],
-  "dependencies": {
-    "mcp": ["ohno"]
-  }
+  ]
 }
