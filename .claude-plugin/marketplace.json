@@ -1,10 +1,14 @@
 {
   "name": "pokayokay",
   "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows",
+  "owner": {
+    "name": "Steve Stomp",
+    "url": "https://github.com/srstomp"
+  },
   "plugins": [
     {
       "name": "pokayokay",
-      "path": "."
+      "source": "."
     }
   ]
 }
