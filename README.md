@@ -72,12 +72,24 @@ npx @stevestomp/ohno-cli serve
 | `/yokay:review` | Analyze session patterns and skill effectiveness |
 | `/yokay:handoff` | Prepare session handoff with context preservation |
 
-### Design
+### Ad-Hoc Work
+
+| Command | Description |
+|---------|-------------|
+| `/yokay:quick <task>` | Create task and immediately start working |
+| `/yokay:fix <bug>` | Bug fix with diagnosis workflow |
+| `/yokay:spike <question>` | Time-boxed technical investigation |
+| `/yokay:hotfix <incident>` | Production incident response |
+
+### Design & UX
 
 | Command | Description |
 |---------|-------------|
 | `/yokay:ux <task>` | UX design - user flows, wireframes, interactions |
 | `/yokay:ui <task>` | Visual design - typography, color, motion |
+| `/yokay:persona <task>` | Create user personas and journey maps |
+| `/yokay:a11y <target>` | Accessibility audit (WCAG 2.2 AA) |
+| `/yokay:marketing <page>` | Marketing and landing pages |
 
 ### Development
 
@@ -85,6 +97,25 @@ npx @stevestomp/ohno-cli serve
 |---------|-------------|
 | `/yokay:api <task>` | API design - REST/GraphQL patterns |
 | `/yokay:arch <area>` | Architecture review and refactoring |
+| `/yokay:db <task>` | Database schema and migrations |
+| `/yokay:test <task>` | Testing strategy and implementation |
+| `/yokay:integrate <api>` | Third-party API integration |
+| `/yokay:sdk <task>` | SDK creation and extraction |
+
+### Infrastructure & Quality
+
+| Command | Description |
+|---------|-------------|
+| `/yokay:cicd <task>` | CI/CD pipeline creation and optimization |
+| `/yokay:security <area>` | Security audit and vulnerability scanning |
+| `/yokay:observe <task>` | Logging, metrics, and tracing |
+
+### Research & Documentation
+
+| Command | Description |
+|---------|-------------|
+| `/yokay:research <topic>` | Extended technical research |
+| `/yokay:docs <task>` | Technical documentation |
 
 ## Skills
 
