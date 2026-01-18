@@ -33,11 +33,59 @@ Use ohno MCP tools:
 - `add_dependency` for task relationships
 
 ### 4. Assign Skill Hints
-Tag tasks with recommended skills:
-- API endpoints → api-design
-- User flows → ux-design
-- Visual components → aesthetic-ui-designer
+
+Tag tasks with recommended skills based on their content:
+
+**Design & UX**:
+- User flows, wireframes → ux-design
+- Visual components, styling → aesthetic-ui-designer
+- User research, personas → persona-creation
+- Accessibility requirements → accessibility-auditor
+
+**Backend & API**:
+- API endpoints, REST/GraphQL → api-design
+- Database schema, migrations → database-design
 - Architecture decisions → architecture-review
+- Third-party integrations → api-integration
+
+**DevOps & Infrastructure**:
+- CI/CD pipelines, GitHub Actions → ci-cd-expert
+- Logging, monitoring, alerts → observability
+
+**Quality & Security**:
+- Test architecture, coverage → testing-strategy
+- Security review, authentication → security-audit
+
+**Investigation**:
+- Time-boxed technical questions → spike (task_type: spike)
+- Multi-day technology evaluation → deep-research (task_type: research)
+
+### 4.1 Keyword Detection
+
+When skill not explicitly specified, detect from task title/description:
+
+| Keywords | Skill |
+|----------|-------|
+| database, schema, migration, model, prisma | database-design |
+| test, coverage, e2e, playwright, cypress, jest | testing-strategy |
+| deploy, pipeline, ci/cd, github actions, release | ci-cd-expert |
+| security, auth, encryption, vulnerability, owasp | security-audit |
+| logging, monitoring, alert, metrics, tracing | observability |
+| spike, investigate, feasibility, can we, how hard | spike |
+| research, evaluate, compare, vendor, assessment | deep-research |
+
+### 4.2 Detect Spike Opportunities
+
+For features with high uncertainty, create spike tasks:
+- "Can we...?" or "Is it possible to...?" questions
+- Performance or feasibility unknowns
+- Technology selection decisions
+- Complex integration assessments
+
+Example:
+```bash
+npx @stevestomp/ohno-cli create "Spike: Can D1 handle multi-tenant isolation?" -t spike --estimate 3h
+```
 
 ### 5. Create Project Context
 Create `.claude/PROJECT.md` with:
@@ -64,5 +112,8 @@ After completion:
 - `.claude/PROJECT.md` for session context
 - Kanban at `npx @stevestomp/ohno-cli serve`
 
-## Next Step
-Use `/pokayokay:work` to start implementation.
+## Related Commands
+
+- `/yokay:work` - Start implementation after planning
+- `/yokay:audit` - Check feature completeness after implementation
+- `/yokay:review` - Analyze planning patterns over time

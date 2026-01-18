@@ -49,6 +49,16 @@ npx @stevestomp/ohno-cli create "Implement [flow/component]" -t feature
 - Mobile and responsive design
 - Accessibility (WCAG)
 
-## See Also
-- Load `ux-design` skill for detailed patterns
-- Use `/pokayokay:ui` after this for visual design
+## Related Commands
+
+- `/yokay:ui` - Visual design after UX (recommended next step)
+- `/yokay:api` - API design for backend needs
+- `/yokay:audit` - Feature completeness check
+- `/yokay:work` - Implement designed flows
+
+## Skill Integration
+
+When UX design involves:
+- **Accessibility requirements** → Also load `accessibility-auditor` skill
+- **User research needed** → Also load `persona-creation` skill
+- **Performance concerns** → Create spike task first

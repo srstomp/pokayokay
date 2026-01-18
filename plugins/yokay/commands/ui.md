@@ -55,6 +55,15 @@ npx @stevestomp/ohno-cli create "Style [component]" -t feature
 - Motion and animation
 - Avoiding generic aesthetics
 
-## See Also
-- Load `aesthetic-ui-designer` skill for detailed patterns
-- Run `/pokayokay:ux` first for structure
+## Related Commands
+
+- `/yokay:ux` - UX design (prerequisite)
+- `/yokay:audit --dimension accessibility` - Accessibility audit after implementation
+- `/yokay:work` - Implement visual components
+
+## Skill Integration
+
+When UI design involves:
+- **Accessibility concerns** → Also load `accessibility-auditor` skill
+- **Component testing** → Also load `testing-strategy` skill
+- **Performance concerns** → Consider performance-critical patterns

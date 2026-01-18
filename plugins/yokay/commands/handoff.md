@@ -1,5 +1,6 @@
 ---
 description: Prepare session handoff for next session or agent
+skill: session-review
 ---
 
 # Session Handoff Workflow
@@ -65,6 +66,63 @@ Use ohno MCP to update session notes with:
 - [any context the next session needs]
 ```
 
+### 4.1 Skill Usage Summary
+
+Document which skills were used and their outcomes:
+
+```markdown
+## Skills Used This Session
+
+| Skill | Tasks | Notes |
+|-------|-------|-------|
+| api-design | T001, T003 | Designed user endpoints |
+| testing-strategy | T002 | Set up Playwright E2E |
+| spike | T005 | GO decision on D1 |
+
+### Skills Recommended But Not Used
+- security-audit (auth changes were made)
+- observability (new API endpoints lack logging)
+```
+
+### 4.2 Ad-Hoc Work Tracking
+
+Document work done outside planned tasks:
+
+```markdown
+## Ad-Hoc Work
+
+| Type | Description | Time | Task Created? |
+|------|-------------|------|---------------|
+| Bug fix | Fixed login redirect | 20 min | Yes (T045) |
+| Refactor | Extracted auth util | 15 min | No |
+| Research | Looked up Prisma syntax | 10 min | No |
+```
+
+If significant ad-hoc work (> 30 min total):
+1. Create tasks retroactively for tracking
+2. Note patterns for future planning
+3. Suggest `/yokay:review` for pattern analysis
+
+### 4.3 Incomplete Investigation Status
+
+Track spikes and research that span sessions:
+
+```markdown
+## Ongoing Investigations
+
+### Spikes (must complete within time-box)
+| Spike | Time Used | Time Remaining | Status |
+|-------|-----------|----------------|--------|
+| Redis caching | 1.5h | 1.5h | Resume next session |
+
+### Deep Research (multi-session)
+| Research | Day | Phase | Next Step |
+|----------|-----|-------|-----------|
+| Auth providers | 2 of 3 | Analysis | Create comparison matrix |
+```
+
+**IMPORTANT**: Incomplete spikes should be resumed and completed next session. Do not leave spikes unfinished for > 1 day.
+
 ### 5. Update ohno
 ```bash
 # If task is partially done, add notes
@@ -111,3 +169,10 @@ Next session can restore context with:
 npx @stevestomp/ohno-cli context
 ```
 Or use ohno MCP `get_session_context`.
+
+## Related Commands
+
+- `/yokay:work` - Resume work next session
+- `/yokay:review` - Analyze completed sessions
+- `/yokay:plan` - Adjust plan based on findings
+- `/yokay:audit` - Check feature completeness
