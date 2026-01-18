@@ -9,7 +9,7 @@
 
 # pokayokay
 
-**AI-assisted development with human control.** Transform PRDs into actionable tasks, orchestrate multi-session development, and ensure features are actually user-accessible.
+**AI-assisted development.** Transform PRDs into actionable tasks, orchestrate multi-session development, and ensure features are actually user-accessible.
 
 ## Features
 
