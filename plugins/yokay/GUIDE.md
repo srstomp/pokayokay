@@ -15,6 +15,22 @@ This guide explains how yokay commands work together to orchestrate AI-assisted 
 | `/yokay:ux` | Design user flows | ux-design |
 | `/yokay:ui` | Create visual designs | aesthetic-ui-designer |
 | `/yokay:arch` | Review architecture | architecture-review |
+| `/yokay:quick` | Quick task + immediate work | - |
+| `/yokay:fix` | Bug diagnosis and fix | - |
+| `/yokay:spike` | Time-boxed investigation | spike |
+| `/yokay:hotfix` | Production incident response | - |
+| `/yokay:cicd` | CI/CD pipelines | ci-cd-expert |
+| `/yokay:db` | Database design | database-design |
+| `/yokay:test` | Testing strategy | testing-strategy |
+| `/yokay:research` | Deep research | deep-research |
+| `/yokay:security` | Security audit | security-audit |
+| `/yokay:observe` | Observability | observability |
+| `/yokay:docs` | Documentation | documentation |
+| `/yokay:a11y` | Accessibility audit | accessibility-auditor |
+| `/yokay:sdk` | SDK development | sdk-development |
+| `/yokay:persona` | User personas | persona-creation |
+| `/yokay:marketing` | Marketing pages | marketing-website |
+| `/yokay:integrate` | API integration | api-integration |
 
 ## Command Relationships
 
@@ -57,6 +73,35 @@ This guide explains how yokay commands work together to orchestrate AI-assisted 
              └──────────► Creates remediation tasks ──────► /work
 ```
 
+## Ad-Hoc Commands
+
+For work that doesn't fit the PRD-to-task flow:
+
+### Quick Tasks
+```bash
+/yokay:quick "add logout button to header"
+```
+Creates task, starts work immediately, marks done when complete.
+
+### Bug Fixes
+```bash
+/yokay:fix "login fails with special characters"
+/yokay:fix T045  # Fix existing bug task
+```
+Structured diagnosis → fix → test workflow.
+
+### Production Incidents
+```bash
+/yokay:hotfix "500 errors on /api/users"
+```
+Expedited fix with mitigation-first approach, optional postmortem.
+
+### Technical Spikes
+```bash
+/yokay:spike "Can we use Redis for session storage?"
+```
+Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
+
 ## Typical Workflow
 
 ### 1. Planning Phase
@@ -97,20 +142,26 @@ This guide explains how yokay commands work together to orchestrate AI-assisted 
 
 ## Skill Routing
 
-The `/work` command routes to skills based on task type:
+The `/work` command routes to skills based on task type, or use direct commands:
 
-| Task Type | Skill |
-|-----------|-------|
-| API endpoints | api-design |
-| UI components | aesthetic-ui-designer |
-| User flows | ux-design |
-| Database work | database-design |
-| CI/CD | ci-cd-expert |
-| Testing | testing-strategy |
-| Security | security-audit |
-| Monitoring | observability |
-| Investigation | spike |
-| Research | deep-research |
+| Task Type | Skill | Direct Command |
+|-----------|-------|----------------|
+| API endpoints | api-design | `/yokay:api` |
+| UI components | aesthetic-ui-designer | `/yokay:ui` |
+| User flows | ux-design | `/yokay:ux` |
+| Database work | database-design | `/yokay:db` |
+| CI/CD | ci-cd-expert | `/yokay:cicd` |
+| Testing | testing-strategy | `/yokay:test` |
+| Security | security-audit | `/yokay:security` |
+| Monitoring | observability | `/yokay:observe` |
+| Investigation | spike | `/yokay:spike` |
+| Research | deep-research | `/yokay:research` |
+| Documentation | documentation | `/yokay:docs` |
+| Accessibility | accessibility-auditor | `/yokay:a11y` |
+| SDK/Packages | sdk-development | `/yokay:sdk` |
+| User personas | persona-creation | `/yokay:persona` |
+| Marketing pages | marketing-website | `/yokay:marketing` |
+| API integration | api-integration | `/yokay:integrate` |
 
 ## Keyword Detection
 
