@@ -43,6 +43,17 @@ npx @stevestomp/ohno-cli create "Implement [endpoint]" -t feature
 - OpenAPI documentation
 - Pagination, filtering, versioning
 
-## See Also
-- Load `api-design` skill for detailed patterns
-- Use `/pokayokay:arch` for broader architecture review
+## Related Commands
+
+- `/yokay:arch` - Broader architecture review
+- `/yokay:work` - Implement designed API
+- `/yokay:audit --dimension security` - Security review of API
+
+## Skill Integration
+
+When API design involves:
+- **Database changes** → Also load `database-design` skill
+- **Security concerns** → Also load `security-audit` skill
+- **CI/CD pipeline** → Also load `ci-cd-expert` for deployment
+- **Monitoring needs** → Also load `observability` skill
+- **Third-party APIs** → Consider `/yokay:integrate` instead

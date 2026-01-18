@@ -57,5 +57,25 @@ Architecture audit with:
 - Refactoring planning
 - Migration strategies
 
-## See Also
-- Load `architecture-review` skill for detailed patterns
+## Related Commands
+
+- `/yokay:api` - API-specific architecture
+- `/yokay:audit --dimension security` - Security architecture review
+- `/yokay:plan` - Incorporate architecture into planning
+- `/yokay:work` - Implement refactoring
+
+## Skill Integration
+
+When architecture review involves:
+- **Database structure** → Also load `database-design` skill
+- **CI/CD concerns** → Also load `ci-cd-expert` skill
+- **Observability gaps** → Also load `observability` skill
+- **Security concerns** → Also load `security-audit` skill
+
+## Spike Trigger
+
+If architecture decision has high uncertainty:
+```bash
+npx @stevestomp/ohno-cli create "Spike: [architecture question]" -t spike
+```
+Then use `/yokay:work` to investigate before deciding.
