@@ -9,9 +9,9 @@
   },
   "plugins": [
     {
-      "name": "pokayokay",
+      "name": "yokay",
       "description": "PRD analysis, project orchestration, and development workflows with ohno integration",
-      "source": "./plugins/pokayokay",
+      "source": "./plugins/yokay",
       "category": "productivity"
     }
   ]
