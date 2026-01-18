@@ -58,10 +58,69 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
         return {"action": name, "status": "error", "reason": str(e)}
 
 
-def handle_task_status_update(tool_response: dict) -> dict:
-    """Handle mcp__ohno__update_task_status PostToolUse event."""
+def handle_session_start(input_data: dict) -> dict:
+    """Handle SessionStart event - run pre-session hooks."""
+    results = []
+
+    # Run pre-session verification
+    results.append(run_action("verify-clean"))
+
+    success_count = sum(1 for r in results if r["status"] == "success")
+    warning_count = sum(1 for r in results if r["status"] == "warning")
+
+    return {
+        "hooks_run": ["pre-session"],
+        "results": results,
+        "summary": f"{success_count} passed, {warning_count} warnings"
+    }
+
+
+def handle_session_end(input_data: dict) -> dict:
+    """Handle SessionEnd event - run post-session hooks."""
+    results = []
+
+    # Run post-session hooks
+    results.append(run_action("sync"))
+    results.append(run_action("session-summary"))
+
+    success_count = sum(1 for r in results if r["status"] == "success")
+    warning_count = sum(1 for r in results if r["status"] == "warning")
+
+    return {
+        "hooks_run": ["post-session"],
+        "results": results,
+        "summary": f"{success_count} passed, {warning_count} warnings"
+    }
+
+
+def handle_task_start(tool_input: dict) -> dict:
+    """Handle task status change to in_progress - run pre-task hooks."""
+    task_id = tool_input.get("task_id", "unknown")
+
+    env = {
+        "TASK_ID": task_id,
+    }
+
+    results = []
+    results.append(run_action("check-blockers", env=env))
+
+    success_count = sum(1 for r in results if r["status"] == "success")
+    warning_count = sum(1 for r in results if r["status"] == "warning")
+
+    return {
+        "hooks_run": ["pre-task"],
+        "task_id": task_id,
+        "results": results,
+        "summary": f"{success_count} passed, {warning_count} warnings"
+    }
+
+
+def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
+    """Handle mcp__ohno__update_task_status PostToolUse event for task completion."""
     results = []
     hooks_run = []
+
+    task_id = tool_input.get("task_id", "unknown")
 
     # Extract boundary metadata
     boundaries = tool_response.get("boundaries", {})
@@ -72,6 +131,7 @@ def handle_task_status_update(tool_response: dict) -> dict:
 
     # Build environment for scripts
     env = {
+        "TASK_ID": task_id,
         "STORY_ID": story_id or "",
         "EPIC_ID": epic_id or "",
         "STORY_COMPLETED": str(story_completed).lower(),
@@ -172,14 +232,23 @@ def main():
 
     result = None
 
-    # Route to appropriate handler
-    if tool_name == "mcp__ohno__update_task_status":
-        # Check if status is "done" - only then do we check boundaries
+    # Route to appropriate handler based on event type
+    if hook_event == "SessionStart":
+        result = handle_session_start(input_data)
+
+    elif hook_event == "SessionEnd":
+        result = handle_session_end(input_data)
+
+    elif tool_name == "mcp__ohno__update_task_status":
         status = tool_input.get("status", "")
         if status in ("done", "archived"):
-            result = handle_task_status_update(tool_response)
+            # Task completed - run post-task hooks
+            result = handle_task_complete(tool_input, tool_response)
+        elif status == "in_progress":
+            # Task started - run pre-task hooks
+            result = handle_task_start(tool_input)
         else:
-            result = {"skip": True, "reason": f"status is {status}, not done/archived"}
+            result = {"skip": True, "reason": f"status is {status}, no hooks for this transition"}
 
     elif tool_name == "mcp__ohno__set_blocker":
         result = handle_set_blocker(tool_input, tool_response)
@@ -188,7 +257,7 @@ def main():
         result = handle_pre_commit(tool_input)
 
     else:
-        result = {"skip": True, "reason": f"unhandled tool: {tool_name}"}
+        result = {"skip": True, "reason": f"unhandled event: {hook_event}/{tool_name}"}
 
     # Output result
     if result and not result.get("skip"):

@@ -164,7 +164,10 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 
 | Claude Code Event | Matcher | yokay Hooks Triggered |
 |-------------------|---------|----------------------|
-| PostToolUse | `mcp__ohno__update_task_status` | post-task, post-story (if boundary), post-epic (if boundary) |
+| SessionStart | — | pre-session (verify-clean) |
+| SessionEnd | — | post-session (sync, summary) |
+| PostToolUse | `mcp__ohno__update_task_status` (done) | post-task, post-story (if boundary), post-epic (if boundary) |
+| PostToolUse | `mcp__ohno__update_task_status` (in_progress) | pre-task (check-blockers) |
 | PostToolUse | `mcp__ohno__set_blocker` | on-blocker |
 | PreToolUse | `Bash` (git commit) | pre-commit |
 
@@ -194,10 +197,13 @@ The bridge script uses this to determine which hooks to run:
 | File | Purpose |
 |------|---------|
 | `actions/bridge.py` | Parses Claude Code hook input, routes to yokay hooks |
+| `actions/verify-clean.sh` | Checks for uncommitted changes (pre-session) |
+| `actions/check-blockers.sh` | Checks for blocked tasks (pre-task) |
 | `actions/sync.sh` | Syncs ohno kanban state |
 | `actions/commit.sh` | Smart git commit |
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/lint.sh` | Runs linter |
+| `actions/session-summary.sh` | Prints session summary (post-session) |
 | `actions/recover.sh` | Error recovery |
 
 ### Configuration Location
