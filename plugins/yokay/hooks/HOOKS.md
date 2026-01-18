@@ -1,11 +1,40 @@
 ---
 name: hooks
-description: Automatic action execution at session lifecycle points. Hooks guarantee critical actions (sync, commit, test) run without relying on LLM memory. Integrated with project-harness for session orchestration.
+description: Automatic action execution at session lifecycle points. Hooks guarantee critical actions (sync, commit, test) run without relying on LLM memory. Integrated with Claude Code native hooks for guaranteed execution.
 ---
 
 # Hook System
 
 Guaranteed action execution for reliable autonomous sessions.
+
+## Architecture
+
+Yokay hooks are now **guaranteed** to execute via Claude Code's native hook system:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Claude Code                           │
+│                                                          │
+│  PostToolUse(mcp__ohno__update_task_status)             │
+│         │                                                │
+│         ▼                                                │
+│  ┌─────────────────────────────────────┐                │
+│  │         bridge.py                    │                │
+│  │  - Parses boundary metadata          │                │
+│  │  - Detects story/epic completion     │                │
+│  │  - Triggers appropriate hooks        │                │
+│  └─────────────────────────────────────┘                │
+│         │                                                │
+│         ├── post-task  → sync.sh, commit.sh             │
+│         ├── post-story → test.sh (if story_completed)   │
+│         └── post-epic  → audit (if epic_completed)      │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Why This Matters
+
+Previously, hooks were "soft" - documentation telling the LLM to run them. Now they are "hard" - Claude Code's native hooks guarantee execution regardless of LLM context or memory.
 
 ## Quick Reference
 
@@ -126,3 +155,67 @@ Hooks are **fail-safe**:
 | Call hooks manually | Let them execute automatically |
 | Skip hooks to save time | Trust the system |
 | Ignore hook warnings | Review before continuing |
+
+## Claude Code Integration
+
+The yokay hook system integrates with Claude Code's native hooks via `bridge.py`:
+
+### Configured Hooks
+
+| Claude Code Event | Matcher | yokay Hooks Triggered |
+|-------------------|---------|----------------------|
+| PostToolUse | `mcp__ohno__update_task_status` | post-task, post-story (if boundary), post-epic (if boundary) |
+| PostToolUse | `mcp__ohno__set_blocker` | on-blocker |
+| PreToolUse | `Bash` (git commit) | pre-commit |
+
+### Boundary Metadata
+
+When ohno's `update_task_status` marks a task as `done`, it returns boundary metadata:
+
+```json
+{
+  "success": true,
+  "boundaries": {
+    "story_completed": true,
+    "epic_completed": false,
+    "story_id": "S-45",
+    "epic_id": "E-12"
+  }
+}
+```
+
+The bridge script uses this to determine which hooks to run:
+- **post-task**: Always runs on task completion
+- **post-story**: Runs when `story_completed: true`
+- **post-epic**: Runs when `epic_completed: true`
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `actions/bridge.py` | Parses Claude Code hook input, routes to yokay hooks |
+| `actions/sync.sh` | Syncs ohno kanban state |
+| `actions/commit.sh` | Smart git commit |
+| `actions/test.sh` | Runs tests (safe, non-blocking) |
+| `actions/lint.sh` | Runs linter |
+| `actions/recover.sh` | Error recovery |
+
+### Configuration Location
+
+Claude Code hooks are configured in `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__ohno__update_task_status",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/yokay/hooks/actions/bridge.py\""
+        }]
+      }
+    ]
+  }
+}
+```
