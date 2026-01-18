@@ -1,0 +1,153 @@
+# yokay Hook System - Default Configuration
+# Override per-project in .yokay/hooks.yaml
+
+version: "1.0"
+
+hooks:
+  pre-session:
+    enabled: true
+    actions:
+      - name: verify-clean
+        type: shell
+        command: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "⚠️ Working directory has uncommitted changes"
+            git status --short
+          else
+            echo "✓ Working directory clean"
+          fi
+
+  pre-task:
+    enabled: true
+    actions:
+      - name: check-blockers
+        type: ohno
+        operation: get_blocked_tasks
+        on-result: |
+          if [ -n "$RESULT" ]; then
+            echo "⚠️ Blocked tasks: $RESULT"
+          fi
+
+  post-task:
+    enabled: true
+    actions:
+      - name: sync
+        type: script
+        path: actions/sync.sh
+      - name: commit
+        type: script
+        path: actions/commit.sh
+
+  post-story:
+    enabled: true
+    actions:
+      - name: test
+        type: script
+        path: actions/test.sh
+      - name: mini-audit
+        type: command
+        command: "yokay:audit"
+        args: ["--quick", "--story", "${STORY_ID}"]
+
+  post-epic:
+    enabled: true
+    actions:
+      - name: full-audit
+        type: command
+        command: "yokay:audit"
+        args: ["${EPIC_ID}"]
+
+  on-error:
+    enabled: true
+    actions:
+      - name: log-error
+        type: shell
+        command: |
+          echo "❌ Error in task ${TASK_ID}: ${ERROR_MESSAGE}"
+          echo "Time: $(date -Iseconds)"
+      - name: block-task
+        type: ohno
+        operation: set_blocker
+        args:
+          task_id: "${TASK_ID}"
+          reason: "Error: ${ERROR_MESSAGE}"
+      - name: recover
+        type: script
+        path: actions/recover.sh
+
+  on-blocker:
+    enabled: true
+    actions:
+      - name: notify
+        type: shell
+        command: |
+          echo "🚧 Blocker on ${TASK_ID}: ${BLOCKER_REASON}"
+      - name: suggest-next
+        type: ohno
+        operation: get_next_task
+        args:
+          exclude: "${TASK_ID}"
+
+  pre-commit:
+    enabled: true
+    actions:
+      - name: lint
+        type: script
+        path: actions/lint.sh
+
+  post-session:
+    enabled: true
+    actions:
+      - name: final-sync
+        type: script
+        path: actions/sync.sh
+      - name: summary
+        type: shell
+        command: |
+          echo ""
+          echo "════════════════════════════════════════"
+          echo "SESSION COMPLETE"
+          echo "════════════════════════════════════════"
+          echo "Tasks completed: ${SESSION_TASKS_COMPLETED:-0}"
+          echo "Duration: ${SESSION_DURATION:-unknown}"
+          echo "════════════════════════════════════════"
+
+# Mode-specific overrides
+modes:
+  supervised:
+    post-task:
+      actions:
+        - name: sync
+          type: script
+          path: actions/sync.sh
+        # No auto-commit in supervised - human reviews first
+
+  semi-auto:
+    # Uses defaults
+
+  autonomous:
+    post-task:
+      actions:
+        - name: sync
+          type: script
+          path: actions/sync.sh
+        - name: commit
+          type: script
+          path: actions/commit.sh
+        - name: quick-test
+          type: script
+          path: actions/test.sh
+          args: ["--bail", "--related"]
+
+# Variables available in hooks
+variables:
+  TASK_ID: "Current task ID"
+  TASK_TITLE: "Current task title"
+  TASK_TYPE: "feature|bug|chore|spike|test"
+  STORY_ID: "Current story ID"
+  EPIC_ID: "Current epic ID"
+  SESSION_MODE: "supervised|semi-auto|autonomous"
+  SESSION_TASKS_COMPLETED: "Count of tasks completed this session"
+  SESSION_DURATION: "Session duration"
+  ERROR_MESSAGE: "Error message (for on-error)"
+  BLOCKER_REASON: "Blocker reason (for on-blocker)"
