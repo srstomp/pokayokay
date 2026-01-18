@@ -104,6 +104,36 @@ Get next task and continue until:
 - User requests stop
 - Checkpoint triggers pause
 
+## Hook System
+
+Hooks execute automatically at lifecycle points:
+
+- **pre-session**: Verifies clean git state
+- **pre-task**: Checks for blockers
+- **post-task**: Syncs ohno, commits changes (mode-dependent)
+- **post-story**: Runs tests, mini-audit
+- **post-session**: Final sync, summary
+
+You don't need to remember to sync or commit — hooks handle it.
+
+### Customizing Hooks
+
+Create `.yokay/hooks.yaml` in your project:
+
+```yaml
+hooks:
+  post-task:
+    actions:
+      - sync
+      - commit
+      - my-custom-action
+
+  pre-commit:
+    enabled: false  # Disable linting
+```
+
+See `hooks/HOOKS.md` for full configuration.
+
 ## Session End
 
 ### 1. Update Session Notes

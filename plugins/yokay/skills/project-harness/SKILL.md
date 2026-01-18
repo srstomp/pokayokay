@@ -170,6 +170,66 @@ WHILE tasks remain:
      ELSE: Continue to next task
 ```
 
+---
+
+## Hook Integration
+
+Hooks execute automatically at lifecycle points. Do not call manually.
+
+### Work Loop with Hooks
+
+```
+[pre-session hooks]  <- Verify clean state
+
+WHILE tasks remain:
+  [pre-task hooks]   <- Check blockers
+
+  1. Get next task (ohno next)
+  2. Start task (ohno start <id>)
+  3. Route to appropriate skill
+  4. Complete ONE task
+
+  [post-task hooks]  <- GUARANTEED: sync, commit
+
+  5. CHECKPOINT based on mode
+
+[post-session hooks] <- Final sync, summary
+```
+
+### Hook Execution Output
+
+When hooks run, you'll see:
+
+```markdown
+## Hooks: post-task
+
+| Action | Status | Time |
+|--------|--------|------|
+| sync | ✓ | 0.3s |
+| commit | ✓ | 0.5s |
+
+Continuing...
+```
+
+### Mode-Specific Behavior
+
+| Mode | post-task hooks |
+|------|-----------------|
+| supervised | sync only |
+| semi-auto | sync, commit |
+| autonomous | sync, commit, quick-test |
+
+### Hook Failures
+
+Hooks are fail-safe:
+- Warnings don't stop the session
+- Critical failures pause for human input
+- All results logged for review
+
+See `hooks/HOOKS.md` for configuration.
+
+---
+
 ### During Work
 
 For each task:
