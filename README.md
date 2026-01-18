@@ -23,7 +23,7 @@
 ## Installation
 
 ```bash
-claude mcp add yokay -- npx @anthropic-ai/claude-code-mcp-plugin yokay
+claude plugin add https://github.com/srstomp/pokayokay
 ```
 
 ### Required: ohno MCP Server
