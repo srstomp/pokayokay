@@ -199,3 +199,39 @@ View the kanban:
 ```bash
 npx @stevestomp/ohno-cli serve
 ```
+
+## Hook System
+
+Hooks guarantee critical actions execute at session lifecycle points, eliminating reliance on LLM memory:
+
+| Hook | When | Default Actions |
+|------|------|-----------------|
+| pre-session | Session start | verify-clean |
+| pre-task | Task start | check-blockers |
+| post-task | Task complete | sync, commit |
+| post-story | Story complete | test, audit |
+| post-session | Session end | final sync, summary |
+
+### Mode Behavior
+
+- **supervised**: sync only (no auto-commit)
+- **semi-auto**: sync, commit
+- **autonomous**: sync, commit, quick-test
+
+### Custom Hooks
+
+Create `.yokay/hooks.yaml` in your project to customize:
+
+```yaml
+hooks:
+  post-task:
+    actions:
+      - sync
+      - commit
+      - my-custom-action
+
+  pre-commit:
+    enabled: false
+```
+
+See `hooks/HOOKS.md` for full documentation.
