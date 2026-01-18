@@ -2,7 +2,7 @@
   "mcpServers": {
     "ohno": {
       "command": "npx",
-      "args": ["@stevestomp/ohno-mcp"]
+      "args": ["@stevestomp/ohno-mcp@latest"]
     }
   }
 }
