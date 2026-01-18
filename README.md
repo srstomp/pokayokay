@@ -171,6 +171,25 @@ The `/yokay:audit` command checks 5 dimensions:
 | `semi-auto` | log | PAUSE | PAUSE |
 | `autonomous` | skip | log | PAUSE |
 
+## Hook System
+
+Yokay includes a **guaranteed hook system** that executes actions at key lifecycle points via Claude Code's native hooks:
+
+| Hook | Trigger | Actions |
+|------|---------|---------|
+| pre-session | Session starts | Verify working directory clean |
+| pre-task | Task starts | Check for blockers |
+| post-task | Task completes | Sync kanban, auto-commit |
+| post-story | Story completes | Run tests |
+| post-epic | Epic completes | Full audit |
+| on-blocker | Task blocked | Notification, suggest alternatives |
+| pre-commit | Before git commit | Run linter |
+| post-session | Session ends | Sync, print summary |
+
+Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py`. The ohno MCP server provides **boundary metadata** when tasks complete, enabling automatic detection of story/epic completion.
+
+See [HOOKS.md](plugins/yokay/hooks/HOOKS.md) for configuration and customization.
+
 ## Spike Protocol
 
 For high-uncertainty work:
