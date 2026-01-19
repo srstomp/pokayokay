@@ -112,16 +112,16 @@ For each feature/task, search for implementation evidence:
 Support dimension-specific audits:
 ```bash
 # Quick audit (accessibility only, default)
-/yokay:audit [feature-name]
+/pokayokay:audit [feature-name]
 
 # Specific dimension
-/yokay:audit --dimension testing
-/yokay:audit --dimension security
-/yokay:audit --dimension observability
-/yokay:audit --dimension docs
+/pokayokay:audit --dimension testing
+/pokayokay:audit --dimension security
+/pokayokay:audit --dimension observability
+/pokayokay:audit --dimension docs
 
 # Full audit (all dimensions)
-/yokay:audit --full
+/pokayokay:audit --full
 ```
 
 ### 5. Identify Gaps
@@ -183,6 +183,6 @@ npx @stevestomp/ohno-cli sync
 
 ## Related Commands
 
-- `/yokay:work` - Address remediation tasks
-- `/yokay:plan` - Re-plan features with major gaps
-- `/yokay:review` - Analyze audit patterns over time
+- `/pokayokay:work` - Address remediation tasks
+- `/pokayokay:plan` - Re-plan features with major gaps
+- `/pokayokay:review` - Analyze audit patterns over time

@@ -73,9 +73,9 @@ npx @stevestomp/ohno-cli create "Observability: [specific task]" -t chore
 
 ## Related Commands
 
-- `/yokay:cicd` - Pipeline monitoring
-- `/yokay:work` - Implement observability
-- `/yokay:security` - Security logging
+- `/pokayokay:cicd` - Pipeline monitoring
+- `/pokayokay:work` - Implement observability
+- `/pokayokay:security` - Security logging
 
 ## Skill Integration
 

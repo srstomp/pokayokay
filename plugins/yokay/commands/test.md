@@ -90,9 +90,9 @@ npx @stevestomp/ohno-cli create "Test: [specific tests]" -t chore
 
 ## Related Commands
 
-- `/yokay:work` - Implement tests
-- `/yokay:cicd` - Add tests to pipeline
-- `/yokay:api` - API testing patterns
+- `/pokayokay:work` - Implement tests
+- `/pokayokay:cicd` - Add tests to pipeline
+- `/pokayokay:api` - API testing patterns
 
 ## Skill Integration
 

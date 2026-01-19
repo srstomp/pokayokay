@@ -92,11 +92,11 @@ npx @stevestomp/ohno-cli create "Integration: [service] [endpoint]" -t feature
 
 ## Related Commands
 
-- `/yokay:api` - Design internal API for integration
-- `/yokay:test` - Test integration
-- `/yokay:security` - Review API security
-- `/yokay:observe` - Monitor integration
-- `/yokay:work` - Implement integration
+- `/pokayokay:api` - Design internal API for integration
+- `/pokayokay:test` - Test integration
+- `/pokayokay:security` - Review API security
+- `/pokayokay:observe` - Monitor integration
+- `/pokayokay:work` - Implement integration
 
 ## Skill Integration
 

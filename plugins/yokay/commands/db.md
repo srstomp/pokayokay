@@ -64,9 +64,9 @@ npx @stevestomp/ohno-cli create "DB: [specific change]" -t feature
 
 ## Related Commands
 
-- `/yokay:api` - Design API for database entities
-- `/yokay:work` - Implement schema changes
-- `/yokay:test` - Database testing strategy
+- `/pokayokay:api` - Design API for database entities
+- `/pokayokay:work` - Implement schema changes
+- `/pokayokay:test` - Database testing strategy
 
 ## Skill Integration
 

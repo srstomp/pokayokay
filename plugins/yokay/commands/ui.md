@@ -57,9 +57,9 @@ npx @stevestomp/ohno-cli create "Style [component]" -t feature
 
 ## Related Commands
 
-- `/yokay:ux` - UX design (prerequisite)
-- `/yokay:audit --dimension accessibility` - Accessibility audit after implementation
-- `/yokay:work` - Implement visual components
+- `/pokayokay:ux` - UX design (prerequisite)
+- `/pokayokay:audit --dimension accessibility` - Accessibility audit after implementation
+- `/pokayokay:work` - Implement visual components
 
 ## Skill Integration
 

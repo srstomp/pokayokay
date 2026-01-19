@@ -50,7 +50,7 @@ if [ ${#QUALITY_ISSUES[@]} -gt 0 ]; then
     echo "- $issue"
   done
   echo ""
-  echo "Consider running \`/yokay:audit\` for a full quality assessment."
+  echo "Consider running \`/pokayokay:audit\` for a full quality assessment."
   echo ""
 else
   echo "Quality gates passed"

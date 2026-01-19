@@ -124,7 +124,7 @@ Run periodically (e.g., end of day/week) to maintain quality and improve process
 
 ## Related Commands
 
-- `/yokay:work` - Start new session with learnings applied
-- `/yokay:handoff` - Prepare session handoff
-- `/yokay:audit` - Check feature completeness
-- `/yokay:plan` - Incorporate learnings into planning
+- `/pokayokay:work` - Start new session with learnings applied
+- `/pokayokay:handoff` - Prepare session handoff
+- `/pokayokay:audit` - Check feature completeness
+- `/pokayokay:plan` - Incorporate learnings into planning
