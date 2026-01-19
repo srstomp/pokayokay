@@ -200,6 +200,58 @@ View the kanban:
 npx @stevestomp/ohno-cli serve
 ```
 
+## Sub-Agents
+
+Sub-agents provide **isolated execution** for verbose operations. They run in separate context windows, keeping the main conversation clean while enforcing constraints like read-only access.
+
+### Available Agents
+
+| Agent | Model | Mode | Purpose |
+|-------|-------|------|---------|
+| `yokay-auditor` | Sonnet | Read-only | L0-L5 completeness scanning |
+| `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
+| `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
+| `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
+| `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
+| `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
+
+### Agent vs Skill
+
+| Component | Context | Use Case |
+|-----------|---------|----------|
+| **Skills** | Main conversation | Interactive work, orchestration, needs shared context |
+| **Agents** | Isolated | Verbose output, enforced constraints, parallel execution |
+
+### Automatic Delegation
+
+Commands that benefit from isolated execution include delegation instructions:
+
+| Command | Delegates To | When |
+|---------|--------------|------|
+| `/yokay:audit` | yokay-auditor | Always (verbose scanning) |
+| `/yokay:spike` | yokay-spike-runner | Deep investigations (>1h) |
+| `/yokay:security` | yokay-security-scanner | Always (verbose scanning) |
+| `/yokay:test` | yokay-test-runner | Running tests (not designing) |
+
+### Manual Invocation
+
+You can also invoke agents directly:
+
+```
+Use the yokay-explorer agent to understand how authentication works in this codebase.
+```
+
+```
+Use yokay-auditor to check the completeness of the dashboard feature.
+```
+
+### Benefits
+
+1. **Context isolation** - Verbose scan output stays separate
+2. **Cost optimization** - Haiku agents are 5-10x cheaper
+3. **Enforced constraints** - Read-only agents can't accidentally edit
+4. **Parallel execution** - Run multiple investigations simultaneously
+
 ## Hook System
 
 Hooks guarantee critical actions execute at session lifecycle points, eliminating reliance on LLM memory:

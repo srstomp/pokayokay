@@ -10,6 +10,23 @@ Audit implementation completeness against requirements.
 
 **Feature**: `$ARGUMENTS` (optional - audits all if not specified)
 
+## Agent Delegation
+
+**Delegate the codebase scanning to the `yokay-auditor` agent** for isolated execution. This keeps verbose scan output separate from the main conversation.
+
+```
+Use the yokay-auditor agent to scan the codebase for feature implementation evidence.
+Return only the summary table and critical gaps to this conversation.
+```
+
+The agent will:
+1. Detect project framework
+2. Scan for backend/frontend/route/navigation evidence
+3. Assign L0-L5 completeness levels
+4. Return a structured summary
+
+After receiving the agent's summary, continue with remediation task creation below.
+
 ## Steps
 
 ### 1. Get Task List

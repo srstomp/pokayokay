@@ -172,6 +172,28 @@ The `/yokay:audit` command checks 5 dimensions:
 | `semi-auto` | log | PAUSE | PAUSE |
 | `autonomous` | skip | log | PAUSE |
 
+## Sub-Agents
+
+Yokay includes **6 specialized sub-agents** that run in isolated context windows for verbose operations:
+
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `yokay-auditor` | Sonnet | L0-L5 completeness scanning (read-only) |
+| `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
+| `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
+| `yokay-spike-runner` | Sonnet | Time-boxed investigations |
+| `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
+| `yokay-test-runner` | Haiku | Test execution with concise output |
+
+### Why Sub-Agents?
+
+- **Context isolation** - Verbose scan output stays separate from main conversation
+- **Cost optimization** - Haiku agents are 5-10x cheaper for exploration
+- **Enforced constraints** - Read-only agents can't accidentally modify files
+- **Parallel execution** - Run multiple investigations simultaneously
+
+Commands like `/yokay:audit`, `/yokay:security`, and `/yokay:spike` automatically delegate to the appropriate agent.
+
 ## Hook System
 
 Yokay includes a **guaranteed hook system** that executes actions at key lifecycle points via Claude Code's native hooks:
