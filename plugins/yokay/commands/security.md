@@ -8,6 +8,23 @@ skill: security-audit
 
 Security audit: `$ARGUMENTS`
 
+## Agent Delegation
+
+**Delegate the security scanning to the `yokay-security-scanner` agent** for isolated execution. This keeps verbose scan output separate and enforces read-only constraints.
+
+```
+Use the yokay-security-scanner agent to scan: $ARGUMENTS
+Return the severity summary and critical/high findings to this conversation.
+```
+
+The agent will:
+1. Scan for OWASP Top 10 vulnerabilities
+2. Check for secrets exposure, injection risks, XSS
+3. Review authentication/authorization patterns
+4. Return findings classified by severity (Critical/High/Medium/Low)
+
+After receiving the agent's findings, continue with remediation task creation below.
+
 ## Steps
 
 ### 1. Define Audit Scope
