@@ -8,6 +8,18 @@ skill: spike
 
 Investigate: `$ARGUMENTS`
 
+## Agent Delegation
+
+For deep investigations (>1 hour), **delegate to the `yokay-spike-runner` agent** for isolated execution. This keeps investigation context separate and allows the agent to write spike reports to `.claude/spikes/`.
+
+```
+Use the yokay-spike-runner agent to investigate: $ARGUMENTS
+Time box: [specify hours]
+Return the decision (GO/NO-GO/PIVOT/MORE-INFO) and summary to this conversation.
+```
+
+For quick feasibility checks (<1 hour), run inline without delegation.
+
 ## Spike Discipline
 
 Spikes answer questions, they don't build features.

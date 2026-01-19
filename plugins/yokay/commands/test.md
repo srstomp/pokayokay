@@ -8,6 +8,30 @@ skill: testing-strategy
 
 Design or implement tests for: `$ARGUMENTS`
 
+## Agent Delegation
+
+When running tests (not designing strategy), **delegate test execution to the `yokay-test-runner` agent** for isolated output. This keeps verbose test output separate from the main conversation.
+
+```
+Use the yokay-test-runner agent to run the test suite.
+Return only failures and summary to this conversation.
+```
+
+The agent will:
+1. Detect test framework (Jest, Vitest, pytest, etc.)
+2. Run test suite
+3. Return only failures with context, not all passing tests
+
+Use delegation for:
+- Running full test suites
+- Verifying fixes
+- Pre-commit test runs
+
+Run inline for:
+- Writing new tests
+- Debugging specific test failures
+- Test strategy design
+
 ## Steps
 
 ### 1. Identify Test Context
