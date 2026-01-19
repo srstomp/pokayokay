@@ -71,6 +71,7 @@ npx @stevestomp/ohno-cli serve
 | `/yokay:audit [feature]` | Audit feature completeness across 5 dimensions |
 | `/yokay:review` | Analyze session patterns and skill effectiveness |
 | `/yokay:handoff` | Prepare session handoff with context preservation |
+| `/yokay:hooks` | View and manage hook configuration |
 
 ### Ad-Hoc Work
 
@@ -178,15 +179,28 @@ Yokay includes a **guaranteed hook system** that executes actions at key lifecyc
 | Hook | Trigger | Actions |
 |------|---------|---------|
 | pre-session | Session starts | Verify working directory clean |
-| pre-task | Task starts | Check for blockers |
-| post-task | Task completes | Sync kanban, auto-commit |
-| post-story | Story completes | Run tests |
-| post-epic | Epic completes | Full audit |
+| pre-task | Task starts | Check blockers, suggest skills |
+| post-task | Task completes | Sync, commit, detect spike, capture knowledge |
+| post-story | Story completes | Run tests, audit gate |
+| post-epic | Epic completes | Full audit, audit gate |
 | on-blocker | Task blocked | Notification, suggest alternatives |
 | pre-commit | Before git commit | Run linter |
 | post-session | Session ends | Sync, print summary |
 
+### Intelligent Hooks
+
+Beyond lifecycle automation, hooks provide intelligent guidance:
+
+| Action | Hook | Purpose |
+|--------|------|---------|
+| `suggest-skills` | pre-task | Suggests relevant skills based on task keywords |
+| `detect-spike` | post-task | Detects uncertainty signals, suggests spike conversion |
+| `capture-knowledge` | post-task | Auto-suggests docs for spike/research tasks |
+| `audit-gate` | post-story/epic | Checks quality thresholds at boundaries |
+
 Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py`. The ohno MCP server provides **boundary metadata** when tasks complete, enabling automatic detection of story/epic completion.
+
+Use `/yokay:hooks` to view and manage hook configuration.
 
 See [HOOKS.md](plugins/yokay/hooks/HOOKS.md) for configuration and customization.
 

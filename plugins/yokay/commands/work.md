@@ -71,7 +71,7 @@ Based on task type, load relevant skill for domain knowledge:
 - Research tasks → Load `deep-research` skill
 
 ### 3. Implement
-Do the work. Make incremental git commits.
+Do the work.
 
 ### 4. Complete Task
 ```bash
@@ -93,12 +93,7 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - Log and continue
 - Only PAUSE at epic boundaries
 
-### 6. Sync Kanban
-```bash
-npx @stevestomp/ohno-cli sync
-```
-
-### 7. Repeat
+### 6. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop
@@ -114,7 +109,7 @@ Hooks execute automatically at lifecycle points:
 - **post-story**: Runs tests, mini-audit
 - **post-session**: Final sync, summary
 
-You don't need to remember to sync or commit — hooks handle it.
+Hooks guarantee sync and commit execution (mode-dependent).
 
 ### Customizing Hooks
 
@@ -142,15 +137,12 @@ Use ohno MCP to log:
 - Any blockers encountered
 - Recommended next steps
 
-### 2. Final Sync
-```bash
-npx @stevestomp/ohno-cli sync
-```
-
-### 3. Report to User
+### 2. Report to User
 - Tasks completed this session
 - Current project status
 - Next recommended task
+
+*Post-session hooks handle final sync and summary.*
 
 ## Modes Reference
 
