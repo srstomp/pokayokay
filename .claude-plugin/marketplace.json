@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "pokayokay",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows",
   "owner": {
     "name": "Steve Stomp",

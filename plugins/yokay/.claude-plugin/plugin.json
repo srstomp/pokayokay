@@ -1,6 +1,6 @@
 {
   "name": "pokayokay",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows. Integrates with ohno for task management.",
   "author": {
     "name": "Steve Stomp",
