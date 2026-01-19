@@ -145,5 +145,5 @@ hooks:
 
 ## Related
 
-- `/yokay:work` - Main work loop using hooks
+- `/pokayokay:work` - Main work loop using hooks
 - `hooks/HOOKS.md` - Full hook system documentation

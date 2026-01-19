@@ -196,7 +196,7 @@ If you discover a bug while working on a feature:
 ### Larger Bugs
 1. Log in ohno: `npx @stevestomp/ohno-cli create "Bug: [description]" -t bug -p P1`
 2. Continue with original task
-3. Address bug in future `/yokay:work` session
+3. Address bug in future `/pokayokay:work` session
 
 ### Blocking Bugs
 1. Block current task: `npx @stevestomp/ohno-cli block <task-id> "Blocked by bug"`
@@ -205,7 +205,7 @@ If you discover a bug while working on a feature:
 
 ## Related Commands
 
-- `/yokay:plan` - Create tasks before working
-- `/yokay:handoff` - End session with context preservation
-- `/yokay:audit` - Check feature completeness
-- `/yokay:review` - Analyze session patterns
+- `/pokayokay:plan` - Create tasks before working
+- `/pokayokay:handoff` - End session with context preservation
+- `/pokayokay:audit` - Check feature completeness
+- `/pokayokay:review` - Analyze session patterns

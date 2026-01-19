@@ -99,10 +99,10 @@ npx @stevestomp/ohno-cli create "Marketing: [page section]" -t feature
 
 ## Related Commands
 
-- `/yokay:ux` - User flow design
-- `/yokay:ui` - Visual design
-- `/yokay:a11y` - Accessible marketing
-- `/yokay:work` - Implement page
+- `/pokayokay:ux` - User flow design
+- `/pokayokay:ui` - Visual design
+- `/pokayokay:a11y` - Accessible marketing
+- `/pokayokay:work` - Implement page
 
 ## Skill Integration
 

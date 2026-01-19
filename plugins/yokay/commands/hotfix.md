@@ -130,16 +130,16 @@ Create `.claude/postmortems/[date]-[slug].md`:
 
 ## Related Commands
 
-- `/yokay:fix` - Non-urgent bug fixes
-- `/yokay:work` - Resume normal work
-- `/yokay:review` - Analyze incident patterns
+- `/pokayokay:fix` - Non-urgent bug fixes
+- `/pokayokay:work` - Resume normal work
+- `/pokayokay:review` - Analyze incident patterns
 
 ## Examples
 
 ```
-/yokay:hotfix Users can't login - 500 error on auth endpoint
-/yokay:hotfix Payment processing failing for Stripe webhook
-/yokay:hotfix Database connection pool exhausted
+/pokayokay:hotfix Users can't login - 500 error on auth endpoint
+/pokayokay:hotfix Payment processing failing for Stripe webhook
+/pokayokay:hotfix Database connection pool exhausted
 ```
 
 ## Checklist

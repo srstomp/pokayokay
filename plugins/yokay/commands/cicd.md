@@ -62,9 +62,9 @@ npx @stevestomp/ohno-cli create "CI/CD: [specific improvement]" -t chore
 
 ## Related Commands
 
-- `/yokay:work` - Implement pipeline changes
-- `/yokay:security` - Audit pipeline security
-- `/yokay:observe` - Add pipeline monitoring
+- `/pokayokay:work` - Implement pipeline changes
+- `/pokayokay:security` - Audit pipeline security
+- `/pokayokay:observe` - Add pipeline monitoring
 
 ## Skill Integration
 

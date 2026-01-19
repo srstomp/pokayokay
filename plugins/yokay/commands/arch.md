@@ -59,10 +59,10 @@ Architecture audit with:
 
 ## Related Commands
 
-- `/yokay:api` - API-specific architecture
-- `/yokay:audit --dimension security` - Security architecture review
-- `/yokay:plan` - Incorporate architecture into planning
-- `/yokay:work` - Implement refactoring
+- `/pokayokay:api` - API-specific architecture
+- `/pokayokay:audit --dimension security` - Security architecture review
+- `/pokayokay:plan` - Incorporate architecture into planning
+- `/pokayokay:work` - Implement refactoring
 
 ## Skill Integration
 
@@ -78,4 +78,4 @@ If architecture decision has high uncertainty:
 ```bash
 npx @stevestomp/ohno-cli create "Spike: [architecture question]" -t spike
 ```
-Then use `/yokay:work` to investigate before deciding.
+Then use `/pokayokay:work` to investigate before deciding.
