@@ -110,9 +110,9 @@ npx @stevestomp/ohno-cli create "UX: Design for [persona]" -t feature
 
 ## Related Commands
 
-- `/yokay:ux` - Design for personas
-- `/yokay:research` - Deep user research
-- `/yokay:work` - Implement persona-driven features
+- `/pokayokay:ux` - Design for personas
+- `/pokayokay:research` - Deep user research
+- `/pokayokay:work` - Implement persona-driven features
 
 ## Skill Integration
 

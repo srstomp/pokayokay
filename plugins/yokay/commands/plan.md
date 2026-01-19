@@ -114,6 +114,6 @@ After completion:
 
 ## Related Commands
 
-- `/yokay:work` - Start implementation after planning
-- `/yokay:audit` - Check feature completeness after implementation
-- `/yokay:review` - Analyze planning patterns over time
+- `/pokayokay:work` - Start implementation after planning
+- `/pokayokay:audit` - Check feature completeness after implementation
+- `/pokayokay:review` - Analyze planning patterns over time

@@ -102,14 +102,14 @@ Commit: [hash] fix: [message]
 
 ## Related Commands
 
-- `/yokay:quick` - Simpler ad-hoc work
-- `/yokay:hotfix` - Production emergencies
-- `/yokay:work` - Continue with other tasks
+- `/pokayokay:quick` - Simpler ad-hoc work
+- `/pokayokay:hotfix` - Production emergencies
+- `/pokayokay:work` - Continue with other tasks
 
 ## Examples
 
 ```
-/yokay:fix Login fails when email has plus sign
-/yokay:fix Dashboard crashes on empty data
-/yokay:fix T045
+/pokayokay:fix Login fails when email has plus sign
+/pokayokay:fix Dashboard crashes on empty data
+/pokayokay:fix T045
 ```

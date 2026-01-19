@@ -160,14 +160,14 @@ npx @stevestomp/ohno-cli done <task-id> --notes "Decision: X. See .claude/spikes
 
 ## Related Commands
 
-- `/yokay:research` - Longer multi-day research
-- `/yokay:work` - Implement spike findings
-- `/yokay:quick` - Non-investigative quick work
+- `/pokayokay:research` - Longer multi-day research
+- `/pokayokay:work` - Implement spike findings
+- `/pokayokay:quick` - Non-investigative quick work
 
 ## Examples
 
 ```
-/yokay:spike Can we use Clerk for authentication?
-/yokay:spike What's the best state management for our React app?
-/yokay:spike Is our current architecture suitable for real-time features?
+/pokayokay:spike Can we use Clerk for authentication?
+/pokayokay:spike What's the best state management for our React app?
+/pokayokay:spike Is our current architecture suitable for real-time features?
 ```

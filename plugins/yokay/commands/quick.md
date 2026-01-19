@@ -73,21 +73,21 @@ Starting work now...
 ## Examples
 
 ```
-/yokay:quick Fix the login button alignment
-/yokay:quick Add loading spinner to dashboard
-/yokay:quick Update the README with new setup steps
+/pokayokay:quick Fix the login button alignment
+/pokayokay:quick Add loading spinner to dashboard
+/pokayokay:quick Update the README with new setup steps
 ```
 
 ## Related Commands
 
-- `/yokay:work` - Continue work session after quick task
-- `/yokay:fix` - Bug-specific workflow with diagnosis
-- `/yokay:handoff` - End session with context
+- `/pokayokay:work` - Continue work session after quick task
+- `/pokayokay:fix` - Bug-specific workflow with diagnosis
+- `/pokayokay:handoff` - End session with context
 
 ## Comparison
 
 | Workflow | Use When |
 |----------|----------|
-| `/yokay:quick` | Small ad-hoc work |
-| `/yokay:fix` | Bug with diagnosis needed |
-| `/yokay:plan` + `/yokay:work` | Planned feature work |
+| `/pokayokay:quick` | Small ad-hoc work |
+| `/pokayokay:fix` | Bug with diagnosis needed |
+| `/pokayokay:plan` + `/pokayokay:work` | Planned feature work |

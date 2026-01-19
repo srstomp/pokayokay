@@ -48,16 +48,16 @@ Add to your MCP configuration:
 npx @stevestomp/ohno-cli init
 
 # 2. Plan from a PRD
-/yokay:plan docs/prd.md
+/pokayokay:plan docs/prd.md
 
 # 3. View kanban board
 npx @stevestomp/ohno-cli serve
 
 # 4. Start working
-/yokay:work supervised
+/pokayokay:work supervised
 
 # 5. Audit completeness
-/yokay:audit --full
+/pokayokay:audit --full
 ```
 
 ## Commands
@@ -66,57 +66,57 @@ npx @stevestomp/ohno-cli serve
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:plan <path>` | Analyze PRD and create tasks with skill routing |
-| `/yokay:work [mode]` | Start/continue work session (supervised/semi-auto/autonomous) |
-| `/yokay:audit [feature]` | Audit feature completeness across 5 dimensions |
-| `/yokay:review` | Analyze session patterns and skill effectiveness |
-| `/yokay:handoff` | Prepare session handoff with context preservation |
-| `/yokay:hooks` | View and manage hook configuration |
+| `/pokayokay:plan <path>` | Analyze PRD and create tasks with skill routing |
+| `/pokayokay:work [mode]` | Start/continue work session (supervised/semi-auto/autonomous) |
+| `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
+| `/pokayokay:review` | Analyze session patterns and skill effectiveness |
+| `/pokayokay:handoff` | Prepare session handoff with context preservation |
+| `/pokayokay:hooks` | View and manage hook configuration |
 
 ### Ad-Hoc Work
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:quick <task>` | Create task and immediately start working |
-| `/yokay:fix <bug>` | Bug fix with diagnosis workflow |
-| `/yokay:spike <question>` | Time-boxed technical investigation |
-| `/yokay:hotfix <incident>` | Production incident response |
+| `/pokayokay:quick <task>` | Create task and immediately start working |
+| `/pokayokay:fix <bug>` | Bug fix with diagnosis workflow |
+| `/pokayokay:spike <question>` | Time-boxed technical investigation |
+| `/pokayokay:hotfix <incident>` | Production incident response |
 
 ### Design & UX
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:ux <task>` | UX design - user flows, wireframes, interactions |
-| `/yokay:ui <task>` | Visual design - typography, color, motion |
-| `/yokay:persona <task>` | Create user personas and journey maps |
-| `/yokay:a11y <target>` | Accessibility audit (WCAG 2.2 AA) |
-| `/yokay:marketing <page>` | Marketing and landing pages |
+| `/pokayokay:ux <task>` | UX design - user flows, wireframes, interactions |
+| `/pokayokay:ui <task>` | Visual design - typography, color, motion |
+| `/pokayokay:persona <task>` | Create user personas and journey maps |
+| `/pokayokay:a11y <target>` | Accessibility audit (WCAG 2.2 AA) |
+| `/pokayokay:marketing <page>` | Marketing and landing pages |
 
 ### Development
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:api <task>` | API design - REST/GraphQL patterns |
-| `/yokay:arch <area>` | Architecture review and refactoring |
-| `/yokay:db <task>` | Database schema and migrations |
-| `/yokay:test <task>` | Testing strategy and implementation |
-| `/yokay:integrate <api>` | Third-party API integration |
-| `/yokay:sdk <task>` | SDK creation and extraction |
+| `/pokayokay:api <task>` | API design - REST/GraphQL patterns |
+| `/pokayokay:arch <area>` | Architecture review and refactoring |
+| `/pokayokay:db <task>` | Database schema and migrations |
+| `/pokayokay:test <task>` | Testing strategy and implementation |
+| `/pokayokay:integrate <api>` | Third-party API integration |
+| `/pokayokay:sdk <task>` | SDK creation and extraction |
 
 ### Infrastructure & Quality
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:cicd <task>` | CI/CD pipeline creation and optimization |
-| `/yokay:security <area>` | Security audit and vulnerability scanning |
-| `/yokay:observe <task>` | Logging, metrics, and tracing |
+| `/pokayokay:cicd <task>` | CI/CD pipeline creation and optimization |
+| `/pokayokay:security <area>` | Security audit and vulnerability scanning |
+| `/pokayokay:observe <task>` | Logging, metrics, and tracing |
 
 ### Research & Documentation
 
 | Command | Description |
 |---------|-------------|
-| `/yokay:research <topic>` | Extended technical research |
-| `/yokay:docs <task>` | Technical documentation |
+| `/pokayokay:research <topic>` | Extended technical research |
+| `/pokayokay:docs <task>` | Technical documentation |
 
 ## Skills
 
@@ -148,7 +148,7 @@ The plugin includes 25+ specialized skills that are automatically loaded based o
 
 ## Audit Dimensions
 
-The `/yokay:audit` command checks 5 dimensions:
+The `/pokayokay:audit` command checks 5 dimensions:
 
 | Dimension | Levels | Description |
 |-----------|--------|-------------|
@@ -159,9 +159,9 @@ The `/yokay:audit` command checks 5 dimensions:
 | Observability | O0-O4 | Logging to full telemetry |
 
 ```bash
-/yokay:audit                    # Quick (accessibility only)
-/yokay:audit --dimension testing  # Specific dimension
-/yokay:audit --full              # All dimensions
+/pokayokay:audit                    # Quick (accessibility only)
+/pokayokay:audit --dimension testing  # Specific dimension
+/pokayokay:audit --full              # All dimensions
 ```
 
 ## Work Modes
@@ -192,7 +192,7 @@ Yokay includes **6 specialized sub-agents** that run in isolated context windows
 - **Enforced constraints** - Read-only agents can't accidentally modify files
 - **Parallel execution** - Run multiple investigations simultaneously
 
-Commands like `/yokay:audit`, `/yokay:security`, and `/yokay:spike` automatically delegate to the appropriate agent.
+Commands like `/pokayokay:audit`, `/pokayokay:security`, and `/pokayokay:spike` automatically delegate to the appropriate agent.
 
 ## Hook System
 
@@ -222,7 +222,7 @@ Beyond lifecycle automation, hooks provide intelligent guidance:
 
 Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py`. The ohno MCP server provides **boundary metadata** when tasks complete, enabling automatic detection of story/epic completion.
 
-Use `/yokay:hooks` to view and manage hook configuration.
+Use `/pokayokay:hooks` to view and manage hook configuration.
 
 See [HOOKS.md](plugins/yokay/hooks/HOOKS.md) for configuration and customization.
 

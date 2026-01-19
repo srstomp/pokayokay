@@ -160,7 +160,7 @@ Checks quality thresholds at story/epic boundaries:
 - Counts TODO/FIXME comments
 - Checks for console.log statements (O level)
 
-Outputs warnings when thresholds not met, suggests `/yokay:audit` for full assessment.
+Outputs warnings when thresholds not met, suggests `/pokayokay:audit` for full assessment.
 
 ## Error Handling
 
@@ -253,6 +253,6 @@ Claude Code hooks are configured in `.claude/settings.local.json`:
 
 ## Related Commands
 
-- `/yokay:hooks` - View and manage hook configuration
-- `/yokay:work` - Main work loop using hooks
-- `/yokay:audit` - Full quality assessment (triggered by hooks at boundaries)
+- `/pokayokay:hooks` - View and manage hook configuration
+- `/pokayokay:work` - Main work loop using hooks
+- `/pokayokay:audit` - Full quality assessment (triggered by hooks at boundaries)

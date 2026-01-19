@@ -10,13 +10,13 @@ Research: `$ARGUMENTS`
 
 ## When to Use
 
-Use `/yokay:research` for **multi-day** investigations:
+Use `/pokayokay:research` for **multi-day** investigations:
 - Technology evaluation
 - Competitive analysis
 - Architecture exploration
 - Vendor selection
 
-For quick (2-4 hour) investigations, use `/yokay:spike` instead.
+For quick (2-4 hour) investigations, use `/pokayokay:spike` instead.
 
 ## Steps
 
@@ -90,9 +90,9 @@ npx @stevestomp/ohno-cli create "[implementation task]" -t feature
 
 ## Related Commands
 
-- `/yokay:spike` - Shorter time-boxed investigation
-- `/yokay:arch` - Architecture review
-- `/yokay:work` - Implement chosen approach
+- `/pokayokay:spike` - Shorter time-boxed investigation
+- `/pokayokay:arch` - Architecture review
+- `/pokayokay:work` - Implement chosen approach
 
 ## Skill Integration
 

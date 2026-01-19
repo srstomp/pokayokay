@@ -44,7 +44,7 @@ if [ -n "$FOUND_SIGNAL" ]; then
   echo ""
   echo "Task notes contain uncertainty signals: \"$FOUND_SIGNAL\""
   echo ""
-  echo "**Consider**: Convert to spike with \`/yokay:spike <question>\`"
+  echo "**Consider**: Convert to spike with \`/pokayokay:spike <question>\`"
   echo "Spikes provide structured time-boxed investigation with mandatory conclusions."
   echo ""
 fi

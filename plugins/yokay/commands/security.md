@@ -93,9 +93,9 @@ npx @stevestomp/ohno-cli create "Security: Fix [vulnerability]" -t bug -p P0
 
 ## Related Commands
 
-- `/yokay:api` - Secure API design
-- `/yokay:cicd` - Security in pipelines
-- `/yokay:work` - Implement fixes
+- `/pokayokay:api` - Secure API design
+- `/pokayokay:cicd` - Security in pipelines
+- `/pokayokay:work` - Implement fixes
 
 ## Skill Integration
 

@@ -101,7 +101,7 @@ Document work done outside planned tasks:
 If significant ad-hoc work (> 30 min total):
 1. Create tasks retroactively for tracking
 2. Note patterns for future planning
-3. Suggest `/yokay:review` for pattern analysis
+3. Suggest `/pokayokay:review` for pattern analysis
 
 ### 4.3 Incomplete Investigation Status
 
@@ -172,7 +172,7 @@ Or use ohno MCP `get_session_context`.
 
 ## Related Commands
 
-- `/yokay:work` - Resume work next session
-- `/yokay:review` - Analyze completed sessions
-- `/yokay:plan` - Adjust plan based on findings
-- `/yokay:audit` - Check feature completeness
+- `/pokayokay:work` - Resume work next session
+- `/pokayokay:review` - Analyze completed sessions
+- `/pokayokay:plan` - Adjust plan based on findings
+- `/pokayokay:audit` - Check feature completeness

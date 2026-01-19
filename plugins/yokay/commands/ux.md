@@ -51,10 +51,10 @@ npx @stevestomp/ohno-cli create "Implement [flow/component]" -t feature
 
 ## Related Commands
 
-- `/yokay:ui` - Visual design after UX (recommended next step)
-- `/yokay:api` - API design for backend needs
-- `/yokay:audit` - Feature completeness check
-- `/yokay:work` - Implement designed flows
+- `/pokayokay:ui` - Visual design after UX (recommended next step)
+- `/pokayokay:api` - API design for backend needs
+- `/pokayokay:audit` - Feature completeness check
+- `/pokayokay:work` - Implement designed flows
 
 ## Skill Integration
 

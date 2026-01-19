@@ -6,31 +6,31 @@ This guide explains how yokay commands work together to orchestrate AI-assisted 
 
 | Command | Purpose | Primary Skill |
 |---------|---------|---------------|
-| `/yokay:plan` | Analyze PRD, create tasks | prd-analyzer |
-| `/yokay:work` | Execute work sessions | project-harness |
-| `/yokay:audit` | Check feature completeness | product-manager |
-| `/yokay:review` | Analyze session patterns | session-review |
-| `/yokay:handoff` | Prepare session handoff | session-review |
-| `/yokay:api` | Design REST/GraphQL APIs | api-design |
-| `/yokay:ux` | Design user flows | ux-design |
-| `/yokay:ui` | Create visual designs | aesthetic-ui-designer |
-| `/yokay:arch` | Review architecture | architecture-review |
-| `/yokay:quick` | Quick task + immediate work | - |
-| `/yokay:fix` | Bug diagnosis and fix | - |
-| `/yokay:spike` | Time-boxed investigation | spike |
-| `/yokay:hotfix` | Production incident response | - |
-| `/yokay:cicd` | CI/CD pipelines | ci-cd-expert |
-| `/yokay:db` | Database design | database-design |
-| `/yokay:test` | Testing strategy | testing-strategy |
-| `/yokay:research` | Deep research | deep-research |
-| `/yokay:security` | Security audit | security-audit |
-| `/yokay:observe` | Observability | observability |
-| `/yokay:docs` | Documentation | documentation |
-| `/yokay:a11y` | Accessibility audit | accessibility-auditor |
-| `/yokay:sdk` | SDK development | sdk-development |
-| `/yokay:persona` | User personas | persona-creation |
-| `/yokay:marketing` | Marketing pages | marketing-website |
-| `/yokay:integrate` | API integration | api-integration |
+| `/pokayokay:plan` | Analyze PRD, create tasks | prd-analyzer |
+| `/pokayokay:work` | Execute work sessions | project-harness |
+| `/pokayokay:audit` | Check feature completeness | product-manager |
+| `/pokayokay:review` | Analyze session patterns | session-review |
+| `/pokayokay:handoff` | Prepare session handoff | session-review |
+| `/pokayokay:api` | Design REST/GraphQL APIs | api-design |
+| `/pokayokay:ux` | Design user flows | ux-design |
+| `/pokayokay:ui` | Create visual designs | aesthetic-ui-designer |
+| `/pokayokay:arch` | Review architecture | architecture-review |
+| `/pokayokay:quick` | Quick task + immediate work | - |
+| `/pokayokay:fix` | Bug diagnosis and fix | - |
+| `/pokayokay:spike` | Time-boxed investigation | spike |
+| `/pokayokay:hotfix` | Production incident response | - |
+| `/pokayokay:cicd` | CI/CD pipelines | ci-cd-expert |
+| `/pokayokay:db` | Database design | database-design |
+| `/pokayokay:test` | Testing strategy | testing-strategy |
+| `/pokayokay:research` | Deep research | deep-research |
+| `/pokayokay:security` | Security audit | security-audit |
+| `/pokayokay:observe` | Observability | observability |
+| `/pokayokay:docs` | Documentation | documentation |
+| `/pokayokay:a11y` | Accessibility audit | accessibility-auditor |
+| `/pokayokay:sdk` | SDK development | sdk-development |
+| `/pokayokay:persona` | User personas | persona-creation |
+| `/pokayokay:marketing` | Marketing pages | marketing-website |
+| `/pokayokay:integrate` | API integration | api-integration |
 
 ## Command Relationships
 
@@ -79,26 +79,26 @@ For work that doesn't fit the PRD-to-task flow:
 
 ### Quick Tasks
 ```bash
-/yokay:quick "add logout button to header"
+/pokayokay:quick "add logout button to header"
 ```
 Creates task, starts work immediately, marks done when complete.
 
 ### Bug Fixes
 ```bash
-/yokay:fix "login fails with special characters"
-/yokay:fix T045  # Fix existing bug task
+/pokayokay:fix "login fails with special characters"
+/pokayokay:fix T045  # Fix existing bug task
 ```
 Structured diagnosis → fix → test workflow.
 
 ### Production Incidents
 ```bash
-/yokay:hotfix "500 errors on /api/users"
+/pokayokay:hotfix "500 errors on /api/users"
 ```
 Expedited fix with mitigation-first approach, optional postmortem.
 
 ### Technical Spikes
 ```bash
-/yokay:spike "Can we use Redis for session storage?"
+/pokayokay:spike "Can we use Redis for session storage?"
 ```
 Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 
@@ -106,7 +106,7 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 
 ### 1. Planning Phase
 ```bash
-/yokay:plan path/to/prd.md
+/pokayokay:plan path/to/prd.md
 ```
 - Analyzes PRD and creates tasks in ohno
 - Tags tasks with recommended skills
@@ -114,9 +114,9 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 
 ### 2. Work Phase
 ```bash
-/yokay:work supervised   # Pause after every task
-/yokay:work semi-auto    # Pause at story boundaries
-/yokay:work autonomous   # Pause at epic boundaries
+/pokayokay:work supervised   # Pause after every task
+/pokayokay:work semi-auto    # Pause at story boundaries
+/pokayokay:work autonomous   # Pause at epic boundaries
 ```
 - Routes to appropriate skills based on task type
 - Handles spike tasks with time-boxing
@@ -124,8 +124,8 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 
 ### 3. Quality Phase
 ```bash
-/yokay:audit            # Check accessibility (L0-L5)
-/yokay:audit --full     # Check all dimensions
+/pokayokay:audit            # Check accessibility (L0-L5)
+/pokayokay:audit --full     # Check all dimensions
 ```
 - Multi-dimensional auditing:
   - Accessibility (L0-L5)
@@ -136,8 +136,8 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 
 ### 4. Session Management
 ```bash
-/yokay:handoff          # End session, save context
-/yokay:review           # Analyze patterns and improvements
+/pokayokay:handoff          # End session, save context
+/pokayokay:review           # Analyze patterns and improvements
 ```
 
 ## Skill Routing
@@ -146,22 +146,22 @@ The `/work` command routes to skills based on task type, or use direct commands:
 
 | Task Type | Skill | Direct Command |
 |-----------|-------|----------------|
-| API endpoints | api-design | `/yokay:api` |
-| UI components | aesthetic-ui-designer | `/yokay:ui` |
-| User flows | ux-design | `/yokay:ux` |
-| Database work | database-design | `/yokay:db` |
-| CI/CD | ci-cd-expert | `/yokay:cicd` |
-| Testing | testing-strategy | `/yokay:test` |
-| Security | security-audit | `/yokay:security` |
-| Monitoring | observability | `/yokay:observe` |
-| Investigation | spike | `/yokay:spike` |
-| Research | deep-research | `/yokay:research` |
-| Documentation | documentation | `/yokay:docs` |
-| Accessibility | accessibility-auditor | `/yokay:a11y` |
-| SDK/Packages | sdk-development | `/yokay:sdk` |
-| User personas | persona-creation | `/yokay:persona` |
-| Marketing pages | marketing-website | `/yokay:marketing` |
-| API integration | api-integration | `/yokay:integrate` |
+| API endpoints | api-design | `/pokayokay:api` |
+| UI components | aesthetic-ui-designer | `/pokayokay:ui` |
+| User flows | ux-design | `/pokayokay:ux` |
+| Database work | database-design | `/pokayokay:db` |
+| CI/CD | ci-cd-expert | `/pokayokay:cicd` |
+| Testing | testing-strategy | `/pokayokay:test` |
+| Security | security-audit | `/pokayokay:security` |
+| Monitoring | observability | `/pokayokay:observe` |
+| Investigation | spike | `/pokayokay:spike` |
+| Research | deep-research | `/pokayokay:research` |
+| Documentation | documentation | `/pokayokay:docs` |
+| Accessibility | accessibility-auditor | `/pokayokay:a11y` |
+| SDK/Packages | sdk-development | `/pokayokay:sdk` |
+| User personas | persona-creation | `/pokayokay:persona` |
+| Marketing pages | marketing-website | `/pokayokay:marketing` |
+| API integration | api-integration | `/pokayokay:integrate` |
 
 ## Keyword Detection
 
@@ -228,10 +228,10 @@ Commands that benefit from isolated execution include delegation instructions:
 
 | Command | Delegates To | When |
 |---------|--------------|------|
-| `/yokay:audit` | yokay-auditor | Always (verbose scanning) |
-| `/yokay:spike` | yokay-spike-runner | Deep investigations (>1h) |
-| `/yokay:security` | yokay-security-scanner | Always (verbose scanning) |
-| `/yokay:test` | yokay-test-runner | Running tests (not designing) |
+| `/pokayokay:audit` | yokay-auditor | Always (verbose scanning) |
+| `/pokayokay:spike` | yokay-spike-runner | Deep investigations (>1h) |
+| `/pokayokay:security` | yokay-security-scanner | Always (verbose scanning) |
+| `/pokayokay:test` | yokay-test-runner | Running tests (not designing) |
 
 ### Manual Invocation
 
@@ -318,7 +318,7 @@ Users need a dashboard to view their activity and stats.
 ### Step 2: Plan the work
 
 ```bash
-/yokay:plan docs/prd.md
+/pokayokay:plan docs/prd.md
 ```
 
 Output:
@@ -336,7 +336,7 @@ View kanban: npx @stevestomp/ohno-cli serve
 ### Step 3: Work on tasks
 
 ```bash
-/yokay:work supervised
+/pokayokay:work supervised
 ```
 
 Claude picks up the first task:
@@ -364,7 +364,7 @@ Type `1` to continue, or `2` to review. In supervised mode, you approve each tas
 After implementing, verify everything is accessible:
 
 ```bash
-/yokay:audit
+/pokayokay:audit
 ```
 
 Output:
@@ -386,7 +386,7 @@ Remediation tasks created:
 ### Step 6: Fix gaps and re-audit
 
 ```bash
-/yokay:work semi-auto
+/pokayokay:work semi-auto
 ```
 
 Work through remediation tasks, then audit again until all features reach L5.
@@ -395,7 +395,7 @@ Work through remediation tasks, then audit again until all features reach L5.
 
 ## Detailed Command Reference
 
-### /yokay:plan
+### /pokayokay:plan
 
 Analyzes a PRD, concept brief, or feature spec and creates a structured implementation plan.
 
@@ -408,10 +408,10 @@ Analyzes a PRD, concept brief, or feature spec and creates a structured implemen
 
 **Example:**
 ```bash
-/yokay:plan docs/feature-spec.md
+/pokayokay:plan docs/feature-spec.md
 ```
 
-### /yokay:work
+### /pokayokay:work
 
 Starts or continues an orchestrated work session with configurable human control.
 
@@ -422,10 +422,10 @@ Starts or continues an orchestrated work session with configurable human control
 
 **Example:**
 ```bash
-/yokay:work semi-auto
+/pokayokay:work semi-auto
 ```
 
-### /yokay:audit
+### /pokayokay:audit
 
 Audits feature completeness by scanning the codebase and comparing against requirements.
 
@@ -437,19 +437,19 @@ Audits feature completeness by scanning the codebase and comparing against requi
 
 **Example:**
 ```bash
-/yokay:audit                    # Audit all features
-/yokay:audit UserDashboard      # Audit specific feature
-/yokay:audit --dimension testing # Check testing coverage
-/yokay:audit --full             # All 5 dimensions
+/pokayokay:audit                    # Audit all features
+/pokayokay:audit UserDashboard      # Audit specific feature
+/pokayokay:audit --dimension testing # Check testing coverage
+/pokayokay:audit --full             # All 5 dimensions
 ```
 
-### /yokay:spike
+### /pokayokay:spike
 
 Time-boxed technical investigation with mandatory decision output.
 
 **Example:**
 ```bash
-/yokay:spike "Can we use Redis for session storage?"
+/pokayokay:spike "Can we use Redis for session storage?"
 ```
 
 **Outputs:** GO / NO-GO / PIVOT / MORE-INFO decision with evidence.
@@ -491,7 +491,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 ### Supervised (Default)
 
 ```bash
-/yokay:work supervised
+/pokayokay:work supervised
 ```
 
 - **Pauses after every task** for your approval
@@ -501,7 +501,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 ### Semi-Auto
 
 ```bash
-/yokay:work semi-auto
+/pokayokay:work semi-auto
 ```
 
 - **Logs task completion, pauses at story boundaries**
@@ -511,7 +511,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 ### Autonomous
 
 ```bash
-/yokay:work autonomous
+/pokayokay:work autonomous
 ```
 
 - **Only pauses at epic boundaries**
@@ -532,26 +532,26 @@ The audit catches these gaps and creates remediation tasks automatically.
 
 ### Starting a new project
 1. Write a PRD or feature spec
-2. `/yokay:plan docs/prd.md` to create tasks
-3. `/yokay:work supervised` to implement with oversight
-4. `/yokay:audit` to verify completeness
+2. `/pokayokay:plan docs/prd.md` to create tasks
+3. `/pokayokay:work supervised` to implement with oversight
+4. `/pokayokay:audit` to verify completeness
 
 ### Resuming interrupted work
 1. Claude automatically reads session context from ohno
-2. `/yokay:work` continues where you left off
+2. `/pokayokay:work` continues where you left off
 3. All previous decisions and progress are preserved
 
 ### Verifying a feature is complete
-1. `/yokay:audit FeatureName` checks implementation
+1. `/pokayokay:audit FeatureName` checks implementation
 2. Identifies gaps (L0-L4 features)
 3. Creates remediation tasks automatically
 4. Re-audit after fixes to confirm L5
 
 ### Design-first workflow
-1. `/yokay:ux` to design user flows first
-2. `/yokay:ui` to create visual designs
-3. `/yokay:api` to design backend APIs
-4. `/yokay:work` to implement the designs
+1. `/pokayokay:ux` to design user flows first
+2. `/pokayokay:ui` to create visual designs
+3. `/pokayokay:api` to design backend APIs
+4. `/pokayokay:work` to implement the designs
 
 ---
 
@@ -602,7 +602,7 @@ Initialize ohno in your project:
 npx @stevestomp/ohno-cli init
 ```
 
-Then create tasks with `/yokay:plan` or manually.
+Then create tasks with `/pokayokay:plan` or manually.
 
 ### "Skill not found"
 
@@ -623,7 +623,7 @@ Check ohno context:
 npx @stevestomp/ohno-cli context
 ```
 
-If empty, previous session may not have synced. Start fresh with `/yokay:plan`.
+If empty, previous session may not have synced. Start fresh with `/pokayokay:plan`.
 
 ### Agent not delegating
 

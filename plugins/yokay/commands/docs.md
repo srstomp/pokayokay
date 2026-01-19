@@ -77,9 +77,9 @@ npx @stevestomp/ohno-cli create "Docs: [specific doc]" -t docs
 
 ## Related Commands
 
-- `/yokay:api` - Document API design
-- `/yokay:arch` - Document architecture
-- `/yokay:work` - Implement documentation
+- `/pokayokay:api` - Document API design
+- `/pokayokay:arch` - Document architecture
+- `/pokayokay:work` - Implement documentation
 
 ## Skill Integration
 

@@ -45,9 +45,9 @@ npx @stevestomp/ohno-cli create "Implement [endpoint]" -t feature
 
 ## Related Commands
 
-- `/yokay:arch` - Broader architecture review
-- `/yokay:work` - Implement designed API
-- `/yokay:audit --dimension security` - Security review of API
+- `/pokayokay:arch` - Broader architecture review
+- `/pokayokay:work` - Implement designed API
+- `/pokayokay:audit --dimension security` - Security review of API
 
 ## Skill Integration
 
@@ -56,4 +56,4 @@ When API design involves:
 - **Security concerns** → Also load `security-audit` skill
 - **CI/CD pipeline** → Also load `ci-cd-expert` for deployment
 - **Monitoring needs** → Also load `observability` skill
-- **Third-party APIs** → Consider `/yokay:integrate` instead
+- **Third-party APIs** → Consider `/pokayokay:integrate` instead

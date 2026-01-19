@@ -91,10 +91,10 @@ npx @stevestomp/ohno-cli create "SDK: [specific task]" -t feature
 
 ## Related Commands
 
-- `/yokay:api` - Design underlying API
-- `/yokay:docs` - SDK documentation
-- `/yokay:test` - SDK testing strategy
-- `/yokay:work` - Implement SDK
+- `/pokayokay:api` - Design underlying API
+- `/pokayokay:docs` - SDK documentation
+- `/pokayokay:test` - SDK testing strategy
+- `/pokayokay:work` - Implement SDK
 
 ## Skill Integration
 
