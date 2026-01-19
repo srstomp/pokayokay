@@ -9,7 +9,7 @@
 
 # yokay
 
-**AI-assisted development orchestration** - Transform PRDs into actionable tasks, orchestrate multi-session development, and ensure features are actually user-accessible.
+**AI-assisted development orchestration** - A Claude Code plugin that orchestrates AI-assisted development sessions with configurable human oversight, bridging the gap between hands-on control and full automation through skills, hooks, agents, and integration with ohno for task management.
 
 ## Features
 
