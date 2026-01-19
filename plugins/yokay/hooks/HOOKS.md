@@ -41,13 +41,13 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | Hook | Trigger | Default Actions |
 |------|---------|-----------------|
 | pre-session | Session start | verify-clean |
-| pre-task | Task start | check-blockers |
-| post-task | Task complete | sync, commit |
-| post-story | Story complete | test, audit |
-| post-epic | Epic complete | full-audit |
+| pre-task | Task start | check-blockers, suggest-skills |
+| post-task | Task complete | sync, commit, detect-spike, capture-knowledge |
+| post-story | Story complete | test, mini-audit, audit-gate |
+| post-epic | Epic complete | full-audit, audit-gate |
 | on-error | Error occurs | log, block, recover |
-| pre-commit | Before commit | lint, typecheck |
-| post-session | Session end | handoff, sync |
+| pre-commit | Before commit | lint |
+| post-session | Session end | final-sync, summary |
 
 ## Execution
 
@@ -141,6 +141,27 @@ fi
 | post-story | — | test, audit | test, audit |
 | post-epic | audit | audit | audit, docs |
 
+## Intelligent Hooks
+
+Beyond lifecycle automation, hooks now provide intelligent guidance:
+
+### Skill Suggestions (pre-task)
+Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to performance, security, accessibility, observability, and testing.
+
+### Spike Detection (post-task)
+Monitors task completion notes for uncertainty signals ("not sure", "need to investigate", etc.). When detected, suggests converting to a spike for structured investigation.
+
+### Knowledge Capture (post-task)
+For spike and research task types, reminds about expected output files and suggests documentation when GO decisions are made.
+
+### Quality Gates (post-story, post-epic)
+Checks quality thresholds at story/epic boundaries:
+- Looks for test files (T level)
+- Counts TODO/FIXME comments
+- Checks for console.log statements (O level)
+
+Outputs warnings when thresholds not met, suggests `/yokay:audit` for full assessment.
+
 ## Error Handling
 
 Hooks are **fail-safe**:
@@ -199,8 +220,12 @@ The bridge script uses this to determine which hooks to run:
 | `actions/bridge.py` | Parses Claude Code hook input, routes to yokay hooks |
 | `actions/verify-clean.sh` | Checks for uncommitted changes (pre-session) |
 | `actions/check-blockers.sh` | Checks for blocked tasks (pre-task) |
+| `actions/suggest-skills.sh` | Suggests relevant skills based on task content (pre-task) |
 | `actions/sync.sh` | Syncs ohno kanban state |
 | `actions/commit.sh` | Smart git commit |
+| `actions/detect-spike.sh` | Detects uncertainty signals, suggests spike conversion (post-task) |
+| `actions/capture-knowledge.sh` | Auto-suggests docs for spike/research tasks (post-task) |
+| `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/lint.sh` | Runs linter |
 | `actions/session-summary.sh` | Prints session summary (post-session) |
@@ -225,3 +250,9 @@ Claude Code hooks are configured in `.claude/settings.local.json`:
   }
 }
 ```
+
+## Related Commands
+
+- `/yokay:hooks` - View and manage hook configuration
+- `/yokay:work` - Main work loop using hooks
+- `/yokay:audit` - Full quality assessment (triggered by hooks at boundaries)

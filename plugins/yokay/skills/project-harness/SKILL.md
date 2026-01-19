@@ -154,24 +154,6 @@ Human reviews at epic boundaries only. Maximum speed.
 3. get_next_task() → Pick what to do
 ```
 
-### Work Loop
-
-```
-WHILE tasks remain:
-  1. Get next task (ohno next)
-  2. Start task (ohno start <id>)
-  3. Route to appropriate skill if needed
-  4. Complete ONE task
-  5. Git commit with descriptive message
-  6. Mark done (ohno done <id> --notes "...")
-  7. Sync kanban (ohno sync)
-  8. CHECKPOINT based on mode
-  9. IF checkpoint == PAUSE: Stop and wait
-     ELSE: Continue to next task
-```
-
----
-
 ## Hook Integration
 
 Hooks execute automatically at lifecycle points. Do not call manually.
@@ -251,10 +233,8 @@ For each task:
 - [ ] Exported from index
 
 ### Post-Task
-1. Git commit: `feat(dashboard): add responsive grid component`
-2. Mark done: `ohno done <task-id> --notes "Created GridLayout component"`
-3. Sync kanban: `ohno sync`
-4. Checkpoint (based on mode)
+Hooks handle: sync, commit (mode-dependent)
+Checkpoint triggers based on mode
 ```
 
 ### Ending a Session
@@ -262,13 +242,12 @@ For each task:
 ```markdown
 ## Session End Checklist
 
-1. [ ] All changes committed
-2. [ ] Current task marked done or in-progress
-3. [ ] Kanban synced: `ohno sync`
-4. [ ] Session notes logged via ohno
-5. [ ] No broken code left
-6. [ ] Clear summary of what was done
-7. [ ] Clear next steps documented
+1. [ ] Session notes logged via ohno
+2. [ ] No broken code left
+3. [ ] Clear summary of what was done
+4. [ ] Clear next steps documented
+
+*Note: post-session hooks handle final sync and summary automatically.*
 ```
 
 ---

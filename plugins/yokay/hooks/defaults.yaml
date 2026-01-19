@@ -27,6 +27,9 @@ hooks:
           if [ -n "$RESULT" ]; then
             echo "⚠️ Blocked tasks: $RESULT"
           fi
+      - name: suggest-skills
+        type: script
+        path: actions/suggest-skills.sh
 
   post-task:
     enabled: true
@@ -37,6 +40,12 @@ hooks:
       - name: commit
         type: script
         path: actions/commit.sh
+      - name: detect-spike
+        type: script
+        path: actions/detect-spike.sh
+      - name: capture-knowledge
+        type: script
+        path: actions/capture-knowledge.sh
 
   post-story:
     enabled: true
@@ -48,6 +57,11 @@ hooks:
         type: command
         command: "yokay:audit"
         args: ["--quick", "--story", "${STORY_ID}"]
+      - name: audit-gate
+        type: script
+        path: actions/audit-gate.sh
+        env:
+          BOUNDARY_TYPE: story
 
   post-epic:
     enabled: true
@@ -56,6 +70,11 @@ hooks:
         type: command
         command: "yokay:audit"
         args: ["${EPIC_ID}"]
+      - name: audit-gate
+        type: script
+        path: actions/audit-gate.sh
+        env:
+          BOUNDARY_TYPE: epic
 
   on-error:
     enabled: true
@@ -143,9 +162,11 @@ modes:
 variables:
   TASK_ID: "Current task ID"
   TASK_TITLE: "Current task title"
-  TASK_TYPE: "feature|bug|chore|spike|test"
+  TASK_TYPE: "feature|bug|chore|spike|test|research"
+  TASK_NOTES: "Notes from task completion"
   STORY_ID: "Current story ID"
   EPIC_ID: "Current epic ID"
+  BOUNDARY_TYPE: "story|epic (set by audit-gate)"
   SESSION_MODE: "supervised|semi-auto|autonomous"
   SESSION_TASKS_COMPLETED: "Count of tasks completed this session"
   SESSION_DURATION: "Session duration"

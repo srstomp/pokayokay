@@ -93,16 +93,24 @@ def handle_session_end(input_data: dict) -> dict:
     }
 
 
-def handle_task_start(tool_input: dict) -> dict:
+def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     """Handle task status change to in_progress - run pre-task hooks."""
     task_id = tool_input.get("task_id", "unknown")
 
+    # Extract task metadata from response if available
+    task_data = tool_response.get("task", {})
+    task_title = task_data.get("title", tool_input.get("title", ""))
+    task_type = task_data.get("type", tool_input.get("type", ""))
+
     env = {
         "TASK_ID": task_id,
+        "TASK_TITLE": task_title,
+        "TASK_TYPE": task_type,
     }
 
     results = []
     results.append(run_action("check-blockers", env=env))
+    results.append(run_action("suggest-skills", env=env))
 
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")
@@ -122,6 +130,12 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
 
     task_id = tool_input.get("task_id", "unknown")
 
+    # Extract task metadata from response if available
+    task_data = tool_response.get("task", {})
+    task_title = task_data.get("title", tool_input.get("title", ""))
+    task_type = task_data.get("type", tool_input.get("type", ""))
+    task_notes = tool_input.get("notes", "")
+
     # Extract boundary metadata
     boundaries = tool_response.get("boundaries", {})
     story_completed = boundaries.get("story_completed", False)
@@ -132,6 +146,9 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     # Build environment for scripts
     env = {
         "TASK_ID": task_id,
+        "TASK_TITLE": task_title,
+        "TASK_TYPE": task_type,
+        "TASK_NOTES": task_notes,
         "STORY_ID": story_id or "",
         "EPIC_ID": epic_id or "",
         "STORY_COMPLETED": str(story_completed).lower(),
@@ -142,17 +159,23 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     hooks_run.append("post-task")
     results.append(run_action("sync", env=env))
     results.append(run_action("commit", env=env))
+    results.append(run_action("detect-spike", env=env))
+    results.append(run_action("capture-knowledge", env=env))
 
     # Run post-story hooks if story completed
     if story_completed:
         hooks_run.append("post-story")
         results.append(run_action("test", env=env))
-        # Note: mini-audit would be a yokay command, not a shell script
+        # Run audit-gate for story boundary
+        story_env = {**env, "BOUNDARY_TYPE": "story"}
+        results.append(run_action("audit-gate", env=story_env))
 
     # Run post-epic hooks if epic completed
     if epic_completed:
         hooks_run.append("post-epic")
-        # Note: full-audit would be a yokay command, not a shell script
+        # Run audit-gate for epic boundary
+        epic_env = {**env, "BOUNDARY_TYPE": "epic"}
+        results.append(run_action("audit-gate", env=epic_env))
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
@@ -246,7 +269,7 @@ def main():
             result = handle_task_complete(tool_input, tool_response)
         elif status == "in_progress":
             # Task started - run pre-task hooks
-            result = handle_task_start(tool_input)
+            result = handle_task_start(tool_input, tool_response)
         else:
             result = {"skip": True, "reason": f"status is {status}, no hooks for this transition"}
 
