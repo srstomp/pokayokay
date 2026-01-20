@@ -23,17 +23,18 @@
 ## Installation
 
 ```bash
-# Add the marketplace (one-time setup)
-/plugin marketplace add srstomp/pokayokay
+# 1. Add the marketplace (one-time setup)
+claude plugin marketplace add srstomp/pokayokay
 
-# Install the plugin
-/plugin install pokayokay@srstomp-pokayokay
+# 2. Install the plugin
+claude plugin install pokayokay@srstomp-pokayokay
 ```
 
-Or install directly from CLI:
+Or from inside Claude Code REPL:
 
-```bash
-claude plugin install pokayokay@srstomp-pokayokay --scope user
+```
+/plugin marketplace add srstomp/pokayokay
+/plugin install pokayokay@srstomp-pokayokay
 ```
 
 ### Required: ohno MCP Server
