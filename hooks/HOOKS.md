@@ -309,7 +309,7 @@ Claude Code hooks are configured in `.claude/settings.local.json`:
         "matcher": "mcp__ohno__update_task_status",
         "hooks": [{
           "type": "command",
-          "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/yokay/hooks/actions/bridge.py\""
+          "command": "python3 \"$CLAUDE_PROJECT_DIR/hooks/actions/bridge.py\""
         }]
       }
     ]

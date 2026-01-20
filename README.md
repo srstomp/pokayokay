@@ -224,7 +224,7 @@ Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py
 
 Use `/pokayokay:hooks` to view and manage hook configuration.
 
-See [HOOKS.md](plugins/yokay/hooks/HOOKS.md) for configuration and customization.
+See [HOOKS.md](hooks/HOOKS.md) for configuration and customization.
 
 ## Spike Protocol
 
@@ -237,7 +237,7 @@ For high-uncertainty work:
 
 ## Documentation
 
-See [GUIDE.md](plugins/yokay/GUIDE.md) for:
+See [GUIDE.md](GUIDE.md) for:
 - Command relationships diagram
 - Skill routing patterns
 - Keyword detection
@@ -247,7 +247,7 @@ See [GUIDE.md](plugins/yokay/GUIDE.md) for:
 
 ```bash
 git clone https://github.com/srstomp/pokayokay.git
-claude --plugin-dir ./pokayokay/plugins/yokay
+claude --plugin-dir ./pokayokay
 ```
 
 ## Dependencies
