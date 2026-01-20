@@ -239,6 +239,53 @@ def handle_pre_commit(tool_input: dict) -> dict:
     }
 
 
+# Commands that should auto-create tasks and need verification
+AUDIT_COMMANDS = {
+    "pokayokay:security": {"prefix": "Security:", "always": True},
+    "pokayokay:a11y": {"prefix": "A11y:", "always": True},
+    "pokayokay:test": {"prefix": "Test:", "flag": "--audit"},
+    "pokayokay:observe": {"prefix": "Observability:", "flag": "--audit"},
+    "pokayokay:arch": {"prefix": "Arch:", "flag": "--audit"},
+}
+
+
+def handle_skill_complete(tool_input: dict, tool_response: dict) -> dict:
+    """Handle Skill tool PostToolUse event for post-command hooks."""
+    skill_name = tool_input.get("skill", "")
+    skill_args = tool_input.get("args", "")
+
+    # Check if this skill should trigger post-command verification
+    config = AUDIT_COMMANDS.get(skill_name)
+    if not config:
+        return {"skip": True, "reason": f"skill {skill_name} has no post-command hooks"}
+
+    # Check if flag is required but not present
+    required_flag = config.get("flag")
+    if required_flag and required_flag not in skill_args:
+        return {"skip": True, "reason": f"skill {skill_name} requires {required_flag} flag for task verification"}
+
+    prefix = config["prefix"]
+
+    env = {
+        "SKILL_NAME": skill_name,
+        "SKILL_ARGS": skill_args,
+        "TASK_PREFIX": prefix,
+    }
+
+    results = []
+    results.append(run_action("verify-tasks", env=env))
+
+    success_count = sum(1 for r in results if r["status"] == "success")
+    warning_count = sum(1 for r in results if r["status"] == "warning")
+
+    return {
+        "hooks_run": ["post-command"],
+        "skill": skill_name,
+        "results": results,
+        "summary": f"{success_count} passed, {warning_count} warnings"
+    }
+
+
 def main():
     """Main entry point."""
     try:
@@ -278,6 +325,9 @@ def main():
 
     elif tool_name == "Bash" and hook_event == "PreToolUse":
         result = handle_pre_commit(tool_input)
+
+    elif tool_name == "Skill" and hook_event == "PostToolUse":
+        result = handle_skill_complete(tool_input, tool_response)
 
     else:
         result = {"skip": True, "reason": f"unhandled event: {hook_event}/{tool_name}"}

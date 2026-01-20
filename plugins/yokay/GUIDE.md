@@ -262,6 +262,7 @@ Hooks guarantee critical actions execute at session lifecycle points, eliminatin
 | pre-task | Task start | check-blockers |
 | post-task | Task complete | sync, commit |
 | post-story | Story complete | test, audit |
+| post-command | After audit commands | verify-tasks |
 | post-session | Session end | final sync, summary |
 
 ### Mode Behavior
@@ -287,6 +288,26 @@ hooks:
 ```
 
 See `hooks/HOOKS.md` for full documentation.
+
+### Post-Command Hooks (Audit Task Verification)
+
+Audit commands automatically create ohno tasks for findings. Post-command hooks verify this happened:
+
+| Command | Creates Tasks | Verification |
+|---------|---------------|--------------|
+| `/pokayokay:security` | Always (Critical/High/Medium findings) | Checks for `Security:` prefix |
+| `/pokayokay:a11y` | Always (WCAG A/AA violations) | Checks for `A11y:` prefix |
+| `/pokayokay:test --audit` | With `--audit` flag | Checks for `Test:` prefix |
+| `/pokayokay:observe --audit` | With `--audit` flag | Checks for `Observability:` prefix |
+| `/pokayokay:arch --audit` | With `--audit` flag | Checks for `Arch:` prefix |
+
+If an audit command completes without creating tasks, the hook warns:
+```
+Warning: No tasks with prefix 'Security:' found after running pokayokay:security
+Action: If findings were discovered, ensure tasks were created using ohno MCP create_task.
+```
+
+This ensures audit findings become tracked, actionable work items.
 
 ---
 

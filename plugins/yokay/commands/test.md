@@ -1,12 +1,18 @@
 ---
 description: Design testing strategy or write tests
-argument-hint: <testing-task>
+argument-hint: <testing-task> [--audit]
 skill: testing-strategy
 ---
 
 # Testing Strategy Workflow
 
 Design or implement tests for: `$ARGUMENTS`
+
+## Mode Detection
+
+Parse `$ARGUMENTS` to determine mode:
+- **`--audit` flag present** → Coverage audit mode (creates tasks for gaps)
+- **No flag** → Design/implement mode (default behavior)
 
 ## Agent Delegation
 
@@ -77,6 +83,68 @@ From `$ARGUMENTS`, determine the goal:
 ### 5. Create Implementation Tasks
 ```bash
 npx @stevestomp/ohno-cli create "Test: [specific tests]" -t chore
+```
+
+## Audit Mode (`--audit` flag)
+
+When `--audit` is specified, switch to coverage gap analysis mode:
+
+### Audit Steps
+
+1. **Run Coverage Analysis**
+```bash
+# Example commands
+npm run test -- --coverage
+npx vitest --coverage
+pytest --cov
+```
+
+2. **Identify Coverage Gaps**
+Analyze coverage report to find:
+- Untested critical paths (auth, payments, core business logic)
+- Files/functions below coverage threshold
+- Missing E2E tests for user flows
+- Untested error handling paths
+
+3. **Classify Gaps by Risk**
+
+| Risk Level | Description | Priority |
+|------------|-------------|----------|
+| Critical | Auth, payments, data integrity | P1 |
+| High | Core business logic, API endpoints | P2 |
+| Medium | UI components, utilities | P3 |
+| Low | Config, constants, types | Skip |
+
+4. **Create Tasks for Gaps**
+
+**Automatically create ohno tasks** using MCP tools for identified gaps:
+
+```
+create_task({
+  title: "Test: [what needs testing]",
+  description: "[Gap description]\n\nFiles: [file paths]\nCurrent coverage: [X]%\nTarget: [Y]%\nSuggested tests: [list]",
+  task_type: "test",
+  estimate_hours: [1-4 based on scope]
+})
+```
+
+**Example task creation:**
+- Untested auth middleware → `create_task("Test: Add unit tests for auth middleware", type: test)` P1
+- Missing API tests → `create_task("Test: Add integration tests for /api/users endpoints", type: test)` P2
+- No E2E for checkout → `create_task("Test: Add E2E test for checkout flow", type: test)` P1
+
+5. **Report Summary**
+```
+Coverage Audit Results:
+- Current coverage: [X]%
+- Target coverage: [Y]%
+- Gap: [Z]%
+
+Created [N] test tasks:
+- [task-id]: Test: [name] (P1/P2/P3)
+- ...
+
+Recommended priority: [first task to tackle]
 ```
 
 ## Covers
