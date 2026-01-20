@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "srstomp-pokayokay",
+  "version": "1.0.0",
+  "description": "AI-assisted development orchestration with task tracking and skill-based routing",
+  "owner": {
+    "name": "Steve Stomp",
+    "email": "steve@srstomp.com"
+  },
+  "plugins": [
+    {
+      "name": "pokayokay",
+      "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
+      "version": "0.3.3",
+      "author": {
+        "name": "Steve Stomp"
+      },
+      "source": "./plugins/pokayokay",
+      "category": "productivity"
+    }
+  ]
+}

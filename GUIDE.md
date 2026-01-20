@@ -634,7 +634,8 @@ claude plugin list
 
 If not listed, reinstall:
 ```bash
-claude plugin add https://github.com/srstomp/pokayokay
+/plugin marketplace add srstomp/pokayokay
+/plugin install pokayokay@srstomp-pokayokay
 ```
 
 ### Session context lost
