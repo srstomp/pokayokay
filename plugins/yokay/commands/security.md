@@ -78,8 +78,37 @@ Document findings with:
 - References (CWE, CVE)
 
 ### 6. Create Remediation Tasks
-```bash
-npx @stevestomp/ohno-cli create "Security: Fix [vulnerability]" -t bug -p P0
+
+**Automatically create ohno tasks for each finding** using MCP tools based on severity:
+
+| Severity | Priority | Task Type | Action |
+|----------|----------|-----------|--------|
+| Critical | P0 | bug | Always create |
+| High | P1 | bug | Always create |
+| Medium | P2 | bug | Create if actionable |
+| Low | P3 | bug | Skip (or create if explicitly requested) |
+
+For each Critical/High/Medium finding, use ohno MCP `create_task`:
+
+```
+create_task({
+  title: "Security: [vulnerability name]",
+  description: "[Description]\n\nLocation: [file:line]\nCWE: [CWE-XXX]\nRemediation: [steps]",
+  task_type: "bug",
+  estimate_hours: [1-4 based on complexity]
+})
+```
+
+**Example task creation for findings:**
+- Critical SQL injection → `create_task("Security: Fix SQL injection in user search", type: bug)` with P0 priority note in description
+- High XSS vulnerability → `create_task("Security: Fix XSS in comment rendering", type: bug)` with P1 priority note
+- Medium weak hashing → `create_task("Security: Upgrade password hashing algorithm", type: bug)` with P2 priority note
+
+After creating tasks, report summary:
+```
+Created [N] remediation tasks:
+- [task-id]: Security: [name] (Critical/High/Medium)
+- ...
 ```
 
 ## Covers

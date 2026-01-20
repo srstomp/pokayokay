@@ -1,16 +1,19 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "pokayokay",
-  "version": "0.3.1",
-  "description": "Claude Code skills for PRD analysis, project orchestration, and development workflows",
   "owner": {
     "name": "Steve Stomp"
+  },
+  "metadata": {
+    "version": "0.3.2",
+    "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
+    "pluginRoot": "./plugins"
   },
   "plugins": [
     {
       "name": "yokay",
-      "description": "PRD analysis, project orchestration, and development workflows with ohno integration",
-      "source": "./plugins/yokay",
+      "description": "Slash commands for planning (/plan), working (/work), auditing (/audit), and 20+ domain skills with ohno task integration",
+      "source": "./yokay",
       "category": "productivity"
     }
   ]

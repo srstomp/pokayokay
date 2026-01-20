@@ -48,6 +48,7 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | on-error | Error occurs | log, block, recover |
 | pre-commit | Before commit | lint |
 | post-session | Session end | final-sync, summary |
+| post-command | After audit commands | verify-tasks |
 
 ## Execution
 
@@ -162,6 +163,69 @@ Checks quality thresholds at story/epic boundaries:
 
 Outputs warnings when thresholds not met, suggests `/pokayokay:audit` for full assessment.
 
+## Post-Command Hooks
+
+Post-command hooks verify that audit commands created expected tasks. They fire after specific commands complete.
+
+### Configured Commands
+
+| Command | Prefix | Trigger |
+|---------|--------|---------|
+| `/pokayokay:security` | `Security:` | Always |
+| `/pokayokay:a11y` | `A11y:` | Always |
+| `/pokayokay:test --audit` | `Test:` | With `--audit` flag |
+| `/pokayokay:observe --audit` | `Observability:` | With `--audit` flag |
+| `/pokayokay:arch --audit` | `Arch:` | With `--audit` flag |
+
+### How It Works
+
+1. Command runs (e.g., `/pokayokay:security auth`)
+2. Command creates tasks for findings via ohno MCP `create_task`
+3. After command completes, `post-command` hook fires
+4. `verify-tasks.sh` checks if tasks with expected prefix exist
+5. Warns if no tasks found (may indicate missed task creation)
+
+### Example Output
+
+```markdown
+## Hooks: post-command
+
+| Action | Status | Output |
+|--------|--------|--------|
+| verify-tasks | ✓ | Verified: 3 task(s) created with prefix 'Security:' |
+
+**Summary:** 1 passed, 0 warnings
+```
+
+If no tasks were created:
+
+```markdown
+## Hooks: post-command
+
+| Action | Status | Output |
+|--------|--------|--------|
+| verify-tasks | ⚠️ | Warning: No tasks with prefix 'Security:' found |
+
+**Summary:** 0 passed, 1 warnings
+
+Action: If findings were discovered, ensure tasks were created using ohno MCP create_task.
+```
+
+### Disabling Post-Command Hooks
+
+In `.yokay/hooks.yaml`:
+
+```yaml
+hooks:
+  post-command:
+    enabled: false  # Disable all post-command hooks
+
+  # Or disable specific commands
+  post-command:
+    security:
+      enabled: false
+```
+
 ## Error Handling
 
 Hooks are **fail-safe**:
@@ -190,6 +254,7 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 | PostToolUse | `mcp__ohno__update_task_status` (done) | post-task, post-story (if boundary), post-epic (if boundary) |
 | PostToolUse | `mcp__ohno__update_task_status` (in_progress) | pre-task (check-blockers) |
 | PostToolUse | `mcp__ohno__set_blocker` | on-blocker |
+| PostToolUse | `Skill` (audit commands) | post-command (verify-tasks) |
 | PreToolUse | `Bash` (git commit) | pre-commit |
 
 ### Boundary Metadata
@@ -226,6 +291,7 @@ The bridge script uses this to determine which hooks to run:
 | `actions/detect-spike.sh` | Detects uncertainty signals, suggests spike conversion (post-task) |
 | `actions/capture-knowledge.sh` | Auto-suggests docs for spike/research tasks (post-task) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
+| `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/lint.sh` | Runs linter |
 | `actions/session-summary.sh` | Prints session summary (post-session) |

@@ -131,6 +131,51 @@ hooks:
           echo "Duration: ${SESSION_DURATION:-unknown}"
           echo "════════════════════════════════════════"
 
+  # Post-command hooks - triggered after specific audit commands complete
+  # These verify that expected tasks were created from audit findings
+  post-command:
+    enabled: true
+    # Commands that always create tasks (audit commands)
+    security:
+      actions:
+        - name: verify-tasks
+          type: script
+          path: actions/verify-tasks.sh
+          env:
+            TASK_PREFIX: "Security:"
+    a11y:
+      actions:
+        - name: verify-tasks
+          type: script
+          path: actions/verify-tasks.sh
+          env:
+            TASK_PREFIX: "A11y:"
+    # Commands that create tasks only with --audit flag
+    test:
+      flag: "--audit"
+      actions:
+        - name: verify-tasks
+          type: script
+          path: actions/verify-tasks.sh
+          env:
+            TASK_PREFIX: "Test:"
+    observe:
+      flag: "--audit"
+      actions:
+        - name: verify-tasks
+          type: script
+          path: actions/verify-tasks.sh
+          env:
+            TASK_PREFIX: "Observability:"
+    arch:
+      flag: "--audit"
+      actions:
+        - name: verify-tasks
+          type: script
+          path: actions/verify-tasks.sh
+          env:
+            TASK_PREFIX: "Arch:"
+
 # Mode-specific overrides
 modes:
   supervised:
@@ -172,3 +217,7 @@ variables:
   SESSION_DURATION: "Session duration"
   ERROR_MESSAGE: "Error message (for on-error)"
   BLOCKER_REASON: "Blocker reason (for on-blocker)"
+  # Post-command variables
+  SKILL_NAME: "Name of the command/skill that was run (for post-command)"
+  SKILL_ARGS: "Arguments passed to the command (for post-command)"
+  TASK_PREFIX: "Expected task title prefix for verification (for post-command)"
