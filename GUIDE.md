@@ -649,6 +649,6 @@ If empty, previous session may not have synced. Start fresh with `/pokayokay:pla
 ### Agent not delegating
 
 If commands aren't delegating to agents:
-1. Check that `plugins/yokay/agents/` directory exists
+1. Check that `agents/` directory exists
 2. Verify agent files have correct YAML frontmatter
 3. Try explicit invocation: "Use the yokay-auditor agent to..."

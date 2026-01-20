@@ -1,0 +1,22 @@
+{
+  "name": "pokayokay",
+  "version": "0.3.2",
+  "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
+  "author": {
+    "name": "Steve Stomp",
+    "url": "https://github.com/srstomp"
+  },
+  "repository": "https://github.com/srstomp/pokayokay",
+  "license": "MIT",
+  "keywords": [
+    "development-workflows",
+    "task-management",
+    "skills",
+    "orchestration",
+    "ohno",
+    "hooks",
+    "audit",
+    "security",
+    "accessibility"
+  ]
+}

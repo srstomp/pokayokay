@@ -1,7 +1,7 @@
 {
-  "name": "yokay",
-  "version": "0.3.0",
-  "description": "Claude Code plugin with skills for PRD analysis, project orchestration, and development workflows",
+  "name": "pokayokay",
+  "version": "0.3.2",
+  "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
   "keywords": [
     "claude-code",
     "plugin",
