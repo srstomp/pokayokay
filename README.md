@@ -7,7 +7,7 @@
 /_/                       /____/                 /____/
 ```
 
-# yokay
+# pokayokay
 
 **AI-assisted development orchestration** - A Claude Code plugin that orchestrates AI-assisted development sessions with configurable human oversight, bridging the gap between hands-on control and full automation through skills, hooks, agents, and integration with ohno for task management.
 
@@ -17,7 +17,7 @@
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
 - **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, or autonomous
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
-- **25+ Specialized Skills** - Route work to domain experts automatically
+- **25 Specialized Skills** - Route work to domain experts automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
 
 ## Installation
@@ -174,7 +174,7 @@ The `/pokayokay:audit` command checks 5 dimensions:
 
 ## Sub-Agents
 
-Yokay includes **6 specialized sub-agents** that run in isolated context windows for verbose operations:
+pokayokay includes **6 specialized sub-agents** that run in isolated context windows for verbose operations:
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
@@ -196,7 +196,7 @@ Commands like `/pokayokay:audit`, `/pokayokay:security`, and `/pokayokay:spike` 
 
 ## Hook System
 
-Yokay includes a **guaranteed hook system** that executes actions at key lifecycle points via Claude Code's native hooks:
+pokayokay includes a **guaranteed hook system** that executes actions at key lifecycle points via Claude Code's native hooks:
 
 | Hook | Trigger | Actions |
 |------|---------|---------|
