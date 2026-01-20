@@ -1,6 +1,6 @@
-# Yokay Command Guide
+# pokayokay Command Guide
 
-This guide explains how yokay commands work together to orchestrate AI-assisted development.
+This guide explains how pokayokay commands work together to orchestrate AI-assisted development.
 
 ## Command Overview
 
@@ -313,7 +313,7 @@ This ensures audit findings become tracked, actionable work items.
 
 ## Complete Workflow Example
 
-Here's a full example of using yokay to build a feature:
+Here's a full example of using pokayokay to build a feature:
 
 ### Step 1: Create a PRD
 
