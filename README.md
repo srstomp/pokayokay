@@ -23,7 +23,17 @@
 ## Installation
 
 ```bash
-claude plugin add srstomp/pokayokay
+# Add the marketplace (one-time setup)
+/plugin marketplace add srstomp/pokayokay
+
+# Install the plugin
+/plugin install pokayokay@srstomp-pokayokay
+```
+
+Or install directly from CLI:
+
+```bash
+claude plugin install pokayokay@srstomp-pokayokay --scope user
 ```
 
 ### Required: ohno MCP Server
