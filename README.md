@@ -23,7 +23,7 @@
 ## Installation
 
 ```bash
-claude plugin add https://github.com/srstomp/pokayokay
+claude plugin add srstomp/pokayokay
 ```
 
 ### Required: ohno MCP Server

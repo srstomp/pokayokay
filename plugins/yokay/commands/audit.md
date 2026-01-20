@@ -181,6 +181,23 @@ When creating remediation tasks, assign appropriate skills:
 npx @stevestomp/ohno-cli sync
 ```
 
+## Output Complete - STOP
+
+**After presenting the audit report:**
+1. Show the summary table
+2. List remediation tasks created
+3. **STOP and wait for user decision**
+
+Do NOT automatically start working on remediation tasks.
+
+Suggest next steps but let the user choose:
+- `/yokay:work` — Start working on remediation tasks
+- `/yokay:ux [feature]` — Redesign a flow
+- `/yokay:fix [task-id]` — Fix a specific bug
+- `/yokay:spike [question]` — Investigate before fixing
+
+The user decides what happens next.
+
 ## Related Commands
 
 - `/pokayokay:work` - Address remediation tasks
