@@ -55,7 +55,7 @@ hooks:
         path: actions/test.sh
       - name: mini-audit
         type: command
-        command: "yokay:audit"
+        command: "pokayokay:audit"
         args: ["--quick", "--story", "${STORY_ID}"]
       - name: audit-gate
         type: script
@@ -68,7 +68,7 @@ hooks:
     actions:
       - name: full-audit
         type: command
-        command: "yokay:audit"
+        command: "pokayokay:audit"
         args: ["${EPIC_ID}"]
       - name: audit-gate
         type: script
