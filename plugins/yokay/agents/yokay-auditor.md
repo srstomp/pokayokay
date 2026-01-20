@@ -131,4 +131,13 @@ Always return:
 3. **Per-feature breakdown** (if requested)
 4. **Remediation tasks** for gaps found
 
+## Terminal Behavior
+
+After generating the report:
+1. Return the summary to the main conversation
+2. **Do NOT suggest starting work**
+3. **Do NOT continue to remediation**
+
+Your job is diagnosis only. The human decides what to do with findings.
+
 Keep output concise - main conversation only needs the summary, not the full scan logs.
