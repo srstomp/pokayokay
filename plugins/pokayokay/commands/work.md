@@ -70,9 +70,128 @@ Based on task type, determine relevant skill for domain knowledge:
 - Spike tasks → Load `spike` skill (enforce time-box)
 - Research tasks → Load `deep-research` skill
 
-### 3. Dispatch Implementer Subagent
+### 3. Brainstorm Gate (Conditional)
+
+Before dispatching the implementer, check if the task needs brainstorming.
+
+#### Trigger Conditions
+
+Brainstorm triggers when ANY of these are true:
+
+| Condition | Check | Rationale |
+|-----------|-------|-----------|
+| Short description | `len(description) < 100 chars` | Likely underspecified |
+| No acceptance criteria | `acceptance_criteria is empty` | No clear success definition |
+| Spike type | `task_type == "spike"` | Investigation required |
+| Ambiguous keywords | Contains "investigate", "explore", "figure out" | Unclear scope |
+
+#### Skip Conditions
+
+Brainstorm is skipped when ANY of these are true:
+
+| Condition | Check | Rationale |
+|-----------|-------|-----------|
+| Bug type | `task_type == "bug"` | Usually well-defined |
+| Chore type | `task_type == "chore"` | Usually mechanical |
+| Well-specified | Has description AND criteria AND no ambiguous keywords | Ready to implement |
+| Manual skip | `--skip-brainstorm` flag passed | Human override |
+
+#### Gate Logic
+
+```python
+# Pseudocode
+def needs_brainstorm(task, skip_flag=False):
+    # Skip conditions (check first)
+    if skip_flag:
+        return False
+    if task.task_type in ["bug", "chore"]:
+        return False
+    if (len(task.description) >= 100 and
+        task.acceptance_criteria and
+        not has_ambiguous_keywords(task)):
+        return False
+
+    # Trigger conditions
+    if len(task.description) < 100:
+        return True, "Short description"
+    if not task.acceptance_criteria:
+        return True, "No acceptance criteria"
+    if task.task_type == "spike":
+        return True, "Spike investigation"
+    if has_ambiguous_keywords(task):
+        return True, "Ambiguous scope"
+
+    return False
+```
+
+#### Dispatching Brainstormer
+
+If brainstorm triggers:
+
+1. Dispatch brainstormer:
+   ```
+   Task tool (yokay-brainstormer):
+     description: "Brainstorm: {task.title}"
+     prompt: [Fill template from agents/templates/brainstorm-prompt.md]
+   ```
+
+2. Process brainstorm result:
+   - Update ohno task with refined requirements:
+     ```
+     update_task(task_id, {
+       description: refined_description,
+       acceptance_criteria: proposed_criteria
+     })
+     ```
+   - If open questions: PAUSE for human input
+   - If refined: Proceed to Step 4
+
+3. Log activity:
+   ```
+   add_task_activity(task_id, "note", "Brainstorm: Refined requirements")
+   ```
+
+#### Brainstorm Flow
+
+```
+┌──────────────┐
+│  Get Task    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     NO      ┌──────────────┐
+│ Needs        │────────────►│ Skip to      │
+│ Brainstorm?  │             │ Implementer  │
+└──────┬───────┘             └──────────────┘
+       │ YES
+       ▼
+┌──────────────┐
+│ Brainstormer │
+│  Subagent    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     QUESTIONS   ┌──────────────┐
+│ Result?      │────────────────►│ PAUSE for    │
+└──────┬───────┘                 │ human input  │
+       │ REFINED                 └──────────────┘
+       ▼
+┌──────────────┐
+│ Update ohno  │
+│ with criteria│
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Implementer  │
+└──────────────┘
+```
+
+### 4. Dispatch Implementer Subagent
 
 **CRITICAL: Do not implement inline. Always dispatch subagent.**
+
+*Note: If brainstorm ran in Step 3, task now has refined requirements.*
 
 1. Extract full task details from ohno:
    ```
@@ -94,7 +213,7 @@ Based on task type, determine relevant skill for domain knowledge:
 
 4. Process subagent result:
    - If questions: Answer and re-dispatch
-   - If complete: Proceed to Step 4
+   - If complete: Proceed to Step 5 (Review)
    - If blocked: Set blocker via ohno MCP
 
 **Why subagent?**
@@ -102,7 +221,7 @@ Based on task type, determine relevant skill for domain knowledge:
 - Subagent can ask questions before/during work
 - Context discarded after task (token efficiency)
 
-### 4. Two-Stage Review
+### 5. Two-Stage Review
 
 After implementer completes, run reviews in sequence:
 
@@ -139,7 +258,7 @@ Only runs if spec review passes.
    ```
 
 2. Process quality review result:
-   - **PASS**: Proceed to task completion (Step 5)
+   - **PASS**: Proceed to task completion (Step 6)
    - **FAIL**: Re-dispatch implementer with quality issues
 
 **What quality reviewer checks:**
@@ -191,9 +310,9 @@ Or for failures:
 add_task_activity(task_id, "note", "Spec review: FAIL - Missing requirement X")
 ```
 
-### 5. Complete Task
+### 6. Complete Task
 
-After subagent completes (Step 3), coordinator:
+After reviews pass (Step 5), coordinator:
 - Logs activity to ohno
 - Triggers post-task hooks
 
@@ -201,7 +320,7 @@ After subagent completes (Step 3), coordinator:
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
 
-### 5. Checkpoint (based on mode)
+### 7. Checkpoint (based on mode)
 
 **Supervised** (default):
 - PAUSE after every task
@@ -216,7 +335,7 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - Log and continue
 - Only PAUSE at epic boundaries
 
-### 6. Repeat
+### 8. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop
