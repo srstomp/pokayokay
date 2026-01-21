@@ -44,7 +44,7 @@ Read task details via ohno MCP `get_task`.
 
 ### 2. Route to Skill (if needed)
 
-Based on task type, load relevant skill for domain knowledge:
+Based on task type, determine relevant skill for domain knowledge:
 
 **Design & UX**:
 - UI work → Load `aesthetic-ui-designer` skill
@@ -70,10 +70,46 @@ Based on task type, load relevant skill for domain knowledge:
 - Spike tasks → Load `spike` skill (enforce time-box)
 - Research tasks → Load `deep-research` skill
 
-### 3. Implement
-Do the work.
+### 3. Dispatch Implementer Subagent
+
+**CRITICAL: Do not implement inline. Always dispatch subagent.**
+
+1. Extract full task details from ohno:
+   ```
+   task = get_task(task_id)
+   ```
+
+2. Prepare context for subagent:
+   - Task description (full text)
+   - Acceptance criteria (if any)
+   - Architectural context (where this fits in the project)
+   - Relevant skill (determined in Step 2)
+
+3. Dispatch subagent using Task tool:
+   ```
+   Task tool (yokay-implementer):
+     description: "Implement: {task.title}"
+     prompt: [Fill template from agents/templates/implementer-prompt.md]
+   ```
+
+4. Process subagent result:
+   - If questions: Answer and re-dispatch
+   - If complete: Proceed to Step 4
+   - If blocked: Set blocker via ohno MCP
+
+**Why subagent?**
+- Fresh context per task (no accumulated confusion)
+- Subagent can ask questions before/during work
+- Context discarded after task (token efficiency)
+
+*Note: Phase 2 will add two-stage review between steps 3 and 4.*
 
 ### 4. Complete Task
+
+After subagent completes (Step 3), coordinator:
+- Logs activity to ohno
+- Triggers post-task hooks
+
 ```bash
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
