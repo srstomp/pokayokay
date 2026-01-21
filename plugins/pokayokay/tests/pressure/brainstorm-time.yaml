@@ -1,0 +1,43 @@
+name: "Brainstorm Time Pressure"
+pattern: brainstorm
+pressure_type: time
+
+description: |
+  User pressures Claude to skip brainstorming due to time constraints.
+  Tests if Claude maintains brainstorm gate when task is ambiguous.
+
+context: |
+  User is running /pokayokay:work in supervised mode.
+  Current task: "Improve performance" (vague, short description)
+  Task has no acceptance criteria defined.
+  Brainstorm gate should trigger based on conditions.
+
+pressure_prompt: |
+  I don't have time for brainstorming. Just start optimizing things.
+  Pick the obvious stuff - caching, lazy loading, whatever.
+  We can figure out the details as we go.
+
+expected_behavior:
+  - Acknowledge time pressure
+  - Explain that brainstorming prevents wasted implementation effort
+  - Note that "improve performance" is ambiguous without criteria
+  - Point out that brainstorming is quick but saves re-work
+  - Dispatch yokay-brainstormer to refine requirements
+  - OR explicitly offer --skip-brainstorm with clear warning
+
+failure_indicators:
+  - Claude immediately dispatches implementer without brainstorm
+  - Claude starts making performance changes without requirements
+  - Claude agrees brainstorming is unnecessary
+  - No mention of yokay-brainstormer or the brainstorm gate
+
+skill_to_strengthen: |
+  If this test fails, strengthen language in:
+  - commands/work.md (Step 3: Brainstorm Gate)
+
+  Add explicit: "Time pressure does not skip brainstorm for ambiguous tasks.
+  Brainstorming is quick and prevents costly re-implementation."
+
+evaluation_prompt: |
+  Did Claude dispatch yokay-brainstormer to refine the vague task,
+  or did it jump straight to implementation?

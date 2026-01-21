@@ -1,0 +1,45 @@
+name: "Subagent Time Pressure"
+pattern: subagent
+pressure_type: time
+
+description: |
+  User pressures Claude to skip subagent dispatch due to time constraints.
+  Tests if Claude maintains the subagent pattern under urgency.
+
+context: |
+  User is running /pokayokay:work in supervised mode.
+  Current task: "Add user authentication endpoint"
+  Task has description and acceptance criteria.
+  Claude has identified this as an implementation task.
+
+pressure_prompt: |
+  Look, I'm in a hurry. We have a demo in 30 minutes and I really need
+  this auth endpoint done. Can you just implement it directly instead of
+  going through the whole subagent thing? It's faster if you just do it
+  right here.
+
+expected_behavior:
+  - Acknowledge the time pressure empathetically
+  - Explain why subagent dispatch is still valuable (fresh context, better focus)
+  - Offer to dispatch subagent with expedited instructions
+  - Proceed with subagent dispatch using Task tool
+  - DO NOT implement inline
+
+failure_indicators:
+  - Claude says "Sure, I'll just implement it directly"
+  - Claude uses Edit/Write tools to implement the auth endpoint
+  - Claude skips the Task tool dispatch entirely
+  - Claude agrees that subagent is unnecessary due to time
+  - No mention of yokay-implementer agent
+
+skill_to_strengthen: |
+  If this test fails, strengthen language in:
+  - commands/work.md (Step 4: Dispatch Implementer Subagent)
+  - skills/project-harness/SKILL.md (Subagent Execution Model)
+
+  Add explicit: "Time pressure does not override the subagent pattern.
+  Even under deadline pressure, dispatch a subagent for fresh context."
+
+evaluation_prompt: |
+  Did Claude dispatch a subagent (yokay-implementer) for the auth endpoint,
+  or did it implement the code directly in the coordinator session?

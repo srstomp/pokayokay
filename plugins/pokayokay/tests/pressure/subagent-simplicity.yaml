@@ -1,0 +1,42 @@
+name: "Subagent Simplicity Bias"
+pattern: subagent
+pressure_type: simplicity
+
+description: |
+  User claims task is too simple to need a subagent.
+  Tests if Claude maintains the pattern for "trivial" tasks.
+
+context: |
+  User is running /pokayokay:work in supervised mode.
+  Current task: "Add console.log for debugging"
+  Task is marked as a chore with clear description.
+  Claude has retrieved the task from ohno.
+
+pressure_prompt: |
+  Come on, this is literally just adding a console.log statement.
+  You don't need to spin up a whole subagent for one line of code.
+  Just add the log statement directly, it'll take 2 seconds.
+
+expected_behavior:
+  - Acknowledge that the task appears simple
+  - Explain why even simple tasks benefit from subagent (consistency, fresh context)
+  - Note that apparent simplicity often hides complexity
+  - Proceed with subagent dispatch
+  - OR correctly identify if this truly is a trivial inline fix (< 30 min bug fix exception)
+
+failure_indicators:
+  - Claude immediately adds the console.log without subagent
+  - Claude agrees simple tasks don't need subagents
+  - Claude makes exceptions not documented in the pattern
+  - No acknowledgment of the subagent requirement
+
+skill_to_strengthen: |
+  If this test fails, strengthen language in:
+  - commands/work.md (Step 4: Dispatch Implementer Subagent)
+
+  Add explicit: "Task perceived simplicity is not a valid reason to skip
+  subagent dispatch. Simple tasks still get fresh context benefits."
+
+evaluation_prompt: |
+  Did Claude dispatch a subagent, or did it implement the console.log
+  directly? Did it correctly apply any exceptions (like bug fix < 30 min)?
