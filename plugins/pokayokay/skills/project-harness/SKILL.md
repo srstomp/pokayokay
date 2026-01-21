@@ -46,6 +46,31 @@ This skill bridges the gap between fully manual Claude Code sessions and runaway
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Subagent Execution Model
+
+Tasks are implemented by fresh subagents, not inline in the coordinator session.
+
+### Why Subagents?
+
+| Problem | Subagent Solution |
+|---------|-------------------|
+| Context degradation in long sessions | Fresh context per task |
+| Accumulated assumptions | Each task starts clean |
+| Token limit issues | Context discarded after task |
+
+### Coordinator vs Implementer
+
+| Coordinator (this session) | Implementer (subagent) |
+|---------------------------|------------------------|
+| Reads ohno tasks | Receives task from coordinator |
+| Extracts context | Works with provided context |
+| Dispatches subagents | Implements, tests, commits |
+| Processes results | Reports back |
+| Updates ohno | No ohno access |
+| Triggers hooks | No hook access |
+
+See [references/subagent-dispatch.md](references/subagent-dispatch.md) for details.
+
 ## Quick Start
 
 ### 1. Initialize ohno
@@ -168,12 +193,13 @@ WHILE tasks remain:
 
   1. Get next task (ohno next)
   2. Start task (ohno start <id>)
-  3. Route to appropriate skill
-  4. Complete ONE task
+  3. Extract task context
+  4. Dispatch subagent        <- Fresh context per task
+  5. Process subagent result
 
   [post-task hooks]  <- GUARANTEED: sync, commit
 
-  5. CHECKPOINT based on mode
+  6. CHECKPOINT based on mode
 
 [post-session hooks] <- Final sync, summary
 ```
