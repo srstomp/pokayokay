@@ -102,9 +102,96 @@ Based on task type, determine relevant skill for domain knowledge:
 - Subagent can ask questions before/during work
 - Context discarded after task (token efficiency)
 
-*Note: Phase 2 will add two-stage review between steps 3 and 4.*
+### 4. Two-Stage Review
 
-### 4. Complete Task
+After implementer completes, run reviews in sequence:
+
+#### Stage 1: Spec Compliance Review
+
+Verify implementation matches task specification.
+
+1. Dispatch spec reviewer:
+   ```
+   Task tool (yokay-spec-reviewer):
+     description: "Spec review: {task.title}"
+     prompt: [Fill template from agents/templates/spec-review-prompt.md]
+   ```
+
+2. Process spec review result:
+   - **PASS**: Proceed to quality review (Stage 2)
+   - **FAIL**: Re-dispatch implementer with spec issues
+
+**What spec reviewer checks:**
+- All acceptance criteria met
+- No missing requirements
+- No scope creep (extra work)
+- Correct interpretation of spec
+
+#### Stage 2: Quality Review
+
+Only runs if spec review passes.
+
+1. Dispatch quality reviewer:
+   ```
+   Task tool (yokay-quality-reviewer):
+     description: "Quality review: {task.title}"
+     prompt: [Fill template from agents/templates/quality-review-prompt.md]
+   ```
+
+2. Process quality review result:
+   - **PASS**: Proceed to task completion (Step 5)
+   - **FAIL**: Re-dispatch implementer with quality issues
+
+**What quality reviewer checks:**
+- Code structure and readability
+- Test quality and coverage
+- Edge case handling
+- Project convention compliance
+
+#### Review Loop
+
+```
+┌──────────────┐
+│ Implementer  │
+│  completes   │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐     FAIL     ┌──────────────┐
+│ Spec Review  │─────────────►│ Re-dispatch  │
+└──────┬───────┘              │ implementer  │
+       │ PASS                 │ with issues  │
+       ▼                      └──────┬───────┘
+┌──────────────┐                     │
+│Quality Review│◄────────────────────┘
+└──────┬───────┘
+       │ PASS
+       ▼
+┌──────────────┐
+│   Complete   │
+│    Task      │
+└──────────────┘
+```
+
+**Re-dispatch rules:**
+- Include specific issues from review
+- Reference original acceptance criteria
+- Maximum 3 review cycles (then escalate to human)
+
+#### Logging Reviews to ohno
+
+After each review, log activity:
+```
+add_task_activity(task_id, "note", "Spec review: PASS")
+add_task_activity(task_id, "note", "Quality review: PASS")
+```
+
+Or for failures:
+```
+add_task_activity(task_id, "note", "Spec review: FAIL - Missing requirement X")
+```
+
+### 5. Complete Task
 
 After subagent completes (Step 3), coordinator:
 - Logs activity to ohno

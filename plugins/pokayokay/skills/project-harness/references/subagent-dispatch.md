@@ -505,3 +505,170 @@ Before dispatching a subagent:
 - [ ] Working directory confirmed
 - [ ] Dependencies are resolved (task is unblocked)
 ```
+
+---
+
+## Two-Stage Review Dispatch
+
+After implementer completes, dispatch reviewers in sequence.
+
+### Stage 1: Spec Review
+
+**Agent**: `yokay-spec-reviewer`
+**Template**: `agents/templates/spec-review-prompt.md`
+**Model**: haiku (fast, focused check)
+
+#### Template Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{TASK_ID}` | Original task | Task identifier |
+| `{TASK_TITLE}` | Original task | Task title |
+| `{TASK_DESCRIPTION}` | Original task | Full description |
+| `{ACCEPTANCE_CRITERIA}` | Original task | All criteria |
+| `{IMPLEMENTATION_SUMMARY}` | Implementer report | What was built |
+| `{FILES_CHANGED}` | Implementer report | File list |
+| `{COMMIT_INFO}` | Implementer report | Hash and message |
+| `{COMMIT_HASH}` | Implementer report | Just the hash |
+
+#### Dispatch Example
+
+```markdown
+## Dispatching Spec Reviewer
+
+**Task**: task-abc123 - Create grid component
+**Agent**: yokay-spec-reviewer
+
+Checking implementation against spec...
+
+[Invoke Task tool with filled spec-review-prompt.md]
+```
+
+#### Processing Result
+
+```python
+# Pseudocode
+if spec_review.verdict == "PASS":
+    proceed_to_quality_review()
+else:
+    log_activity(task_id, "note", f"Spec review: FAIL - {spec_review.issues}")
+    redispatch_implementer(
+        original_task=task,
+        issues=spec_review.required_fixes
+    )
+```
+
+### Stage 2: Quality Review
+
+**Agent**: `yokay-quality-reviewer`
+**Template**: `agents/templates/quality-review-prompt.md`
+**Model**: haiku (fast, focused check)
+
+Only dispatch after spec review PASSES.
+
+#### Template Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{TASK_ID}` | Original task | Task identifier |
+| `{TASK_TITLE}` | Original task | Task title |
+| `{FILES_CHANGED}` | Implementer report | File list |
+| `{COMMIT_INFO}` | Implementer report | Hash and message |
+| `{COMMIT_HASH}` | Implementer report | Just the hash |
+
+#### Dispatch Example
+
+```markdown
+## Dispatching Quality Reviewer
+
+**Task**: task-abc123 - Create grid component
+**Agent**: yokay-quality-reviewer
+**Prerequisite**: Spec review PASSED
+
+Checking code quality...
+
+[Invoke Task tool with filled quality-review-prompt.md]
+```
+
+#### Processing Result
+
+```python
+# Pseudocode
+if quality_review.verdict == "PASS":
+    log_activity(task_id, "note", "Spec review: PASS")
+    log_activity(task_id, "note", "Quality review: PASS")
+    proceed_to_task_completion()
+else:
+    log_activity(task_id, "note", f"Quality review: FAIL - {quality_review.issues}")
+    redispatch_implementer(
+        original_task=task,
+        issues=quality_review.required_fixes
+    )
+```
+
+### Review Loop Control
+
+```markdown
+## Review Cycle Limits
+
+Maximum review cycles: 3
+
+After 3 failed review cycles:
+1. Log escalation to ohno
+2. Block task with reason
+3. PAUSE for human intervention
+
+Escalation message:
+"Task failed review 3 times. Issues: [list]. Requires human review."
+```
+
+### Complete Review Flow
+
+```
+IMPLEMENT
+    │
+    ▼
+SPEC REVIEW ──FAIL──► RE-IMPLEMENT (with spec issues)
+    │                       │
+   PASS                     │
+    │                       │
+    ▼                       │
+QUALITY REVIEW ◄────────────┘
+    │
+    │──FAIL──► RE-IMPLEMENT (with quality issues)
+    │
+   PASS
+    │
+    ▼
+LOG TO OHNO
+    │
+    ▼
+COMPLETE TASK
+```
+
+### ohno Activity Logging
+
+Log review results for visibility:
+
+```python
+# After spec review
+add_task_activity(
+    task_id=task.id,
+    activity_type="note",
+    description="Spec review: PASS"
+)
+
+# After quality review
+add_task_activity(
+    task_id=task.id,
+    activity_type="note",
+    description="Quality review: PASS"
+)
+
+# On failure with issues
+add_task_activity(
+    task_id=task.id,
+    activity_type="note",
+    description="Spec review: FAIL - Missing criterion X, scope creep in Y"
+)
+```
