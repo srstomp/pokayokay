@@ -1,29 +1,45 @@
 # Subagent Dispatch Reference
 
-Guide for the coordinator to prepare and dispatch implementer subagents.
+Guide for the coordinator to prepare and dispatch subagents.
 
 ## Overview
 
-The coordinator delegates task implementation to subagents. This reference covers:
+The coordinator delegates work to subagents at various stages:
+
+1. **Brainstorm** (conditional) - Refines ambiguous tasks before implementation
+2. **Implementer** - Implements the task following TDD
+3. **Spec Reviewer** - Verifies implementation matches spec
+4. **Quality Reviewer** - Verifies code quality standards
+
+This reference covers:
 
 1. Extracting task details from ohno
-2. Formatting context for the subagent
+2. Brainstorm gate (conditional dispatch)
 3. Filling the implementer prompt template
-4. Error handling when ohno fails
+4. Two-stage review dispatch
+5. Error handling when ohno fails
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    DISPATCH FLOW                            │
 │                                                             │
 │   ┌──────────┐     ┌──────────┐     ┌──────────┐          │
-│   │  GET     │ ──► │  FILL    │ ──► │ DISPATCH │          │
-│   │  TASK    │     │ TEMPLATE │     │ SUBAGENT │          │
+│   │  GET     │ ──► │BRAINSTORM│ ──► │IMPLEMENTER│         │
+│   │  TASK    │     │ (maybe)  │     │           │         │
 │   └──────────┘     └──────────┘     └──────────┘          │
 │        │                │                │                 │
 │        ▼                ▼                ▼                 │
-│    ohno MCP         Populate        Task tool with        │
-│    get_task()       template        yokay-implementer     │
-│                     variables       agent type            │
+│    ohno MCP         Refine if       Implement task        │
+│    get_task()       ambiguous       with TDD              │
+│                                                            │
+│                         ┌──────────┐     ┌──────────┐     │
+│                         │  SPEC    │ ──► │ QUALITY  │     │
+│                         │ REVIEWER │     │ REVIEWER │     │
+│                         └──────────┘     └──────────┘     │
+│                              │                │            │
+│                              ▼                ▼            │
+│                         Verify spec      Verify quality   │
+│                         compliance       standards        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,7 +129,124 @@ def build_context(task):
 
 ---
 
-## Step 2: Determine Relevant Skill
+## Step 2: Brainstorm Gate (Conditional)
+
+Before dispatching the implementer, evaluate if the task needs brainstorming.
+
+### Trigger Conditions
+
+Check these conditions to determine if brainstorming is needed:
+
+```python
+def needs_brainstorm(task, skip_flag=False):
+    """
+    Returns (needs_brainstorm: bool, reason: str | None)
+    """
+    # Skip conditions (check first)
+    if skip_flag:
+        return False, None
+    if task.task_type in ["bug", "chore"]:
+        return False, None
+
+    # Well-specified check
+    well_specified = (
+        len(task.description or "") >= 100 and
+        task.acceptance_criteria and
+        not has_ambiguous_keywords(task)
+    )
+    if well_specified:
+        return False, None
+
+    # Trigger conditions
+    if len(task.description or "") < 100:
+        return True, "Short description (< 100 chars)"
+    if not task.acceptance_criteria:
+        return True, "No acceptance criteria"
+    if task.task_type == "spike":
+        return True, "Spike investigation required"
+    if has_ambiguous_keywords(task):
+        return True, "Ambiguous scope keywords"
+
+    return False, None
+
+def has_ambiguous_keywords(task):
+    """Check for keywords indicating unclear scope."""
+    ambiguous = ["investigate", "explore", "figure out", "look into", "research"]
+    text = f"{task.title} {task.description}".lower()
+    return any(kw in text for kw in ambiguous)
+```
+
+### Brainstorm Dispatch
+
+**Agent**: `yokay-brainstormer`
+**Template**: `agents/templates/brainstorm-prompt.md`
+**Model**: sonnet (needs reasoning capability)
+
+#### Template Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{TASK_ID}` | `task.id` | Task identifier |
+| `{TASK_TITLE}` | `task.title` | Task title |
+| `{TASK_TYPE}` | `task.task_type` | feature/bug/spike/etc |
+| `{TASK_DESCRIPTION}` | `task.description` | Current description |
+| `{ACCEPTANCE_CRITERIA}` | `task.acceptance_criteria` | Current criteria (may be empty) |
+| `{TRIGGER_REASON}` | From needs_brainstorm() | Why brainstorm triggered |
+| `{WORKING_DIRECTORY}` | Project root | Working directory path |
+
+#### Dispatch Example
+
+```markdown
+## Dispatching Brainstormer
+
+**Task**: task-abc123 - Improve performance
+**Trigger**: Short description (< 100 chars)
+**Agent**: yokay-brainstormer
+
+Refining requirements before implementation...
+
+[Invoke Task tool with filled brainstorm-prompt.md]
+```
+
+### Processing Brainstorm Result
+
+```python
+# Pseudocode
+if brainstorm.status == "Refined":
+    # Update ohno with refined requirements
+    update_task(task_id, {
+        "description": brainstorm.refined_description,
+        # Note: acceptance_criteria may need separate field or append to description
+    })
+
+    # Log activity
+    add_task_activity(task_id, "note", "Brainstorm: Requirements refined")
+
+    # Proceed to implementer dispatch
+    proceed_to_implementation()
+
+elif brainstorm.status == "Needs Input":
+    # PAUSE for human to answer questions
+    log_activity(task_id, "note", f"Brainstorm: Needs input - {brainstorm.questions}")
+    pause_for_human(brainstorm.open_questions)
+```
+
+### Skip Flag
+
+The `--skip-brainstorm` flag bypasses the gate:
+
+```markdown
+## Skip Brainstorm
+
+User specified --skip-brainstorm flag.
+Proceeding directly to implementation.
+
+*Warning: Task may have ambiguous requirements.*
+```
+
+---
+
+## Step 3: Determine Relevant Skill
 
 Route the task to an appropriate skill based on characteristics.
 
@@ -159,7 +292,7 @@ No specialized skill applies to this task. Use Claude's built-in knowledge for i
 
 ---
 
-## Step 3: Fill the Implementer Prompt Template
+## Step 4: Fill the Implementer Prompt Template
 
 ### Template Location
 
@@ -263,7 +396,7 @@ If `acceptance_criteria` is empty or vague, coordinator should define:
 
 ---
 
-## Step 4: Dispatch the Subagent
+## Step 5: Dispatch the Subagent
 
 ### Using the Task Tool
 
