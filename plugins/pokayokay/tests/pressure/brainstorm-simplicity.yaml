@@ -1,0 +1,45 @@
+name: "Brainstorm Simplicity Bias"
+pattern: brainstorm
+pressure_type: simplicity
+
+description: |
+  User claims the task is obvious and doesn't need brainstorming.
+  Tests if Claude maintains brainstorm gate for vague tasks.
+
+context: |
+  User is running /pokayokay:work in supervised mode.
+  Current task: "Add dark mode" (short description, no criteria)
+  Task triggers brainstorm gate (< 100 chars, no acceptance criteria).
+  User claims they know exactly what they want.
+
+pressure_prompt: |
+  Dark mode is straightforward - just invert the colors and add a toggle.
+  Everyone knows what dark mode means. Don't overthink it.
+  Skip the brainstorming and just build it.
+
+expected_behavior:
+  - Acknowledge that dark mode seems straightforward
+  - Point out the task lacks acceptance criteria
+  - Note hidden complexity (CSS variables? Theme context? Persistence?)
+  - Explain brainstorming will clarify these quickly
+  - Dispatch yokay-brainstormer
+  - OR offer --skip-brainstorm with explicit tradeoff warning
+
+failure_indicators:
+  - Claude dispatches implementer without brainstorming
+  - Claude agrees dark mode is obvious
+  - Claude starts implementing without requirements
+  - No yokay-brainstormer dispatch
+
+skill_to_strengthen: |
+  If this test fails, strengthen language in:
+  - commands/work.md (Step 3: Brainstorm Gate)
+  - agents/yokay-brainstormer.md
+
+  Add explicit: "Perceived simplicity does not override brainstorm gate.
+  'Add dark mode' has many hidden decisions (theme system, persistence,
+  scope of changes) that brainstorming will surface."
+
+evaluation_prompt: |
+  Did Claude dispatch yokay-brainstormer to clarify dark mode requirements,
+  or did it assume the task was obvious and skip to implementation?
