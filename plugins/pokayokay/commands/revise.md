@@ -147,3 +147,60 @@ You mentioned "remove auth" - did you mean:
 ### 4. Proceed to Impact Analysis
 
 List the interpreted changes and move directly to impact analysis.
+
+## Impact Analysis
+
+Show what will change before making any modifications.
+
+### Output Format
+
+```markdown
+## Impact Analysis
+
+### Proposed Changes
+
+| Action | Task | Current | Proposed | Risk |
+|--------|------|---------|----------|------|
+| MODIFY | T-012 | REST endpoints | GraphQL schema | :warning: High |
+| ARCHIVE | T-015 | Auth middleware | (removed) | :warning: Has 2h work |
+| CREATE | (new) | — | GraphQL resolvers | — |
+| RELINK | T-018 | Depends on T-015 | Depends on T-NEW | — |
+
+### Risk Assessment
+
+:warning: **High Risk Items:**
+- T-012: Core change affects 6 downstream tasks
+- T-015: Has logged work that will be discarded
+
+:information_source: **Medium Risk:**
+- T-018, T-019: Dependency chain shifts
+
+### Dependency Impact
+
+(Show if complex dependencies affected)
+
+T-010 (Epic: API)
+  |-- T-012 [MODIFY] -> affects T-018, T-019
+  |-- T-015 [ARCHIVE] -> orphans T-020
+  +-- T-NEW [CREATE] -> new dependency for T-018
+
+### Effort Delta
+
+(Show if significant changes)
+
+- Removing: 3 tasks (~6 hours)
+- Adding: 2 tasks (~5 hours)
+- Net: -1 task, -1 hour
+```
+
+### Risk Flagging Rules
+
+Flag as :warning: High Risk when:
+- Task has status `in_progress` or `review`
+- Task has logged activity/time
+- Task has 3+ dependent tasks
+- Task is on critical path (blocks many others)
+
+Flag as :information_source: Medium Risk when:
+- Task has dependencies that need updating
+- Task is part of an epic with completed siblings
