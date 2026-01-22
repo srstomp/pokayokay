@@ -286,3 +286,53 @@ add_task_activity(task_id, "note", "Revised: [reason]")
 
 Use `/pokayokay:work` to continue implementation.
 ```
+
+## Edge Cases
+
+| Situation | Behavior |
+|-----------|----------|
+| No tasks exist | "No plan found. Use `/pokayokay:plan` first." |
+| In-progress task affected | :warning: Flag, require explicit confirmation |
+| Circular dependency created | Block execution, explain the cycle |
+| All tasks archived | Warn: "This will empty your plan. Continue?" |
+| During `/work` session | Pause work loop, run revise, resume |
+
+### Circular Dependency Detection
+
+Before executing, check for cycles:
+```python
+# Pseudocode
+def has_cycle(task_id, dependencies, visited=set()):
+    if task_id in visited:
+        return True
+    visited.add(task_id)
+    for dep in dependencies.get(task_id, []):
+        if has_cycle(dep, dependencies, visited):
+            return True
+    return False
+```
+
+If cycle detected:
+```
+Cannot apply changes: circular dependency detected.
+
+T-001 -> T-002 -> T-003 -> T-001
+
+Please modify dependencies to break the cycle.
+```
+
+## Related Commands
+
+- `/pokayokay:plan` - Create initial plan
+- `/pokayokay:work` - Execute plan
+- `/pokayokay:review` - Retrospective analysis
+- `/pokayokay:arch` - Architecture review (may trigger revise)
+
+## Integration Points
+
+| From | To Revise | Scenario |
+|------|-----------|----------|
+| `/plan` | `/revise` | Refine after initial creation |
+| `/work` | `/revise` | Mid-project pivot |
+| `/review` | `/revise` | Act on retrospective findings |
+| `/arch` | `/revise` | Update plan based on architecture review |
