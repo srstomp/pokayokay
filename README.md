@@ -20,6 +20,12 @@
 - **25 Specialized Skills** - Route work to domain experts automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
 
+## Prerequisites
+
+- **Claude Code** v1.0.0 or later
+- **Node.js** v18 or later (for ohno CLI)
+- **Git** (for version control integration)
+
 ## Installation
 
 ```bash
@@ -78,6 +84,7 @@ npx @stevestomp/ohno-cli serve
 | Command | Description |
 |---------|-------------|
 | `/pokayokay:plan <path>` | Analyze PRD and create tasks with skill routing |
+| `/pokayokay:revise [--direct]` | Revise existing plan with impact analysis |
 | `/pokayokay:work [mode]` | Start/continue work session (supervised/semi-auto/autonomous) |
 | `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
 | `/pokayokay:review` | Analyze session patterns and skill effectiveness |
@@ -131,7 +138,7 @@ npx @stevestomp/ohno-cli serve
 
 ## Skills
 
-The plugin includes 25+ specialized skills that are automatically loaded based on task type:
+The plugin includes 26 specialized skills that are automatically loaded based on task type:
 
 ### Design & UX
 - `ux-design` - User flows, wireframes, information architecture
@@ -156,6 +163,9 @@ The plugin includes 25+ specialized skills that are automatically loaded based o
 ### Investigation
 - `spike` - Time-boxed technical investigation (2-4 hours)
 - `deep-research` - Multi-day technology evaluation
+
+### Planning
+- `plan-revision` - Guided plan revision with impact analysis
 
 ## Audit Dimensions
 
@@ -261,7 +271,7 @@ Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py
 
 Use `/pokayokay:hooks` to view and manage hook configuration.
 
-See [HOOKS.md](hooks/HOOKS.md) for configuration and customization.
+See [HOOKS.md](plugins/pokayokay/hooks/HOOKS.md) for configuration and customization.
 
 ## Spike Protocol
 
@@ -273,6 +283,10 @@ For high-uncertainty work:
 4. **Output**: `.claude/spikes/[name].md`
 
 ## Documentation
+
+- [GUIDE.md](GUIDE.md) - Detailed usage guide
+- [CHEATSHEET.md](CHEATSHEET.md) - Quick reference card
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 See [GUIDE.md](GUIDE.md) for:
 - Command relationships diagram
