@@ -60,3 +60,55 @@ Build mental model:
 **In Progress**: [list any active work]
 **Blocked**: [list any blockers]
 ```
+
+## Explore Mode
+
+When user is unsure what needs to change.
+
+### 1. Open with Discovery Question
+
+Ask ONE question to start:
+```
+Looking at your current plan, what's bothering you?
+
+1. **Technical approach** - The tickets assume an approach I disagree with
+2. **Scope** - Features need to be added, removed, or changed
+3. **Priority/ordering** - Dependencies or priorities are wrong
+4. **Something else** - Let me explain...
+```
+
+### 2. Drill Down with Follow-up Questions
+
+Based on answer, ask targeted follow-ups:
+- One question at a time
+- Multiple choice when possible
+- Surface connections: "If we change X, ticket Y depends on it"
+
+### 3. Propose 2-3 Approaches
+
+Once you understand the concern:
+```markdown
+## Approaches
+
+**Option A (Recommended)**: [description]
+- Pros: [list]
+- Cons: [list]
+- Impact: [N tasks affected]
+
+**Option B**: [description]
+- Pros: [list]
+- Cons: [list]
+- Impact: [N tasks affected]
+
+Which approach would you like to explore?
+```
+
+### 4. Converge to Concrete Changes
+
+After approach selected, list specific changes:
+- Tasks to create
+- Tasks to modify
+- Tasks to archive
+- Dependencies to update
+
+Then proceed to Impact Analysis.
