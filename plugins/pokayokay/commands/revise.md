@@ -112,3 +112,38 @@ After approach selected, list specific changes:
 - Dependencies to update
 
 Then proceed to Impact Analysis.
+
+## Direct Mode
+
+When user knows what they want to change.
+
+### 1. Prompt for Changes
+
+```
+What changes do you want to make to the plan?
+
+Be specific: "Remove the OAuth feature", "Change API from REST to GraphQL",
+"Split the auth epic into two smaller epics"
+```
+
+### 2. Parse Intent
+
+From user's response, identify:
+- **Additions**: New tasks/features to create
+- **Modifications**: Existing tasks to change
+- **Removals**: Tasks to archive
+- **Reordering**: Dependency changes
+
+### 3. Clarify Ambiguity (if needed)
+
+Only ask if genuinely unclear:
+```
+You mentioned "remove auth" - did you mean:
+1. Remove the entire authentication epic (5 tasks)
+2. Remove just the OAuth integration (2 tasks)
+3. Something else?
+```
+
+### 4. Proceed to Impact Analysis
+
+List the interpreted changes and move directly to impact analysis.
