@@ -209,10 +209,14 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | Agent | Model | Mode | Purpose |
 |-------|-------|------|---------|
 | `yokay-auditor` | Sonnet | Read-only | L0-L5 completeness scanning |
+| `yokay-brainstormer` | Sonnet | Read-only | Refine ambiguous tasks into clear requirements |
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
+| `yokay-implementer` | Sonnet | Can write | TDD implementation with fresh context |
+| `yokay-quality-reviewer` | Haiku | Read-only | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
-| `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
+| `yokay-spec-reviewer` | Haiku | Read-only | Verify implementation matches spec |
+| `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
 
 ### Agent vs Skill
@@ -232,6 +236,10 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:spike` | yokay-spike-runner | Deep investigations (>1h) |
 | `/pokayokay:security` | yokay-security-scanner | Always (verbose scanning) |
 | `/pokayokay:test` | yokay-test-runner | Running tests (not designing) |
+| `/pokayokay:work` | yokay-brainstormer | Ambiguous tasks (before impl) |
+| `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
+| `/pokayokay:work` | yokay-spec-reviewer | After implementation |
+| `/pokayokay:work` | yokay-quality-reviewer | After spec review passes |
 
 ### Manual Invocation
 
@@ -251,6 +259,58 @@ Use yokay-auditor to check the completeness of the dashboard feature.
 2. **Cost optimization** - Haiku agents are 5-10x cheaper
 3. **Enforced constraints** - Read-only agents can't accidentally edit
 4. **Parallel execution** - Run multiple investigations simultaneously
+
+### Brainstorm Gate
+
+For ambiguous tasks, `yokay-brainstormer` runs **before** implementation begins:
+
+```
+AMBIGUOUS TASK → yokay-brainstormer → CLEAR REQUIREMENTS → Implementation
+```
+
+**Triggers:**
+- Short or vague task descriptions
+- Missing acceptance criteria
+- Spike-type investigations
+- Features with unclear scope
+
+**Output:**
+- Gaps identified in the spec
+- Proposed acceptance criteria (Must Have / Should Have / Could Have)
+- Technical approach recommendation
+- Questions for human if still unclear
+
+This prevents wasted implementation effort from misunderstood requirements.
+
+### Two-Stage Review
+
+After implementation completes, work passes through two sequential reviews:
+
+```
+IMPLEMENTATION → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
+                      ↓ FAIL                  ↓ FAIL
+                 Re-implement              Re-implement
+```
+
+**Stage 1: Spec Review** (`yokay-spec-reviewer`)
+- Verifies all acceptance criteria are met
+- Checks for misinterpretations
+- Flags scope creep (unrequested features)
+- Binary PASS/FAIL verdict
+
+**Stage 2: Quality Review** (`yokay-quality-reviewer`)
+- Only runs after spec review passes
+- Checks code structure and readability
+- Verifies test coverage and quality
+- Checks project conventions
+- Binary PASS/FAIL verdict
+
+Both reviews must PASS before a task is marked complete. If either fails, the implementer is re-dispatched with specific fix requirements.
+
+**Why two stages?**
+- Separates "did we build the right thing?" from "did we build it well?"
+- Prevents quality issues from masking spec failures
+- Enables focused, actionable feedback
 
 ## Hook System
 

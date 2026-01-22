@@ -185,15 +185,19 @@ The `/pokayokay:audit` command checks 5 dimensions:
 
 ## Sub-Agents
 
-pokayokay includes **6 specialized sub-agents** that run in isolated context windows for verbose operations:
+pokayokay includes **10 specialized sub-agents** that run in isolated context windows for verbose operations:
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | `yokay-auditor` | Sonnet | L0-L5 completeness scanning (read-only) |
+| `yokay-brainstormer` | Sonnet | Refines ambiguous tasks into clear requirements |
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
+| `yokay-implementer` | Sonnet | TDD implementation with fresh context |
+| `yokay-quality-reviewer` | Haiku | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
-| `yokay-spike-runner` | Sonnet | Time-boxed investigations |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
+| `yokay-spec-reviewer` | Haiku | Verifies implementation matches spec |
+| `yokay-spike-runner` | Sonnet | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Test execution with concise output |
 
 ### Why Sub-Agents?
@@ -204,6 +208,28 @@ pokayokay includes **6 specialized sub-agents** that run in isolated context win
 - **Parallel execution** - Run multiple investigations simultaneously
 
 Commands like `/pokayokay:audit`, `/pokayokay:security`, and `/pokayokay:spike` automatically delegate to the appropriate agent.
+
+### Brainstorm Gate
+
+For ambiguous or under-specified tasks, `yokay-brainstormer` runs **before** implementation:
+
+1. Detects vague descriptions or missing acceptance criteria
+2. Explores codebase for context
+3. Produces clear requirements and technical approach
+4. Requests confirmation before implementation proceeds
+
+This prevents wasted work from misunderstood requirements.
+
+### Two-Stage Review
+
+After implementation, work passes through two sequential reviews:
+
+| Stage | Agent | Checks |
+|-------|-------|--------|
+| 1. Spec Review | `yokay-spec-reviewer` | Does implementation match requirements? |
+| 2. Quality Review | `yokay-quality-reviewer` | Is the code well-written and tested? |
+
+Both must PASS before a task is marked complete. This separation ensures completeness (spec) and quality are independently verified.
 
 ## Hook System
 
