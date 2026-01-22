@@ -7,6 +7,7 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | Command | Purpose | Primary Skill |
 |---------|---------|---------------|
 | `/pokayokay:plan` | Analyze PRD, create tasks | prd-analyzer |
+| `/pokayokay:revise` | Revise existing plan | plan-revision |
 | `/pokayokay:work` | Execute work sessions | project-harness |
 | `/pokayokay:audit` | Check feature completeness | product-manager |
 | `/pokayokay:review` | Analyze session patterns | session-review |
@@ -40,33 +41,39 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
                           │    (PRD Analysis + Task Creation)    │
                           └──────────────┬──────────────────────┘
                                          │
-                    ┌────────────────────┼────────────────────┐
-                    │                    │                    │
-                    ▼                    ▼                    ▼
-           ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-           │   /api        │    │    /ux        │    │    /arch      │
-           │ (API Design)  │    │  (UX Design)  │    │ (Architecture)│
-           └───────┬───────┘    └───────┬───────┘    └───────────────┘
-                   │                    │
-                   │                    ▼
-                   │            ┌───────────────┐
-                   │            │     /ui       │
-                   │            │(Visual Design)│
-                   │            └───────────────┘
-                   │
-                   └─────────────────┬─────────────────────────────┐
-                                     │                             │
-                                     ▼                             │
-                          ┌─────────────────────────────────────┐  │
-                          │              /work                   │  │
-                          │    (Implementation with Skills)      │◄─┘
-                          └──────────────┬──────────────────────┘
-                                         │
-              ┌──────────────────────────┼──────────────────────────┐
-              │                          │                          │
-              ▼                          ▼                          ▼
-     ┌───────────────┐        ┌───────────────┐        ┌───────────────┐
-     │    /audit     │        │   /handoff    │        │   /review     │
+                                         ▼
+                          ┌─────────────────────────────────────┐
+                          │             /revise                  │
+                          │   (Optional Plan Refinement)         │◄───────┐
+                          └──────────────┬──────────────────────┘        │
+                                         │                               │
+                    ┌────────────────────┼────────────────────┐          │
+                    │                    │                    │          │
+                    ▼                    ▼                    ▼          │
+           ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   │
+           │   /api        │    │    /ux        │    │    /arch      │   │
+           │ (API Design)  │    │  (UX Design)  │    │ (Architecture)│   │
+           └───────┬───────┘    └───────┬───────┘    └───────────────┘   │
+                   │                    │                                │
+                   │                    ▼                                │
+                   │            ┌───────────────┐                        │
+                   │            │     /ui       │                        │
+                   │            │(Visual Design)│                        │
+                   │            └───────────────┘                        │
+                   │                                                     │
+                   └─────────────────┬─────────────────────────────┐     │
+                                     │                             │     │
+                                     ▼                             │     │
+                          ┌─────────────────────────────────────┐  │     │
+                          │              /work                   │  │     │
+                          │    (Implementation with Skills)      │◄─┘     │
+                          └──────────────┬──────────────────────┘        │
+                                         │                               │
+              ┌──────────────────────────┼──────────────────────────┐    │
+              │                          │                          │    │
+              ▼                          ▼                          ▼    │
+     ┌───────────────┐        ┌───────────────┐        ┌───────────────┐ │
+     │    /audit     │        │   /handoff    │        │   /review     │─┘
      │ (Completeness)│        │(Session End)  │        │ (Analysis)    │
      └───────┬───────┘        └───────────────┘        └───────────────┘
              │
@@ -111,6 +118,15 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 - Analyzes PRD and creates tasks in ohno
 - Tags tasks with recommended skills
 - Creates `.claude/PROJECT.md` for context
+
+### 1b. Revision Phase (Optional)
+```bash
+/pokayokay:revise              # If you want to refine the plan
+/pokayokay:revise --direct     # If you know exactly what to change
+```
+- Review and adjust tasks before starting work
+- See impact of changes before applying them
+- Useful after feedback or requirements change
 
 ### 2. Work Phase
 ```bash
@@ -492,6 +508,31 @@ Analyzes a PRD, concept brief, or feature spec and creates a structured implemen
 /pokayokay:plan docs/feature-spec.md
 ```
 
+### /pokayokay:revise
+
+Revise an existing plan through guided conversation or directed changes, with full impact analysis before execution.
+
+**Modes:**
+- **Explore** (default) - Guided discovery when you're unsure what to change
+- **Direct** (`--direct`) - Fast path when you know exactly what to change
+
+**What it does:**
+1. Loads current plan from ohno
+2. Guides you through changes (explore) or parses your intent (direct)
+3. Shows impact analysis: ticket diff, risk assessment, dependency graph
+4. Executes changes with approval (dry-run first)
+
+**Example:**
+```bash
+/pokayokay:revise                    # Explore mode - "something feels off"
+/pokayokay:revise --direct           # Direct mode - "I want to change X"
+```
+
+**Use when:**
+- After `/plan` to refine before starting work
+- Mid-project when requirements change
+- After `/review` to act on retrospective findings
+
 ### /pokayokay:work
 
 Starts or continues an orchestrated work session with configurable human control.
@@ -614,8 +655,15 @@ The audit catches these gaps and creates remediation tasks automatically.
 ### Starting a new project
 1. Write a PRD or feature spec
 2. `/pokayokay:plan docs/prd.md` to create tasks
-3. `/pokayokay:work supervised` to implement with oversight
-4. `/pokayokay:audit` to verify completeness
+3. `/pokayokay:revise` to refine if needed
+4. `/pokayokay:work supervised` to implement with oversight
+5. `/pokayokay:audit` to verify completeness
+
+### Revising a plan mid-project
+1. `/pokayokay:revise` to explore what needs to change
+2. Review impact analysis (affected tasks, risks)
+3. Approve changes or iterate
+4. `/pokayokay:work` to continue with updated plan
 
 ### Resuming interrupted work
 1. Claude automatically reads session context from ohno
