@@ -204,3 +204,85 @@ Flag as :warning: High Risk when:
 Flag as :information_source: Medium Risk when:
 - Task has dependencies that need updating
 - Task is part of an epic with completed siblings
+
+## Execution Phase
+
+After impact analysis, apply changes with user approval.
+
+### 1. Approval Prompt
+
+```
+Apply all changes?
+
+[A] Apply all (N changes)
+[R] Review high-risk only (N items flagged)
+[E] Edit plan (back to conversation)
+[C] Cancel
+```
+
+### 2. High-Risk Review (if selected)
+
+For each :warning: flagged item:
+```
+:warning: Archive T-015 "Auth middleware"?
+   This task has 2 hours of logged work.
+
+   [Y] Yes, archive
+   [N] No, keep
+   [M] Modify instead
+```
+
+### 3. Execute Changes
+
+Use ohno MCP tools in order:
+
+**Step 3a: Archive tasks**
+```
+archive_task(task_id, reason="Removed during plan revision")
+```
+
+**Step 3b: Update existing tasks**
+```
+update_task(task_id, {
+  title: new_title,
+  description: new_description,
+  ...
+})
+```
+
+**Step 3c: Create new tasks**
+```
+create_task({
+  title: title,
+  description: description,
+  story_id: parent_story,
+  ...
+})
+```
+
+**Step 3d: Update dependencies**
+```
+remove_dependency(task_id, old_dependency)
+add_dependency(task_id, new_dependency)
+```
+
+**Step 3e: Log revision**
+```
+add_task_activity(task_id, "note", "Revised: [reason]")
+```
+
+### 4. Summary
+
+```markdown
+## Revision Complete
+
+**Applied Changes:**
+- Archived: N tasks
+- Modified: N tasks
+- Created: N tasks
+- Dependencies updated: N
+
+**Plan now has**: X tasks total
+
+Use `/pokayokay:work` to continue implementation.
+```
