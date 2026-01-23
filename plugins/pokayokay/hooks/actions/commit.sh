@@ -12,9 +12,16 @@ fi
 
 # Check for sensitive files before staging
 CHANGED_FILES=$(git status --porcelain | grep -E '^[AM? ]' | cut -c 4-)
-if echo "$CHANGED_FILES" | grep -qE '\.env|credentials|secrets|id_rsa'; then
+# Pattern matches:
+# - .env (exact filename)
+# - credentials or credentials.json (exact)
+# - secrets, secrets.json, secrets.yaml, secrets.yml (exact)
+# - id_rsa (exact, not id_rsa.pub)
+# Uses (^|/) to match start of path or after directory separator
+# Uses $ to ensure exact match (no suffixes allowed)
+if echo "$CHANGED_FILES" | grep -qE '(^|/)\.env$|(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'; then
   echo "⚠️ Sensitive files detected. Review before committing."
-  echo "$CHANGED_FILES" | grep -E '\.env|credentials|secrets|id_rsa'
+  echo "$CHANGED_FILES" | grep -E '(^|/)\.env$|(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'
   exit 1
 fi
 
