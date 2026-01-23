@@ -10,8 +10,16 @@ if git diff --cached --quiet && git diff --quiet; then
   exit 0
 fi
 
-# Stage all changes
-git add -A
+# Check for sensitive files before staging
+CHANGED_FILES=$(git status --porcelain | grep -E '^[AM? ]' | cut -c 4-)
+if echo "$CHANGED_FILES" | grep -qE '\.env|credentials|secrets|id_rsa'; then
+  echo "⚠️ Sensitive files detected. Review before committing."
+  echo "$CHANGED_FILES" | grep -E '\.env|credentials|secrets|id_rsa'
+  exit 1
+fi
+
+# Stage only tracked files (prevents accidentally staging new sensitive files)
+git add -u
 
 # Build commit message
 TASK_TYPE="${TASK_TYPE:-feat}"
