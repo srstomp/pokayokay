@@ -17,6 +17,24 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
+def sanitize_env_value(value: str) -> str:
+    """
+    Sanitize environment variable values to prevent command injection.
+
+    Removes non-printable characters (except newline) to prevent control
+    characters from affecting subprocess behavior.
+
+    Args:
+        value: The environment variable value to sanitize
+
+    Returns:
+        Sanitized string with only printable characters and newlines
+    """
+    if not isinstance(value, str):
+        return str(value)
+    return ''.join(c for c in value if c.isprintable() or c == '\n')
+
+
 def get_script_dir() -> Path:
     """Get the directory containing this script."""
     return Path(__file__).parent
@@ -33,7 +51,9 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
         # Merge environment
         run_env = os.environ.copy()
         if env:
-            run_env.update(env)
+            # Sanitize environment variables to prevent command injection
+            sanitized_env = {k: sanitize_env_value(v) for k, v in env.items()}
+            run_env.update(sanitized_env)
 
         # Run the script
         cmd = [str(script_path)] + (args or [])
