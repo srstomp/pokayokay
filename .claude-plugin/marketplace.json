@@ -11,7 +11,7 @@
     {
       "name": "pokayokay",
       "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "author": {
         "name": "Steve Stomp"
       },
