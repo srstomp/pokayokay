@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "srstomp-pokayokay",
+  "name": "pokayokay",
   "version": "1.0.0",
   "description": "AI-assisted development orchestration with task tracking and skill-based routing",
   "owner": {
