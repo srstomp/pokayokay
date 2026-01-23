@@ -28,13 +28,13 @@ if [ -d "src" ]; then
 fi
 
 # Check for TODO/FIXME comments in recent changes
-TODOS=$(git diff HEAD~5 --name-only 2>/dev/null | xargs grep -l "TODO\|FIXME" 2>/dev/null | wc -l || echo "0")
+TODOS=$(git diff HEAD~5 --name-only -z 2>/dev/null | xargs -0 -r grep -l "TODO\|FIXME" 2>/dev/null | wc -l || echo "0")
 if [ "$TODOS" -gt 3 ]; then
   QUALITY_ISSUES+=("$TODOS files with TODO/FIXME in recent changes")
 fi
 
 # Check for console.log in production code
-CONSOLE_LOGS=$(find src -name "*.ts" -o -name "*.tsx" 2>/dev/null | xargs grep -l "console.log" 2>/dev/null | wc -l || echo "0")
+CONSOLE_LOGS=$(find src -name "*.ts" -o -name "*.tsx" -print0 2>/dev/null | xargs -0 -r grep -l "console.log" 2>/dev/null | wc -l || echo "0")
 if [ "$CONSOLE_LOGS" -gt 5 ]; then
   QUALITY_ISSUES+=("$CONSOLE_LOGS files with console.log (O1)")
 fi
