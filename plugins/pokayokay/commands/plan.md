@@ -22,15 +22,47 @@ Read and understand the document at the provided path. Extract:
 npx @stevestomp/ohno-cli init
 ```
 
-### 3. Break Down into Tasks
-For each feature identified:
-1. Create an epic-level task in ohno
-2. Break into stories (user-facing chunks)
-3. Break stories into implementable tasks
+### 3. Create Hierarchical Structure
 
-Use ohno MCP tools:
-- `create_task` for each task
-- `add_dependency` for task relationships
+Use the ohno MCP tools to create a proper epic → story → task hierarchy:
+
+#### 3.1 Create Epics (Major Features)
+For each major feature area, create an epic with priority:
+```
+mcp__ohno__create_epic:
+  title: "User Authentication"
+  description: "Complete auth system with login, registration, password reset"
+  priority: "P0"  # P0=critical, P1=high, P2=medium, P3=low
+```
+
+#### 3.2 Create Stories (User-Facing Capabilities)
+For each epic, create stories representing user-facing chunks:
+```
+mcp__ohno__create_story:
+  title: "Email/Password Registration"
+  epic_id: "<epic_id from step above>"
+  description: "Users can create accounts with email and password"
+```
+
+#### 3.3 Create Tasks (Implementable Units)
+For each story, create tasks (1-8 hours each):
+```
+mcp__ohno__create_task:
+  title: "Create registration form component"
+  story_id: "<story_id from step above>"
+  task_type: "feature"  # feature, bug, chore, spike, test
+  estimate_hours: 4
+```
+
+#### 3.4 Add Dependencies
+Link tasks that depend on each other:
+```
+mcp__ohno__add_dependency:
+  task_id: "<task that is blocked>"
+  depends_on_task_id: "<task that must complete first>"
+```
+
+**Important**: Always create in order: epics first, then stories (with epic_id), then tasks (with story_id). This ensures proper relationships.
 
 ### 4. Assign Skill Hints
 
@@ -83,8 +115,12 @@ For features with high uncertainty, create spike tasks:
 - Complex integration assessments
 
 Example:
-```bash
-npx @stevestomp/ohno-cli create "Spike: Can D1 handle multi-tenant isolation?" -t spike --estimate 3h
+```
+mcp__ohno__create_task:
+  title: "Spike: Can D1 handle multi-tenant isolation?"
+  story_id: "<relevant_story_id>"
+  task_type: "spike"
+  estimate_hours: 3
 ```
 
 ### 5. Create Project Context
