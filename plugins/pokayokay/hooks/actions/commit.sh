@@ -34,21 +34,40 @@ if [[ "$TASK_TITLE" =~ ^([a-zA-Z]+): ]]; then
   SCOPE="${BASH_REMATCH[1]}"
 fi
 
-# Build message
+# Create temporary file for commit message
+COMMIT_FILE=$(mktemp)
+trap "rm -f $COMMIT_FILE" EXIT
+
+# Build message in temporary file using heredoc
 if [ -n "$SCOPE" ]; then
-  MESSAGE="${TYPE}(${SCOPE}): ${TASK_TITLE}"
+  if [ -n "$TASK_ID" ]; then
+    cat > "$COMMIT_FILE" <<EOF
+${TYPE}(${SCOPE}): ${TASK_TITLE}
+
+Task: ${TASK_ID}
+EOF
+  else
+    cat > "$COMMIT_FILE" <<EOF
+${TYPE}(${SCOPE}): ${TASK_TITLE}
+EOF
+  fi
 else
-  MESSAGE="${TYPE}: ${TASK_TITLE}"
+  if [ -n "$TASK_ID" ]; then
+    cat > "$COMMIT_FILE" <<EOF
+${TYPE}: ${TASK_TITLE}
+
+Task: ${TASK_ID}
+EOF
+  else
+    cat > "$COMMIT_FILE" <<EOF
+${TYPE}: ${TASK_TITLE}
+EOF
+  fi
 fi
 
-# Add task ID if available
-if [ -n "$TASK_ID" ]; then
-  MESSAGE="${MESSAGE}
+# Commit using file
+git commit -F "$COMMIT_FILE"
 
-Task: ${TASK_ID}"
-fi
-
-# Commit
-git commit -m "$MESSAGE"
-
+# Read message for display
+MESSAGE=$(cat "$COMMIT_FILE")
 echo "✓ Committed: $MESSAGE"
