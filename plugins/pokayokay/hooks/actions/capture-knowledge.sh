@@ -10,15 +10,31 @@ TYPE="${TASK_TYPE:-}"
 TITLE="${TASK_TITLE:-}"
 NOTES="${TASK_NOTES:-}"
 
-# Only process spike and research tasks
-if [ "$TYPE" != "spike" ] && [ "$TYPE" != "research" ]; then
-  exit 0
-fi
+# Validate TASK_TYPE against allowlist (CWE-22: Path Traversal Prevention)
+# This prevents malicious task types like "../../../tmp/exploit" from writing outside .claude/
+case "$TYPE" in
+  spike|research)
+    # Valid task types - continue processing
+    ;;
+  "")
+    # Empty task type - exit silently (not an error, just nothing to do)
+    exit 0
+    ;;
+  *)
+    # Invalid task type - exit with error
+    echo "Error: Invalid task type '$TYPE'. Must be 'spike' or 'research'." >&2
+    exit 1
+    ;;
+esac
 
-echo "Checking knowledge capture for ${TYPE}..."
+# Defense-in-depth: Use basename to strip any path components
+# This ensures even if validation is somehow bypassed, path traversal is prevented
+SAFE_TYPE=$(basename "$TYPE")
+
+echo "Checking knowledge capture for ${SAFE_TYPE}..."
 
 # Create output directory if needed
-KNOWLEDGE_DIR=".claude/${TYPE}s"
+KNOWLEDGE_DIR=".claude/${SAFE_TYPE}s"
 mkdir -p "$KNOWLEDGE_DIR" 2>/dev/null || true
 
 # Check if output file exists
@@ -32,14 +48,14 @@ else
   echo ""
   echo "## Knowledge Capture Reminder"
   echo ""
-  echo "This ${TYPE} should produce documented findings."
+  echo "This ${SAFE_TYPE} should produce documented findings."
   echo ""
   echo "Expected output: \`$OUTPUT_FILE\`"
   echo ""
 fi
 
 # Check for GO decision in notes (spike-specific)
-if [ "$TYPE" = "spike" ]; then
+if [ "$SAFE_TYPE" = "spike" ]; then
   NOTES_LOWER=$(echo "$NOTES" | tr '[:upper:]' '[:lower:]')
 
   if echo "$NOTES_LOWER" | grep -q "go"; then
