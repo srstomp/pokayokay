@@ -221,6 +221,80 @@ If brainstorm triggers:
 - Subagent can ask questions before/during work
 - Context discarded after task (token efficiency)
 
+### 4.5 Browser Verification (Conditional)
+
+After the implementer completes, check if browser verification should run.
+
+#### Testability Checks
+
+All three conditions must pass:
+
+1. **Browser tools available**: Check for Playwright MCP (`mcp__plugin_playwright_*`) or Chrome extension tools
+2. **Server running**: HTTP server on ports 3000-9999, or can be started via package.json
+3. **Renderable files changed**: Task modified `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/`
+
+If any check fails, silently skip to Step 5 (Review).
+
+#### Verification Flow
+
+If all checks pass:
+
+1. Dispatch browser verifier:
+   ```
+   Task tool (yokay-browser-verifier):
+     description: "Browser verify: {task.title}"
+     prompt: [Include task details, server URL, changed files]
+   ```
+
+2. Process verification result:
+   - **PASS**: Continue to Step 5 (Review)
+   - **ISSUE**: Re-dispatch implementer with visual/functional issues
+   - **SKIP**: User provided reason, continue with warning flag
+
+3. Log activity:
+   ```
+   add_task_activity(task_id, "note", "Browser verification: PASS/ISSUE/SKIP")
+   ```
+
+#### Detection Pseudocode
+
+```python
+def should_verify_browser(task, changed_files):
+    # Check 1: Browser tools
+    has_playwright = any_tool_matches("mcp__plugin_playwright_*")
+    has_chrome = any_tool_matches("mcp__claude-in-chrome__*")
+    if not (has_playwright or has_chrome):
+        return False, "No browser tools"
+
+    # Check 2: Server running
+    server = detect_server([3000, 9999])
+    if not server and not can_start_server():
+        return False, "No server"
+
+    # Check 3: Renderable files
+    renderable_exts = ['.html', '.css', '.scss', '.tsx', '.jsx', '.vue', '.svelte']
+    renderable_paths = ['components/', 'views/', 'ui/', 'pages/']
+
+    has_renderable = any(
+        f.endswith(tuple(renderable_exts)) or
+        any(p in f for p in renderable_paths)
+        for f in changed_files
+    )
+    if not has_renderable:
+        return False, "No UI changes"
+
+    return True, server
+```
+
+#### Advisory Behavior
+
+This is advisory, not blocking:
+- User can skip with a reason
+- Skip reason is logged in task notes
+- Work continues to review with warning flag
+
+See `skills/browser-verification/SKILL.md` for full details.
+
 ### 5. Two-Stage Review
 
 After implementer completes, run reviews in sequence:
@@ -276,13 +350,25 @@ Only runs if spec review passes.
 └──────┬───────┘
        │
        ▼
-┌──────────────┐     FAIL     ┌──────────────┐
-│ Spec Review  │─────────────►│ Re-dispatch  │
-└──────┬───────┘              │ implementer  │
-       │ PASS                 │ with issues  │
-       ▼                      └──────┬───────┘
-┌──────────────┐                     │
-│Quality Review│◄────────────────────┘
+┌──────────────┐  NO   ┌──────────────┐
+│ UI changes?  │──────►│ Skip browser │
+│              │       │  verify      │
+└──────┬───────┘       └──────┬───────┘
+       │ YES                  │
+       ▼                      │
+┌──────────────┐  ISSUE  ┌────┴────────┐
+│   Browser    │────────►│ Re-dispatch │
+│   Verify     │         │ implementer │
+└──────┬───────┘         └─────────────┘
+       │ PASS/SKIP             ▲
+       ▼                       │
+┌──────────────┐     FAIL      │
+│ Spec Review  │───────────────┘
+└──────┬───────┘
+       │ PASS
+       ▼
+┌──────────────┐     FAIL
+│Quality Review│───────────────►(back to implementer)
 └──────┬───────┘
        │ PASS
        ▼

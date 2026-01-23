@@ -234,6 +234,7 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-spec-reviewer` | Haiku | Read-only | Verify implementation matches spec |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
+| `yokay-browser-verifier` | Sonnet | Read-only | Browser verification for UI changes |
 
 ### Agent vs Skill
 
@@ -254,7 +255,8 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:test` | yokay-test-runner | Running tests (not designing) |
 | `/pokayokay:work` | yokay-brainstormer | Ambiguous tasks (before impl) |
 | `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
-| `/pokayokay:work` | yokay-spec-reviewer | After implementation |
+| `/pokayokay:work` | yokay-browser-verifier | UI changes (after implementation) |
+| `/pokayokay:work` | yokay-spec-reviewer | After browser verification |
 | `/pokayokay:work` | yokay-quality-reviewer | After spec review passes |
 
 ### Manual Invocation
@@ -327,6 +329,56 @@ Both reviews must PASS before a task is marked complete. If either fails, the im
 - Separates "did we build the right thing?" from "did we build it well?"
 - Prevents quality issues from masking spec failures
 - Enables focused, actionable feedback
+
+### Browser Verification
+
+For tasks that modify UI-related files, browser verification runs **after implementation and before reviews**:
+
+```
+IMPLEMENTATION → browser-verify → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
+```
+
+**What it checks:**
+- Visual elements render correctly
+- Interactive features work as expected
+- No JavaScript console errors
+- Page loads without issues
+
+**When it runs:**
+
+All three conditions must be true:
+
+| Condition | Check |
+|-----------|-------|
+| Browser tools available | Playwright MCP or Chrome extension |
+| Server running | HTTP server on ports 3000-9999 |
+| UI files changed | `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/` |
+
+If any condition fails, verification is silently skipped.
+
+**Advisory behavior:**
+
+Browser verification is advisory, not blocking:
+- User can skip with a reason ("tests cover this", "backend-only change", etc.)
+- Skip reason is logged in task notes
+- Work continues to spec review with warning flag
+
+**Configuration:**
+
+Create `.yokay/browser-verification.yaml` to customize:
+
+```yaml
+enabled: true
+server:
+  preferredPort: 5173  # Vite default
+files:
+  additionalPaths:
+    - src/templates/
+  excludePaths:
+    - src/email-templates/
+```
+
+See `skills/browser-verification/SKILL.md` for full details.
 
 ## Hook System
 
