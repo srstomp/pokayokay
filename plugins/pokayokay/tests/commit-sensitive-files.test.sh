@@ -142,6 +142,192 @@ else
   exit 1
 fi
 
+# Test 7: Allow .env.backup (false positive check)
+echo "Test 7: Allow .env.backup file"
+rm -f newfile.txt
+echo "backup" > .env.backup
+echo "change 1" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: .env.backup file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 4 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: .env.backup was incorrectly blocked"
+  exit 1
+fi
+
+# Test 8: Allow id_rsa.pub (public key is safe)
+echo "Test 8: Allow id_rsa.pub file"
+rm -f .env.backup
+echo "-----BEGIN PUBLIC KEY-----" > id_rsa.pub
+echo "change 2" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: id_rsa.pub file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 5 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: id_rsa.pub was incorrectly blocked"
+  exit 1
+fi
+
+# Test 9: Allow credentials-backup.json (false positive check)
+echo "Test 9: Allow credentials-backup.json file"
+rm -f id_rsa.pub
+echo "backup" > credentials-backup.json
+echo "change 3" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: credentials-backup.json file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 6 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: credentials-backup.json was incorrectly blocked"
+  exit 1
+fi
+
+# Test 10: Allow secrets-config.yml (false positive check)
+echo "Test 10: Allow secrets-config.yml file"
+rm -f credentials-backup.json
+echo "config" > secrets-config.yml
+echo "change 4" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: secrets-config.yml file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 7 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: secrets-config.yml was incorrectly blocked"
+  exit 1
+fi
+
+# Test 11: Block exact .env file
+echo "Test 11: Block exact .env file"
+rm -f secrets-config.yml
+echo "SECRET=value" > .env
+echo "normal change" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1 | grep -q "Sensitive files detected"; then
+  echo "  PASS: Exact .env file was blocked"
+else
+  echo "  FAIL: Exact .env file was not blocked"
+  exit 1
+fi
+
+# Test 12: Block credentials.json (with extension)
+echo "Test 12: Block credentials.json"
+rm -f .env
+git restore --staged normal.txt
+echo "password=secret" > credentials.json
+echo "normal change" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1 | grep -q "Sensitive files detected"; then
+  echo "  PASS: credentials.json was blocked"
+else
+  echo "  FAIL: credentials.json was not blocked"
+  exit 1
+fi
+
+# Test 13: Block exact credentials file (no extension)
+echo "Test 13: Block exact credentials file"
+rm -f credentials.json
+git restore --staged normal.txt
+echo "password=secret" > credentials
+echo "normal change" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1 | grep -q "Sensitive files detected"; then
+  echo "  PASS: Exact credentials file was blocked"
+else
+  echo "  FAIL: Exact credentials file was not blocked"
+  exit 1
+fi
+
+# Test 14: Block secrets.yaml
+echo "Test 14: Block secrets.yaml"
+rm -f credentials
+git restore --staged normal.txt
+echo "api_key=xyz" > secrets.yaml
+echo "normal change" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1 | grep -q "Sensitive files detected"; then
+  echo "  PASS: secrets.yaml was blocked"
+else
+  echo "  FAIL: secrets.yaml was not blocked"
+  exit 1
+fi
+
+# Test 15: Allow .env.local
+echo "Test 15: Allow .env.local file"
+rm -f secrets.yaml
+git restore --staged normal.txt
+echo "LOCAL_VAR=value" > .env.local
+echo "change 5" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: .env.local file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 8 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: .env.local was incorrectly blocked"
+  exit 1
+fi
+
+# Test 16: Allow .env.example
+echo "Test 16: Allow .env.example file"
+rm -f .env.local
+echo "EXAMPLE_VAR=value" > .env.example
+echo "change 6" > normal.txt
+git add normal.txt
+
+if bash "$COMMIT_SCRIPT" 2>&1; then
+  echo "  PASS: .env.example file was allowed"
+  COMMIT_COUNT=$(git rev-list --count HEAD)
+  if [ "$COMMIT_COUNT" -eq 9 ]; then
+    echo "  PASS: Commit was created successfully"
+  else
+    echo "  FAIL: Commit count unexpected: $COMMIT_COUNT"
+    exit 1
+  fi
+else
+  echo "  FAIL: .env.example was incorrectly blocked"
+  exit 1
+fi
+
 echo ""
 echo "All sensitive file detection tests passed!"
 echo ""
@@ -150,3 +336,4 @@ echo "  - Check for sensitive file patterns before staging"
 echo "  - Use 'git add -u' instead of 'git add -A'"
 echo "  - Exit with error if sensitive files detected"
 echo "  - Patterns: .env, credentials, secrets, id_rsa"
+echo "  - Allow false positives: .env.backup, .env.local, .env.example, id_rsa.pub, credentials-backup.json, secrets-config.yml"
