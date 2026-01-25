@@ -1,0 +1,57 @@
+id: SC-001
+
+category: scope-creep
+
+discovered: 2026-01-25
+
+severity: medium
+
+context:
+  task: "Add a settings page where users can update their profile name and email"
+
+failure:
+  description: "Agent implemented the requested settings page but also added unrequested features: dark mode toggle, language preferences, notification settings, and a complete theme customization system"
+  root_cause: "Agent likely over-interpreted 'settings page' as requiring all common settings features, rather than implementing only the explicitly requested profile update functionality. This added unnecessary complexity and scope beyond what was asked."
+
+evidence:
+  task_spec: |
+    Create a settings page for the application with the following functionality:
+
+    Requirements:
+    - Form to update user's display name
+    - Form to update user's email address
+    - Validation for both fields
+    - Save button that updates the user profile
+    - Success/error messages
+
+    Acceptance Criteria:
+    - User can change their name and see it reflected across the app
+    - Email validation ensures valid format before save
+    - Proper error handling if save fails
+
+  what_was_built: |
+    Implemented features:
+    - Profile name update form ✓
+    - Email update form ✓
+    - Validation ✓
+    - Save functionality ✓
+
+    EXTRA features NOT requested:
+    - Dark mode toggle ✗
+    - Language selector (EN, ES, FR, DE) ✗
+    - Notification preferences (email, push, SMS) ✗
+    - Theme customizer (accent colors, font sizes) ✗
+    - Privacy settings section ✗
+    - Complete settings navigation sidebar ✗
+
+    Result: Created a complex settings system (500+ lines) when only a simple profile update form (100 lines) was needed.
+
+eval_criteria:
+  - type: code-based
+    check: "count_components('settings') <= 2 && file_size('settings.tsx') < 200 lines"
+
+  - type: model-based
+    check: "Verify implementation includes ONLY the features explicitly listed in requirements, with no additional functionality beyond what was requested"
+
+  - type: model-based
+    check: "Compare the scope of what was built against the task specification and flag any features that were not explicitly requested or reasonably implied"

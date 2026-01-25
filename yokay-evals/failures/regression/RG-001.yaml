@@ -1,0 +1,75 @@
+id: RG-001
+
+category: regression
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Fix bug where user profile page crashes when user has no avatar"
+
+failure:
+  description: "Agent fixed the null avatar crash by adding a check, but the fix modified a shared utility function that broke avatar display on 4 other pages (dashboard, comments, sidebar, and admin panel)"
+  root_cause: "Agent modified the getAvatarUrl() utility function used across the application instead of fixing the issue locally in the profile page component. The agent didn't run the full test suite or check usage of the function across the codebase before making the change."
+
+evidence:
+  task_spec: |
+    Bug Report #247: Profile page crashes when user has no avatar
+
+    Steps to reproduce:
+    1. Create new user account (no avatar set)
+    2. Navigate to /profile
+    3. Page crashes with: "Cannot read property 'url' of null"
+
+    Expected behavior:
+    - Show default avatar image when user has no avatar
+
+    Fix requirements:
+    - Handle null/undefined avatar gracefully
+    - Display placeholder avatar image
+    - Don't break any existing functionality
+
+  what_was_built: |
+    Changed made to src/utils/avatar.js:
+    ```javascript
+    // BEFORE (working in 4 places, broken in 1):
+    export function getAvatarUrl(user) {
+      return user.avatar?.url || '/images/default-avatar.png';
+    }
+
+    // AFTER (fixes profile, breaks 4 other pages):
+    export function getAvatarUrl(user) {
+      if (!user?.avatar) return null;  // Changed to null instead of default
+      return user.avatar.url;
+    }
+    ```
+
+    Impact:
+    - Profile page: Fixed ✓ (no longer crashes)
+    - Dashboard: Broken ✗ (shows broken image icon)
+    - Comment sections: Broken ✗ (displays "null" as text)
+    - Sidebar user menu: Broken ✗ (avatar missing)
+    - Admin user list: Broken ✗ (no avatars displayed)
+
+    Test results agent didn't check:
+    - profile.test.js: PASS ✓
+    - dashboard.test.js: FAIL ✗ (avatar rendering test)
+    - comments.test.js: FAIL ✗ (user avatar display test)
+    - sidebar.test.js: FAIL ✗ (menu avatar test)
+
+eval_criteria:
+  - type: code-based
+    check: "npm test && exit_code == 0"
+
+  - type: code-based
+    check: "git diff main --name-only | xargs -I {} grep -l 'getAvatarUrl' {} | wc -l == 0 || run_tests_for_affected_files"
+
+  - type: model-based
+    check: "Before modifying shared utility functions, verify usage across entire codebase and ensure changes don't break existing consumers"
+
+  - type: model-based
+    check: "Confirm full test suite was run after changes, not just tests for the specific component being fixed"
+
+  - type: code-based
+    check: "grep -r 'getAvatarUrl' src/ | wc -l > 1 && warn_shared_function_modified"

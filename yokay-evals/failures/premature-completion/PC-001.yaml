@@ -1,0 +1,60 @@
+id: PC-001
+
+category: premature-completion
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Implement shopping cart functionality with add/remove items and calculate total"
+
+failure:
+  description: "Agent reported task completion and committed code, but the test suite was failing with 3 broken tests and the application crashed when trying to remove items from the cart"
+  root_cause: "Agent implemented the core functionality but did not run the test suite before declaring completion. The removeItem function had an off-by-one error causing array index out of bounds, and the total calculation didn't handle edge cases like empty carts or removed items."
+
+evidence:
+  task_spec: |
+    Implement a shopping cart with the following features:
+
+    Requirements:
+    - addItem(product, quantity): Add items to cart
+    - removeItem(productId): Remove items from cart
+    - calculateTotal(): Return total price of all items
+    - getItems(): Return current cart contents
+
+    Acceptance Criteria:
+    - All existing unit tests must pass
+    - Cart handles edge cases (empty cart, removing non-existent items)
+    - Total calculation includes quantity multiplied by price
+    - Cart state persists across page reloads
+
+  what_was_built: |
+    Implementation status:
+    - addItem() implemented ✓
+    - removeItem() implemented but broken ✗
+    - calculateTotal() implemented but buggy ✗
+    - getItems() implemented ✓
+    - LocalStorage persistence ✓
+
+    Test results (agent did not check these):
+    - test_add_item: PASS ✓
+    - test_remove_item: FAIL ✗ (TypeError: Cannot read property 'splice' of undefined)
+    - test_calculate_total_empty_cart: FAIL ✗ (Returns NaN instead of 0)
+    - test_calculate_total_with_items: FAIL ✗ (Incorrect calculation after removal)
+    - test_persistence: PASS ✓
+
+    Application crash when user clicks "Remove" button.
+
+eval_criteria:
+  - type: code-based
+    check: "npm test -- --coverage && exit_code == 0"
+
+  - type: code-based
+    check: "grep -q 'All tests passed' test-output.log"
+
+  - type: model-based
+    check: "Verify agent explicitly ran the test suite and confirmed all tests pass before declaring task complete"
+
+  - type: model-based
+    check: "Confirm the implementation handles all edge cases mentioned in acceptance criteria (empty cart, removing non-existent items, etc.)"

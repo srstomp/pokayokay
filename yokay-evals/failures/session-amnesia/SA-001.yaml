@@ -1,0 +1,54 @@
+id: SA-001
+
+category: session-amnesia
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Implement file upload endpoint for user avatars"
+  session_id: conv_2026-01-25_morning
+
+failure:
+  description: "Agent implemented file upload endpoint but allowed any file type and unlimited file sizes, despite explicit constraints mentioned earlier in the conversation about limiting to images under 5MB"
+  root_cause: "Agent lost track of earlier context from the conversation where file type restrictions (jpg, png, gif only) and size limits (max 5MB) were discussed. The agent focused only on the immediate implementation request without referencing prior constraints."
+
+evidence:
+  task_spec: |
+    Earlier in conversation (turn 3):
+    User: "We need to be careful about file uploads. Only allow image files - jpg, png, and gif.
+    And keep them under 5MB to avoid storage issues."
+    Agent: "Understood. I'll make sure to validate file types and enforce the 5MB limit."
+
+    Later in conversation (turn 15):
+    User: "Now implement the file upload endpoint for user avatars"
+
+    [Agent implemented upload but forgot the constraints from turn 3]
+
+  what_was_built: |
+    Implementation:
+    - POST /api/upload/avatar endpoint ✓
+    - File upload handling ✓
+    - Storage to filesystem ✓
+    - Database record update ✓
+
+    Missing validation (discussed earlier):
+    - File type validation ✗ (accepts ANY file type including .exe, .pdf, etc.)
+    - File size limit ✗ (no size restriction, could upload gigabyte files)
+    - Image validation ✗ (doesn't verify file is actually an image)
+
+    Security impact: Users uploaded 50MB video files and executable files as "avatars"
+
+eval_criteria:
+  - type: code-based
+    check: "grep -r 'allowedTypes.*\\[.*jpg.*png.*gif' src/ && grep -r 'maxSize.*5.*MB' src/"
+
+  - type: code-based
+    check: "file_upload_middleware_validates_type() && file_upload_middleware_validates_size()"
+
+  - type: model-based
+    check: "Verify implementation respects ALL constraints mentioned anywhere in the conversation history, not just in the immediate task request"
+
+  - type: model-based
+    check: "Check that file upload includes validation for: allowed file types (jpg, png, gif), max file size (5MB), and actual file content verification"
