@@ -1,0 +1,46 @@
+id: WP-003
+
+category: wrong-product
+
+discovered: 2026-01-25
+
+severity: medium
+
+context:
+  task: "Add inline editing for task names in project management dashboard"
+
+failure:
+  description: "Agent created a modal dialog for editing task names instead of the requested inline editing functionality"
+  root_cause: "Agent may have defaulted to familiar modal pattern or missed the 'inline' requirement, focusing only on 'editing' functionality"
+
+evidence:
+  task_spec: |
+    Add inline editing capability for task names in the task list.
+
+    Requirements:
+    - Click on task name to enter edit mode (no modal/dialog)
+    - Show text input field in place of task name
+    - Save on Enter key or blur event
+    - Cancel on Escape key
+    - Update task name via PATCH /api/tasks/:id
+
+    UX Note: Must be inline editing for quick workflows. Users should
+    not need to open separate dialogs or navigate away from the list.
+
+  what_was_built: |
+    Agent implemented:
+    - Click task name opens edit modal dialog ✗
+    - Modal contains form with input field ✗
+    - Save button in modal calls PATCH /api/tasks/:id ✓
+    - Cancel button closes modal ✓
+    - Inline editing ✗ (not implemented)
+
+    Result: Users must open a modal for each edit, disrupting workflow.
+    Quick bulk editing is cumbersome. UX is much slower than specified.
+
+eval_criteria:
+  - type: code-based
+    check: "no_modal_in_edit_flow() && edit_input_appears_in_list_dom() && !contains_string('modal', 'dialog', 'popup')"
+
+  - type: model-based
+    check: "Verify that editing happens directly in the task list view without opening modals, dialogs, or separate pages. The text input should appear in place of the task name when clicked."

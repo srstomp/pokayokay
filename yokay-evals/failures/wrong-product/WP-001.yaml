@@ -1,0 +1,43 @@
+id: WP-001
+
+category: wrong-product
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Add email validation to user registration API"
+
+failure:
+  description: "Agent implemented client-side validation only when server-side validation was explicitly required for security"
+  root_cause: "Agent likely defaulted to client-side implementation pattern without carefully reading the security requirement emphasizing server-side validation"
+
+evidence:
+  task_spec: |
+    Add email validation to the user registration endpoint.
+
+    Requirements:
+    - Validate email format on the server before saving to database
+    - Reject invalid emails with 400 Bad Request
+    - Return clear error message for invalid format
+
+    IMPORTANT: This must be server-side validation for security.
+    Client-side validation is optional but server-side is mandatory.
+
+  what_was_built: |
+    Agent implemented:
+    - Client-side JavaScript email validation in registration form ✓
+    - Nice UX with inline error messages ✓
+    - Server-side validation ✗ (completely missing)
+
+    Result: Users can bypass client-side validation and register with
+    invalid emails by calling the API directly. Database now contains
+    garbage email addresses.
+
+eval_criteria:
+  - type: code-based
+    check: "server_endpoint_contains_validation('/api/register') && validation_runs_before_database_save()"
+
+  - type: model-based
+    check: "Verify that email validation exists in the server-side code path, not just client-side JavaScript. Check that invalid emails are rejected by the API endpoint before database operations."

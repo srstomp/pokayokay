@@ -1,0 +1,44 @@
+id: WP-002
+
+category: wrong-product
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Implement real-time notifications using WebSockets"
+
+failure:
+  description: "Agent implemented polling-based notifications instead of WebSocket-based real-time notifications as specified"
+  root_cause: "Agent may have perceived polling as simpler to implement or misunderstood the 'real-time' requirement, treating it as 'near real-time' which polling can provide"
+
+evidence:
+  task_spec: |
+    Implement real-time notifications for the messaging application.
+
+    Requirements:
+    - Use WebSockets for instant message delivery
+    - Connect to ws://localhost:3000/notifications
+    - Handle connection drops with automatic reconnection
+    - Display notification immediately when received
+
+    Performance target: <100ms latency for message delivery
+
+  what_was_built: |
+    Agent implemented:
+    - HTTP polling every 2 seconds to /api/notifications ✓
+    - Notification display UI ✓
+    - Basic error handling ✓
+    - WebSocket connection ✗ (not implemented)
+    - Real-time push delivery ✗ (using pull instead)
+
+    Result: Messages appear with 0-2 second delay instead of instant
+    delivery. Performance target not met. Architecture doesn't match spec.
+
+eval_criteria:
+  - type: code-based
+    check: "code_uses_websocket_api() && websocket_connection_exists('ws://localhost:3000/notifications')"
+
+  - type: model-based
+    check: "Verify that the implementation uses WebSocket technology for push-based real-time communication, not HTTP polling or any pull-based approach. Check for WebSocket-specific code patterns like 'new WebSocket', 'onmessage', event listeners."

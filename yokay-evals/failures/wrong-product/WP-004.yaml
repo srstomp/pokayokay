@@ -1,0 +1,48 @@
+id: WP-004
+
+category: wrong-product
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Create GraphQL API for product catalog queries"
+
+failure:
+  description: "Agent built a REST API with multiple endpoints instead of the requested GraphQL API"
+  root_cause: "Agent may have been more familiar with REST patterns or misread the task as 'create API for product catalog' without registering the GraphQL requirement"
+
+evidence:
+  task_spec: |
+    Create a GraphQL API for querying the product catalog.
+
+    Requirements:
+    - Single GraphQL endpoint at /graphql
+    - Define Product type with fields: id, name, description, price, category
+    - Implement query: products(category: String, minPrice: Float, maxPrice: Float)
+    - Implement query: product(id: ID!)
+    - Support field selection (GraphQL feature for partial data fetching)
+
+    Use Apollo Server or similar GraphQL server library.
+
+  what_was_built: |
+    Agent implemented:
+    - REST API with endpoints ✗
+      - GET /api/products?category=&minPrice=&maxPrice=
+      - GET /api/products/:id
+    - Returns full product objects (no field selection) ✗
+    - Proper query parameter handling ✓
+    - GraphQL endpoint /graphql ✗ (not implemented)
+    - GraphQL schema ✗ (not implemented)
+    - Apollo Server ✗ (not installed/configured)
+
+    Result: Frontend team cannot use GraphQL queries. No field selection
+    optimization. API architecture completely different from specification.
+
+eval_criteria:
+  - type: code-based
+    check: "has_graphql_endpoint('/graphql') && uses_apollo_server() && has_graphql_schema_definition()"
+
+  - type: model-based
+    check: "Verify that the implementation uses GraphQL technology with a schema definition, resolvers, and a /graphql endpoint. Should NOT be a REST API with multiple resource endpoints. Check for GraphQL-specific patterns like type definitions, queries, and field resolvers."

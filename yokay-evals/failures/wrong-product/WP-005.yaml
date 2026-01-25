@@ -1,0 +1,49 @@
+id: WP-005
+
+category: wrong-product
+
+discovered: 2026-01-25
+
+severity: critical
+
+context:
+  task: "Implement user account deletion with permanent data removal"
+
+failure:
+  description: "Agent implemented soft delete (marking as deleted) when hard delete with permanent data removal was explicitly required for GDPR compliance"
+  root_cause: "Agent likely defaulted to soft delete as 'safer' database pattern without understanding the compliance requirement that mandated permanent data removal"
+
+evidence:
+  task_spec: |
+    Implement user account deletion to comply with GDPR data removal requests.
+
+    Requirements:
+    - DELETE /api/users/:id endpoint
+    - Permanently remove user data from database (hard delete)
+    - Also delete related data: user_profiles, user_preferences, user_sessions
+    - Return 204 No Content on success
+    - Add audit log entry before deletion
+
+    CRITICAL: This is for GDPR compliance. Data must be permanently deleted,
+    not just marked as deleted. Soft delete is NOT acceptable for this use case.
+
+  what_was_built: |
+    Agent implemented:
+    - DELETE /api/users/:id endpoint ✓
+    - Sets deleted_at timestamp on user record ✗
+    - Adds deleted=true flag ✗
+    - Returns 204 No Content ✓
+    - Audit logging ✓
+    - Hard delete (permanent removal) ✗ (not implemented)
+    - Related data cleanup ✗ (not implemented)
+
+    Result: User data remains in database indefinitely. GDPR compliance
+    violation. Legal risk. Data is still accessible via database queries.
+    Related tables still contain user information.
+
+eval_criteria:
+  - type: code-based
+    check: "uses_database_delete_statement() && !contains_update_statement_in_delete_endpoint() && !has_deleted_at_column_reference()"
+
+  - type: model-based
+    check: "Verify that the deletion uses SQL DELETE or equivalent permanent removal operations, not UPDATE statements that set flags or timestamps. Check that the user record and all related data are permanently removed from all tables, not just marked as deleted."
