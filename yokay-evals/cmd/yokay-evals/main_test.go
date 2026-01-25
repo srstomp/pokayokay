@@ -129,30 +129,30 @@ func TestGenerateReport(t *testing.T) {
 	// Create sample grading results
 	results := []skillResult{
 		{
-			Name:  "excellent-skill",
-			Path:  "/path/to/excellent-skill/SKILL.md",
-			Score: 85.0,
-			Passed: true,
+			Name:    "excellent-skill",
+			Path:    "/path/to/excellent-skill/SKILL.md",
+			Score:   85.0,
+			Passed:  true,
 			Message: "Excellent clarity",
 			Details: map[string]any{
 				"clear_instructions": map[string]any{
-					"score": 90.0,
+					"score":    90.0,
 					"feedback": "Very clear",
-					"weight": 0.30,
+					"weight":   0.30,
 				},
 			},
 		},
 		{
-			Name:  "poor-skill",
-			Path:  "/path/to/poor-skill/SKILL.md",
-			Score: 45.0,
-			Passed: false,
+			Name:    "poor-skill",
+			Path:    "/path/to/poor-skill/SKILL.md",
+			Score:   45.0,
+			Passed:  false,
 			Message: "Needs improvement",
 			Details: map[string]any{
 				"clear_instructions": map[string]any{
-					"score": 40.0,
+					"score":    40.0,
 					"feedback": "Unclear",
-					"weight": 0.30,
+					"weight":   0.30,
 				},
 			},
 		},
@@ -201,5 +201,98 @@ func TestGenerateReport(t *testing.T) {
 	// Verify skills below threshold are highlighted
 	if !strings.Contains(reportStr, "Below Threshold") && !strings.Contains(reportStr, "Needs Improvement") {
 		t.Error("Report not highlighting skills below threshold")
+	}
+}
+
+func TestGenerateReportWithMalformedDetails(t *testing.T) {
+	tmpDir := t.TempDir()
+	reportPath := filepath.Join(tmpDir, "report.md")
+
+	// Create results with various malformed Details structures
+	results := []skillResult{
+		{
+			Name:    "missing-fields-skill",
+			Path:    "/path/to/missing-fields/SKILL.md",
+			Score:   75.0,
+			Passed:  true,
+			Message: "Has malformed details",
+			Details: map[string]any{
+				"clear_instructions": map[string]any{
+					"score": 80.0,
+					// Missing "feedback" and "weight" fields
+				},
+			},
+		},
+		{
+			Name:    "wrong-type-skill",
+			Path:    "/path/to/wrong-type/SKILL.md",
+			Score:   70.0,
+			Passed:  true,
+			Message: "Has wrong type details",
+			Details: map[string]any{
+				"clear_instructions": map[string]any{
+					"score":    "not-a-number", // Wrong type - should be float64
+					"feedback": 123,            // Wrong type - should be string
+					"weight":   "0.30",         // Wrong type - should be float64
+				},
+			},
+		},
+		{
+			Name:    "not-a-map-skill",
+			Path:    "/path/to/not-a-map/SKILL.md",
+			Score:   80.0,
+			Passed:  true,
+			Message: "Has non-map details",
+			Details: map[string]any{
+				"clear_instructions": "not-a-map", // Should be map[string]any
+			},
+		},
+		{
+			Name:    "normal-skill",
+			Path:    "/path/to/normal/SKILL.md",
+			Score:   85.0,
+			Passed:  true,
+			Message: "Normal skill",
+			Details: map[string]any{
+				"clear_instructions": map[string]any{
+					"score":    90.0,
+					"feedback": "Very clear",
+					"weight":   0.30,
+				},
+			},
+		},
+	}
+
+	// Should not panic even with malformed details
+	err := generateReport(results, reportPath)
+	if err != nil {
+		t.Fatalf("generateReport failed: %v", err)
+	}
+
+	// Verify report was created
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("Failed to read report: %v", err)
+	}
+
+	reportStr := string(content)
+
+	// All skills should still appear in the report
+	if !strings.Contains(reportStr, "missing-fields-skill") {
+		t.Error("Report missing skill with missing fields")
+	}
+	if !strings.Contains(reportStr, "wrong-type-skill") {
+		t.Error("Report missing skill with wrong type fields")
+	}
+	if !strings.Contains(reportStr, "not-a-map-skill") {
+		t.Error("Report missing skill with non-map details")
+	}
+	if !strings.Contains(reportStr, "normal-skill") {
+		t.Error("Report missing normal skill")
+	}
+
+	// Verify the normal skill's details are properly rendered
+	if !strings.Contains(reportStr, "Very clear") {
+		t.Error("Report missing feedback from normal skill")
 	}
 }

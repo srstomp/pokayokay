@@ -243,9 +243,15 @@ func generateReport(results []skillResult, reportPath string) error {
 		criteria := []string{"clear_instructions", "actionable_steps", "good_examples", "appropriate_scope"}
 		for _, criterion := range criteria {
 			if details, ok := r.Details[criterion].(map[string]any); ok {
-				score := details["score"].(float64)
-				feedback := details["feedback"].(string)
-				weight := details["weight"].(float64)
+				// Safely extract fields with type checking
+				score, scoreOk := details["score"].(float64)
+				feedback, feedbackOk := details["feedback"].(string)
+				weight, weightOk := details["weight"].(float64)
+
+				// Skip this criterion if any field is missing or has wrong type
+				if !scoreOk || !feedbackOk || !weightOk {
+					continue
+				}
 
 				sb.WriteString(fmt.Sprintf("- **%s** (weight: %.0f%%): %.1f/100\n",
 					formatCriterionName(criterion), weight*100, score))
@@ -267,7 +273,10 @@ func generateReport(results []skillResult, reportPath string) error {
 func formatCriterionName(name string) string {
 	parts := strings.Split(name, "_")
 	for i, part := range parts {
-		parts[i] = strings.Title(part)
+		if len(part) > 0 {
+			// Manually title case: capitalize first letter, lowercase the rest
+			parts[i] = strings.ToUpper(part[:1]) + strings.ToLower(part[1:])
+		}
 	}
 	return strings.Join(parts, " ")
 }
