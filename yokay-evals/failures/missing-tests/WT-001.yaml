@@ -1,0 +1,49 @@
+id: WT-001
+
+category: missing-tests
+
+discovered: 2026-01-25
+
+severity: medium
+
+context:
+  task: "Implement email validation function with comprehensive test coverage"
+
+failure:
+  description: "Agent implemented a robust email validation function with multiple validation rules, but wrote only a single happy-path test case and completely omitted tests for invalid inputs"
+  root_cause: "Agent focused on implementing the validation logic correctly but treated testing as an afterthought, writing only one test to 'check the box' rather than ensuring comprehensive coverage"
+
+evidence:
+  task_spec: |
+    Implement an email validation function that:
+    - Checks for valid email format (user@domain.tld)
+    - Rejects emails with invalid characters
+    - Validates domain has at least one dot
+    - Returns descriptive error messages for each failure case
+
+    TESTING REQUIREMENTS:
+    - Write unit tests covering all validation rules
+    - Test both valid and invalid inputs
+    - Verify error messages are correct
+    - Test edge cases (empty string, null, whitespace)
+
+  what_was_built: |
+    Implementation:
+    - validateEmail() function with all required validation rules ✓
+    - Descriptive error messages for each case ✓
+
+    Tests:
+    - Single test: validateEmail('user@example.com') returns valid ✓
+    - No tests for invalid email formats ✗
+    - No tests for edge cases (null, empty, whitespace) ✗
+    - No tests for specific error messages ✗
+    - No tests for special characters ✗
+
+    Result: Validation function works but has no test coverage for failure cases, making regressions likely during refactoring.
+
+eval_criteria:
+  - type: code-based
+    check: "test_file_contains_multiple_test_cases('validateEmail') && test_count_for_function('validateEmail') >= 5 && tests_include_pattern('invalid|error|fail')"
+
+  - type: model-based
+    check: "Verify test coverage includes both success and failure cases for all validation rules mentioned in the spec, including edge cases like null, empty strings, and boundary conditions"

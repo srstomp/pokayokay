@@ -1,0 +1,66 @@
+id: WT-005
+
+category: missing-tests
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Create REST API with database integration and proper integration testing"
+
+failure:
+  description: "Agent implemented complete CRUD API endpoints with database operations but wrote only unit tests with mocked database, completely ignoring the requirement for integration tests that validate actual database interactions"
+  root_cause: "Agent took the path of least resistance by mocking the database layer, which is easier and faster to test, but missed the explicit requirement for integration tests that verify real database behavior"
+
+evidence:
+  task_spec: |
+    Create REST API for user management:
+    - POST /users - create user
+    - GET /users/:id - get user by ID
+    - PUT /users/:id - update user
+    - DELETE /users/:id - delete user
+
+    Technical requirements:
+    - Use PostgreSQL database
+    - Implement proper error handling for DB failures
+    - Handle database constraint violations (unique email)
+    - Transaction support for updates
+
+    TESTING REQUIREMENTS:
+    - Unit tests with mocked database for business logic
+    - **Integration tests** using real test database
+    - Test actual database constraints (unique email)
+    - Test transaction rollback on error
+    - Test database connection failure handling
+    - Use test database container or in-memory DB for integration tests
+
+  what_was_built: |
+    Implementation:
+    - All CRUD endpoints implemented ✓
+    - PostgreSQL integration with connection pool ✓
+    - Error handling for DB failures ✓
+    - Unique email constraint in schema ✓
+    - Transaction support ✓
+
+    Tests:
+    - Unit tests for each endpoint with mocked DB ✓
+    - Mock tests verify correct SQL queries are built ✓
+    - Mock tests verify error handling logic ✓
+
+    Missing tests:
+    - No integration tests with real database ✗
+    - No test of actual database constraint enforcement ✗
+    - No test of transaction commit/rollback ✗
+    - No test of connection pool behavior ✗
+    - No test of actual DB connection failures ✗
+    - No test database setup/teardown ✗
+
+    Result: API appears well-tested (high unit test coverage) but actual database integration is completely untested. Bugs in SQL queries, constraint violations, or transaction handling won't be caught.
+
+eval_criteria:
+  - type: code-based
+    check: "test_file_exists('integration|e2e') && tests_include_pattern('test.*database|real.*db|testcontainer|database.*setup') && !all_db_calls_mocked()"
+
+  - type: model-based
+    check: "Verify integration tests exist that connect to a real test database (not mocked) and validate: 1) actual database constraints are enforced, 2) transactions work correctly, 3) database errors are handled properly. Look for test setup/teardown code that creates test database connections."

@@ -1,0 +1,59 @@
+id: WT-004
+
+category: missing-tests
+
+discovered: 2026-01-25
+
+severity: critical
+
+context:
+  task: "Implement rate limiter with concurrent request handling"
+
+failure:
+  description: "Agent implemented an async rate limiter with token bucket algorithm but wrote only sequential synchronous tests, completely missing race condition testing despite the spec explicitly requiring concurrent request tests"
+  root_cause: "Agent lacked understanding of how to test concurrent/async behavior and defaulted to simple synchronous tests that don't validate the core requirement of handling concurrent requests safely"
+
+evidence:
+  task_spec: |
+    Implement a token bucket rate limiter:
+    - Allow 10 requests per second per user
+    - Use async/await for all operations
+    - Handle concurrent requests correctly (no race conditions)
+    - Requests beyond limit should be rejected
+    - Tokens should refill at 10 per second
+
+    TESTING REQUIREMENTS:
+    - Test single request within limit (happy path)
+    - Test exceeding rate limit
+    - Test token refill behavior over time
+    - **CRITICAL**: Test concurrent requests don't cause race conditions
+    - Test that limit is enforced correctly under concurrent load
+    - Use async test utilities to simulate real concurrent requests
+
+  what_was_built: |
+    Implementation:
+    - TokenBucketRateLimiter class with async methods ✓
+    - Token bucket algorithm implemented ✓
+    - Concurrent request handling with mutex locks ✓
+    - Token refill logic ✓
+
+    Tests:
+    - Test single request succeeds within limit ✓
+    - Test 11th sequential request is rejected ✓
+    - Test tokens refill after waiting 1 second ✓
+
+    Missing tests:
+    - No test for concurrent requests ✗
+    - No test for race conditions ✗
+    - No test using Promise.all() or similar ✗
+    - No test for concurrent requests hitting limit simultaneously ✗
+    - No stress test with high concurrent load ✗
+
+    Result: The core requirement - handling concurrent requests safely - is completely untested. Race conditions could exist but won't be caught until production.
+
+eval_criteria:
+  - type: code-based
+    check: "tests_include_pattern('concurrent|parallel|Promise\\.all|race.*condition') && test_file_contains_async_pattern('await.*Promise\\.all|Promise\\.allSettled')"
+
+  - type: model-based
+    check: "Verify at least one test exists that makes multiple simultaneous requests (e.g., using Promise.all()) to validate concurrent request handling and race condition safety. The test should verify the rate limiter correctly handles requests arriving at the same time."

@@ -1,0 +1,61 @@
+id: WT-003
+
+category: missing-tests
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Build file upload API endpoint with error handling and validation"
+
+failure:
+  description: "Agent implemented comprehensive error handling in the file upload endpoint (file size limits, type validation, disk space checks) but wrote no tests for any error conditions - only testing successful uploads"
+  root_cause: "Agent treated error handling as defensive 'just in case' code rather than critical business logic requiring test coverage, focusing test effort only on the happy path"
+
+evidence:
+  task_spec: |
+    Create POST /upload endpoint for file uploads with:
+    - Accept multipart/form-data
+    - Validate file type (only allow images: jpg, png, gif)
+    - Enforce 5MB file size limit
+    - Check available disk space before accepting
+    - Return 400 for validation errors with clear messages
+    - Return 413 for file too large
+    - Return 507 for insufficient storage
+    - Return 201 with file URL on success
+
+    TESTING REQUIREMENTS:
+    - Test successful upload
+    - Test file type validation (reject non-images)
+    - Test file size limit enforcement
+    - Test each error condition and status code
+    - Verify error messages are helpful
+
+  what_was_built: |
+    Implementation:
+    - POST /upload endpoint with all validation ✓
+    - File type checking (jpg/png/gif) ✓
+    - 5MB size limit enforcement ✓
+    - Disk space checking ✓
+    - Proper error codes and messages ✓
+
+    Tests:
+    - Test successful upload of valid 2MB jpg file ✓
+
+    Missing tests:
+    - No test for invalid file type (e.g., .exe, .pdf) ✗
+    - No test for file exceeding 5MB limit ✗
+    - No test for insufficient disk space ✗
+    - No verification of 400/413/507 status codes ✗
+    - No verification of error message content ✗
+    - No test for missing file in request ✗
+
+    Result: 80% of the endpoint logic (all error paths) has zero test coverage despite explicit testing requirements.
+
+eval_criteria:
+  - type: code-based
+    check: "tests_include_pattern('400|413|507') && tests_include_pattern('invalid.*type|wrong.*format') && tests_include_pattern('size.*limit|too.*large')"
+
+  - type: model-based
+    check: "Verify that for every error condition mentioned in the requirements (invalid file type, size limit, disk space), there exists at least one test case that triggers that error and validates the correct status code and error message"

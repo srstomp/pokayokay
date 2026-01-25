@@ -1,0 +1,63 @@
+id: WT-002
+
+category: missing-tests
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Create array processing utility with null/empty/boundary condition handling"
+
+failure:
+  description: "Agent implemented array processing functions with proper null checks and edge case handling in the code, but wrote no tests for these edge cases - only testing with normal arrays containing data"
+  root_cause: "Agent implemented defensive programming in the code but didn't translate that same defensive thinking to the test suite, testing only the expected use case"
+
+evidence:
+  task_spec: |
+    Implement utility functions for array processing:
+    - findMax(arr): returns maximum value in array
+    - findMin(arr): returns minimum value in array
+    - average(arr): returns average of array values
+
+    Requirements:
+    - Handle null/undefined arrays gracefully
+    - Handle empty arrays appropriately
+    - Handle arrays with single element
+    - Handle arrays with negative numbers
+    - Return null or appropriate value for invalid inputs
+
+    TESTING:
+    - Write comprehensive tests including edge cases
+    - Test boundary conditions (empty, single element)
+    - Test with negative numbers, zeros
+    - Test error handling for invalid inputs
+
+  what_was_built: |
+    Implementation:
+    - findMax(), findMin(), average() with full edge case handling ✓
+    - Null/undefined checks implemented ✓
+    - Empty array handling implemented ✓
+    - Single element handling implemented ✓
+
+    Tests written:
+    - Test findMax with array [1, 5, 3, 9, 2] ✓
+    - Test findMin with array [1, 5, 3, 9, 2] ✓
+    - Test average with array [2, 4, 6, 8] ✓
+
+    Missing tests:
+    - No test for null/undefined input ✗
+    - No test for empty array [] ✗
+    - No test for single element array [5] ✗
+    - No test for negative numbers ✗
+    - No test for array with zeros ✗
+    - No test for array with mixed positive/negative ✗
+
+    Result: Edge case handling exists in code but is completely untested, creating false confidence and risk of breaking during refactoring.
+
+eval_criteria:
+  - type: code-based
+    check: "tests_exist_for_pattern('null|undefined|empty|\\[\\]') && tests_exist_for_pattern('single.*element|length.*1') && tests_exist_for_pattern('negative')"
+
+  - type: model-based
+    check: "Verify tests exist for all edge cases mentioned in requirements: null/undefined inputs, empty arrays, single-element arrays, negative numbers, and boundary conditions. At least one test should exist for each edge case category."
