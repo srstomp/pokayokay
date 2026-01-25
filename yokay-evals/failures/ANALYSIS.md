@@ -1,41 +1,41 @@
 # Failure Case Analysis
 
 **Analysis Date**: 2026-01-25
-**Total Cases Analyzed**: 18
+**Total Cases Analyzed**: 20
 **Collection Period**: 2026-01-25 (single day collection)
 
 ## Overview
 
-This document provides a comprehensive analysis of 18 failure cases collected during real-world usage of the pokayokay task delegation system. These cases represent actual mistakes made by AI agents when implementing development tasks, providing critical insights for building evaluation criteria and graders.
+This document provides a comprehensive analysis of 20 failure cases collected during real-world usage of the pokayokay task delegation system. These cases represent actual mistakes made by AI agents when implementing development tasks, providing critical insights for building evaluation criteria and graders.
 
 ## Category Distribution
 
 | Category | Count | Percentage | Severity Distribution |
 |----------|-------|------------|---------------------|
-| **missed-tasks** | 5 | 27.8% | Critical: 1, High: 3, Medium: 1 |
-| **wrong-product** | 5 | 27.8% | Critical: 1, High: 3, Medium: 1 |
-| **missing-tests** | 5 | 27.8% | Critical: 1, High: 3, Medium: 1 |
-| **scope-creep** | 1 | 5.6% | Medium: 1 |
-| **premature-completion** | 1 | 5.6% | High: 1 |
-| **session-amnesia** | 1 | 5.6% | High: 1 |
-| **security-flaw** | 1 | 5.6% | Critical: 1 |
-| **regression** | 1 | 5.6% | High: 1 |
-| **TOTAL** | 18 | 100% | Critical: 3, High: 10, Medium: 5 |
+| **missed-tasks** | 5 | 25.0% | Critical: 1, High: 2, Medium: 2 |
+| **wrong-product** | 5 | 25.0% | Critical: 1, High: 3, Medium: 1 |
+| **missing-tests** | 5 | 25.0% | Critical: 1, High: 3, Medium: 1 |
+| **scope-creep** | 1 | 5.0% | Medium: 1 |
+| **premature-completion** | 1 | 5.0% | High: 1 |
+| **session-amnesia** | 1 | 5.0% | High: 1 |
+| **security-flaw** | 1 | 5.0% | Critical: 1 |
+| **regression** | 1 | 5.0% | High: 1 |
+| **TOTAL** | 20 | 100% | Critical: 4, High: 11, Medium: 5 |
 
 ### Key Observations
 
-- **Top 3 categories** (missed-tasks, wrong-product, missing-tests) account for 83.4% of all failures
-- **Critical severity** failures represent 16.7% of cases, requiring immediate attention
-- **High severity** failures represent 55.6% of cases, indicating most failures have significant impact
+- **Top 3 categories** (missed-tasks, wrong-product, missing-tests) account for 75.0% of all failures
+- **Critical severity** failures represent 20.0% of cases, requiring immediate attention
+- **High severity** failures represent 55.0% of cases, indicating most failures have significant impact
 - **Balanced distribution** across top categories suggests systemic patterns rather than isolated issues
 
 ## Severity Distribution
 
 | Severity | Count | Percentage | Impact |
 |----------|-------|------------|--------|
-| **Critical** | 3 | 16.7% | Security vulnerabilities, data integrity issues, legal compliance violations |
-| **High** | 10 | 55.6% | Major functionality broken, security gaps, poor user experience |
-| **Medium** | 5 | 27.8% | Degraded functionality, performance issues, incomplete features |
+| **Critical** | 4 | 20.0% | Security vulnerabilities, data integrity issues, legal compliance violations |
+| **High** | 11 | 55.0% | Major functionality broken, security gaps, poor user experience |
+| **Medium** | 5 | 25.0% | Degraded functionality, performance issues, incomplete features |
 | **Low** | 0 | 0% | Minor issues, cosmetic problems |
 
 ## Common Root Causes
@@ -198,7 +198,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 1. Completeness Grader (missed-tasks)
 **Priority**: CRITICAL
-**Rationale**: 27.8% of failures, includes critical security gaps
+**Rationale**: 25.0% of failures, includes critical security gaps
 
 **Capabilities Needed**:
 - Requirement extraction from task spec
@@ -213,7 +213,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 2. Technology Match Grader (wrong-product)
 **Priority**: CRITICAL
-**Rationale**: 27.8% of failures, high severity, clear technology requirements
+**Rationale**: 25.0% of failures, high severity, clear technology requirements
 
 **Capabilities Needed**:
 - Technology detection (WebSocket vs. polling, GraphQL vs. REST)
@@ -227,7 +227,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 3. Test Adequacy Grader (missing-tests)
 **Priority**: CRITICAL
-**Rationale**: 27.8% of failures, masks future bugs
+**Rationale**: 25.0% of failures, masks future bugs
 
 **Capabilities Needed**:
 - Test case counting and categorization
@@ -244,7 +244,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 4. Security Grader (security-flaw)
 **Priority**: HIGH
-**Rationale**: Low frequency (5.6%) but critical severity
+**Rationale**: Low frequency (5.0%) but critical severity
 
 **Capabilities Needed**:
 - SQL injection detection
@@ -275,7 +275,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 6. Scope Grader (scope-creep + premature-completion)
 **Priority**: MEDIUM
-**Rationale**: Combined 11.1% of failures, moderate impact
+**Rationale**: Combined 10.0% of failures, moderate impact
 
 **Capabilities Needed**:
 - Scope boundary definition
@@ -289,7 +289,7 @@ Based on frequency, severity, and detectability, we recommend building graders i
 
 #### 7. Context Memory Grader (session-amnesia)
 **Priority**: MEDIUM
-**Rationale**: Low frequency (5.6%) but preventable with better prompting
+**Rationale**: Low frequency (5.0%) but preventable with better prompting
 
 **Capabilities Needed**:
 - Conversation history requirement extraction
@@ -336,12 +336,12 @@ Based on the failure patterns, eval tests should:
 ## Next Steps
 
 1. **Build Phase 1 graders** (Completeness, Technology Match, Test Adequacy)
-   - These three cover 83.4% of failures
+   - These three cover 75.0% of failures
    - Create grader templates for each category
    - Define eval test format
 
 2. **Create eval test suite structure**
-   - One test per failure case initially (18 tests)
+   - One test per failure case initially (20 tests)
    - Add positive cases (correct implementations) for balance
    - Target: 50 total tests covering all categories
 
@@ -351,7 +351,7 @@ Based on the failure patterns, eval tests should:
    - Score aggregation and reporting
 
 4. **Validate graders**
-   - Run all 18 failure cases through graders
+   - Run all 20 failure cases through graders
    - Verify each grader catches its category of failures
    - Measure false positive/negative rates
 
