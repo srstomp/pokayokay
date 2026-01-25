@@ -1,0 +1,150 @@
+# Meta-Evaluation for yokay-brainstormer
+# Tests the brainstormer agent's ability to refine ambiguous tasks
+
+agent: yokay-brainstormer
+consistency_threshold: 0.95
+
+test_cases:
+  # === AMBIGUOUS TASKS THAT SHOULD BE REFINED ===
+
+  - id: BR-001
+    name: "Refine vague performance task"
+    input:
+      task_title: "Improve performance"
+      task_description: "The app is slow, make it faster"
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Task is too vague - no metrics, no scope, no target areas specified. Brainstormer should explore codebase and propose specific criteria."
+
+  - id: BR-002
+    name: "Refine short feature request"
+    input:
+      task_title: "Add dark mode"
+      task_description: "Users want dark mode"
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Short description with hidden complexity (theme system, persistence, scope). Should refine with clear acceptance criteria."
+
+  - id: BR-003
+    name: "Refine ambiguous bug description"
+    input:
+      task_title: "Fix login issues"
+      task_description: "Login isn't working right"
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Vague bug report - no reproduce steps, no expected vs actual behavior. Should refine with specific criteria."
+
+  # === MISSING ACCEPTANCE CRITERIA ===
+
+  - id: BR-004
+    name: "Add criteria to well-described feature"
+    input:
+      task_title: "Add email validation to registration"
+      task_description: "We need to validate email addresses during user registration. Should check format and reject invalid emails with appropriate error messages."
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Good description but missing structured acceptance criteria. Should add specific testable criteria (server vs client, error codes, edge cases)."
+
+  - id: BR-005
+    name: "Add criteria to spike task"
+    input:
+      task_title: "Investigate auth options"
+      task_description: "Research authentication approaches for the new API"
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Spike task needs clear deliverable definition, time-box, and decision criteria."
+
+  # === TASKS TOO VAGUE FOR REFINEMENT (NEEDS INPUT) ===
+
+  - id: BR-006
+    name: "Escalate completely ambiguous request"
+    input:
+      task_title: "Make it better"
+      task_description: "Just improve things"
+      acceptance_criteria: null
+    expected: NEEDS_INPUT
+    k: 5
+    rationale: "Impossibly vague - no domain, no target, no context. Even exploration won't help. Needs human clarification."
+
+  - id: BR-007
+    name: "Escalate conflicting requirements"
+    input:
+      task_title: "Optimize for speed and size"
+      task_description: "Make the bundle smaller but also load faster. It should use more caching but have less overhead. Minimize dependencies but add more features."
+      acceptance_criteria: null
+    expected: NEEDS_INPUT
+    k: 5
+    rationale: "Contains contradictory requirements. Brainstormer should identify conflicts and escalate for priority decisions."
+
+  # === CLEAR TASKS (MINIMAL/NO REFINEMENT NEEDED) ===
+
+  - id: BR-008
+    name: "Skip well-specified task with criteria"
+    input:
+      task_title: "Add logout endpoint"
+      task_description: "Implement POST /api/logout endpoint that invalidates the user's session token"
+      acceptance_criteria:
+        - "POST /api/logout endpoint exists"
+        - "Endpoint invalidates session token in database"
+        - "Returns 200 OK on success"
+        - "Returns 401 if no valid token provided"
+        - "Tests verify token is invalid after logout"
+    expected: SKIP
+    k: 5
+    rationale: "Clear, specific, with complete acceptance criteria. No refinement needed."
+
+  - id: BR-009
+    name: "Skip narrow bugfix with repro steps"
+    input:
+      task_title: "Fix TypeError in user profile"
+      task_description: "User profile page throws 'Cannot read property name of undefined' when user.profile is null"
+      acceptance_criteria:
+        - "No TypeError when user.profile is null"
+        - "Profile page shows placeholder or empty state"
+        - "Regression test added for null profile case"
+    expected: SKIP
+    k: 5
+    rationale: "Specific bug with clear repro, clear fix scope, and acceptance criteria defined."
+
+  # === EDGE CASES ===
+
+  - id: BR-010
+    name: "Refine task with partial criteria"
+    input:
+      task_title: "Implement API rate limiting"
+      task_description: "Add rate limiting to prevent abuse of the API endpoints"
+      acceptance_criteria:
+        - "API requests are rate limited"
+    expected: REFINED
+    k: 5
+    rationale: "Has one vague criterion but missing crucial details (rate limit values, time windows, which endpoints, error responses, storage mechanism)."
+
+  - id: BR-011
+    name: "Handle extremely detailed but unclear task"
+    input:
+      task_title: "Refactor user management"
+      task_description: |
+        The user management code is messy. There's the UserService that handles CRUD,
+        but it also validates, and sends emails, and logs things. The UserController
+        calls it but also has business logic. The models are in multiple files.
+        We need to clean this up and make it follow better patterns. Also maybe
+        add some caching? And the authentication is mixed in there too.
+      acceptance_criteria: null
+    expected: REFINED
+    k: 5
+    rationale: "Lots of detail but no clear scope or goals. Should refine to separate concerns, prioritize refactoring steps, and define success criteria."
+
+  - id: BR-012
+    name: "Clarify task with business decision needed"
+    input:
+      task_title: "Add user preferences"
+      task_description: "Let users customize their experience with preferences"
+      acceptance_criteria: null
+    expected: NEEDS_INPUT
+    k: 5
+    rationale: "Requires product decisions (which preferences? UI location? defaults?). Brainstormer should identify decision points and escalate."
