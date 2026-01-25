@@ -1,0 +1,857 @@
+# Meta-Evaluation for yokay-quality-reviewer
+# Tests the quality reviewer's ability to identify code quality, test, and security issues
+
+agent: yokay-quality-reviewer
+consistency_threshold: 0.95
+
+test_cases:
+  # === CODE SMELL: LONG FUNCTIONS ===
+
+  - id: QR-001
+    name: "Fail long function without abstraction"
+    input:
+      task_title: "Add user profile update endpoint"
+      implementation: |
+        // src/controllers/userController.ts
+        export async function updateProfile(req: Request, res: Response) {
+          const userId = req.params.id;
+          const { name, email, bio, avatar, preferences, settings, address, phone } = req.body;
+
+          if (!userId) return res.status(400).json({ error: 'Missing user ID' });
+          if (!name && !email && !bio && !avatar && !preferences && !settings && !address && !phone) {
+            return res.status(400).json({ error: 'No fields to update' });
+          }
+
+          const user = await db.users.findById(userId);
+          if (!user) return res.status(404).json({ error: 'User not found' });
+
+          if (name) {
+            if (name.length < 2) return res.status(400).json({ error: 'Name too short' });
+            if (name.length > 100) return res.status(400).json({ error: 'Name too long' });
+            user.name = name;
+          }
+
+          if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email' });
+            const existing = await db.users.findByEmail(email);
+            if (existing && existing.id !== userId) {
+              return res.status(409).json({ error: 'Email already in use' });
+            }
+            user.email = email;
+          }
+
+          if (bio) {
+            if (bio.length > 500) return res.status(400).json({ error: 'Bio too long' });
+            user.bio = bio;
+          }
+
+          if (avatar) {
+            if (!avatar.startsWith('http')) return res.status(400).json({ error: 'Invalid avatar URL' });
+            user.avatar = avatar;
+          }
+
+          if (preferences) {
+            user.preferences = { ...user.preferences, ...preferences };
+          }
+
+          if (settings) {
+            user.settings = { ...user.settings, ...settings };
+          }
+
+          if (address) {
+            if (!address.street || !address.city || !address.country) {
+              return res.status(400).json({ error: 'Incomplete address' });
+            }
+            user.address = address;
+          }
+
+          if (phone) {
+            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+            if (!phoneRegex.test(phone)) return res.status(400).json({ error: 'Invalid phone' });
+            user.phone = phone;
+          }
+
+          await user.save();
+          await logUserActivity(userId, 'profile_updated');
+          await sendEmail(email || user.email, 'Profile Updated', 'Your profile has been updated.');
+
+          res.json({ user });
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Function is 60+ lines with multiple responsibilities. Should be split into validation, update logic, and side effects. Critical code smell."
+
+  # === CODE SMELL: DEEP NESTING ===
+
+  - id: QR-002
+    name: "Fail deeply nested conditionals"
+    input:
+      task_title: "Implement order processing logic"
+      implementation: |
+        // src/services/orderService.ts
+        export function processOrder(order: Order): ProcessResult {
+          if (order.status === 'pending') {
+            if (order.items.length > 0) {
+              if (order.user.isVerified) {
+                if (order.total < 1000) {
+                  if (order.paymentMethod === 'card') {
+                    if (order.shippingAddress) {
+                      if (validateAddress(order.shippingAddress)) {
+                        return { success: true, orderId: order.id };
+                      } else {
+                        return { success: false, error: 'Invalid address' };
+                      }
+                    } else {
+                      return { success: false, error: 'No address' };
+                    }
+                  } else {
+                    return { success: false, error: 'Only card payments' };
+                  }
+                } else {
+                  return { success: false, error: 'Amount too high' };
+                }
+              } else {
+                return { success: false, error: 'User not verified' };
+              }
+            } else {
+              return { success: false, error: 'Empty order' };
+            }
+          } else {
+            return { success: false, error: 'Invalid status' };
+          }
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Deep nesting (6-7 levels) makes code hard to read and maintain. Should use early returns or guard clauses."
+
+  # === CODE SMELL: MAGIC NUMBERS ===
+
+  - id: QR-003
+    name: "Fail code with magic numbers"
+    input:
+      task_title: "Add rate limiting to API"
+      implementation: |
+        // src/middleware/rateLimit.ts
+        const requestCounts = new Map<string, number[]>();
+
+        export function rateLimit(req: Request, res: Response, next: NextFunction) {
+          const key = req.ip;
+          const now = Date.now();
+          const requests = requestCounts.get(key) || [];
+
+          const recent = requests.filter(t => now - t < 60000);
+
+          if (recent.length >= 100) {
+            return res.status(429).json({ error: 'Too many requests' });
+          }
+
+          recent.push(now);
+          requestCounts.set(key, recent);
+
+          if (requestCounts.size > 10000) {
+            requestCounts.clear();
+          }
+
+          next();
+        }
+
+        // tests/rateLimit.test.ts
+        test('rate limit blocks after 100 requests', async () => {
+          for (let i = 0; i < 101; i++) {
+            await request(app).get('/api/test');
+          }
+          const res = await request(app).get('/api/test');
+          expect(res.status).toBe(429);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Magic numbers (60000, 100, 10000) should be named constants. Reduces maintainability and makes tests unclear."
+
+  # === CODE SMELL: DUPLICATED CODE ===
+
+  - id: QR-004
+    name: "Fail duplicated validation logic"
+    input:
+      task_title: "Add create and update endpoints for products"
+      implementation: |
+        // src/controllers/productController.ts
+        export async function createProduct(req: Request, res: Response) {
+          const { name, price, description, category } = req.body;
+
+          if (!name || name.length < 3) {
+            return res.status(400).json({ error: 'Invalid name' });
+          }
+          if (!price || price < 0 || price > 1000000) {
+            return res.status(400).json({ error: 'Invalid price' });
+          }
+          if (!description || description.length < 10) {
+            return res.status(400).json({ error: 'Invalid description' });
+          }
+          if (!category || !['electronics', 'clothing', 'food'].includes(category)) {
+            return res.status(400).json({ error: 'Invalid category' });
+          }
+
+          const product = await db.products.create({ name, price, description, category });
+          res.json({ product });
+        }
+
+        export async function updateProduct(req: Request, res: Response) {
+          const { name, price, description, category } = req.body;
+
+          if (!name || name.length < 3) {
+            return res.status(400).json({ error: 'Invalid name' });
+          }
+          if (!price || price < 0 || price > 1000000) {
+            return res.status(400).json({ error: 'Invalid price' });
+          }
+          if (!description || description.length < 10) {
+            return res.status(400).json({ error: 'Invalid description' });
+          }
+          if (!category || !['electronics', 'clothing', 'food'].includes(category)) {
+            return res.status(400).json({ error: 'Invalid category' });
+          }
+
+          const product = await db.products.update(req.params.id, { name, price, description, category });
+          res.json({ product });
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Duplicated validation logic in both functions. Should extract to shared validator function."
+
+  # === TEST SMELL: MISSING TESTS ===
+
+  - id: QR-005
+    name: "Fail new feature with no tests"
+    input:
+      task_title: "Add password reset functionality"
+      implementation: |
+        // src/services/authService.ts
+        export async function requestPasswordReset(email: string): Promise<void> {
+          const user = await db.users.findByEmail(email);
+          if (!user) {
+            throw new Error('User not found');
+          }
+
+          const token = crypto.randomBytes(32).toString('hex');
+          const expiry = Date.now() + 3600000; // 1 hour
+
+          await db.resetTokens.create({ userId: user.id, token, expiry });
+          await sendEmail(email, 'Password Reset', `Reset link: /reset?token=${token}`);
+        }
+
+        export async function resetPassword(token: string, newPassword: string): Promise<void> {
+          const reset = await db.resetTokens.findByToken(token);
+          if (!reset || reset.expiry < Date.now()) {
+            throw new Error('Invalid or expired token');
+          }
+
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          await db.users.updatePassword(reset.userId, hashedPassword);
+          await db.resetTokens.delete(reset.id);
+        }
+    expected: FAIL
+    k: 5
+    rationale: "New functionality with no tests. Critical gap - password reset is security-sensitive and needs comprehensive test coverage."
+
+  # === TEST SMELL: ONLY HAPPY PATH ===
+
+  - id: QR-006
+    name: "Fail tests that only cover happy path"
+    input:
+      task_title: "Add file upload endpoint"
+      implementation: |
+        // src/controllers/uploadController.ts
+        export async function uploadFile(req: Request, res: Response) {
+          if (!req.file) {
+            return res.status(400).json({ error: 'No file provided' });
+          }
+
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (req.file.size > maxSize) {
+            return res.status(400).json({ error: 'File too large' });
+          }
+
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          if (!allowedTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ error: 'Invalid file type' });
+          }
+
+          const url = await storage.upload(req.file);
+          res.json({ url });
+        }
+
+        // tests/upload.test.ts
+        test('uploads file successfully', async () => {
+          const res = await request(app)
+            .post('/api/upload')
+            .attach('file', 'test.jpg');
+
+          expect(res.status).toBe(200);
+          expect(res.body.url).toBeDefined();
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Tests only cover happy path. Missing tests for: no file, file too large, invalid file type - all explicitly handled in code."
+
+  # === SECURITY: HARDCODED SECRETS ===
+
+  - id: QR-007
+    name: "Fail hardcoded API keys"
+    input:
+      task_title: "Add payment processing integration"
+      implementation: |
+        // src/services/paymentService.ts
+        import Stripe from 'stripe';
+
+        const stripe = new Stripe('HARDCODED_SECRET_KEY_EXAMPLE', {
+          apiVersion: '2023-10-16',
+        });
+
+        export async function createPayment(amount: number, currency: string) {
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency,
+          });
+
+          return paymentIntent;
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Critical security issue - hardcoded Stripe API key in source code. Should use environment variables."
+
+  # === SECURITY: SQL INJECTION ===
+
+  - id: QR-008
+    name: "Fail SQL injection vulnerability"
+    input:
+      task_title: "Add user search endpoint"
+      implementation: |
+        // src/controllers/searchController.ts
+        export async function searchUsers(req: Request, res: Response) {
+          const { query } = req.query;
+
+          const sql = `SELECT * FROM users WHERE name LIKE '%${query}%' OR email LIKE '%${query}%'`;
+          const results = await db.query(sql);
+
+          res.json({ users: results });
+        }
+
+        // tests/search.test.ts
+        test('searches users by name', async () => {
+          const res = await request(app).get('/api/search?query=john');
+          expect(res.status).toBe(200);
+          expect(Array.isArray(res.body.users)).toBe(true);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Critical security issue - SQL injection vulnerability. User input directly interpolated into SQL query. Should use parameterized queries."
+
+  # === SECURITY: XSS VULNERABILITY ===
+
+  - id: QR-009
+    name: "Fail XSS vulnerability in rendering"
+    input:
+      task_title: "Add user comment display"
+      implementation: |
+        // src/components/CommentList.tsx
+        export function CommentList({ comments }: { comments: Comment[] }) {
+          return (
+            <div className="comments">
+              {comments.map(comment => (
+                <div key={comment.id} className="comment">
+                  <div className="author">{comment.author}</div>
+                  <div
+                    className="content"
+                    dangerouslySetInnerHTML={{ __html: comment.content }}
+                  />
+                  <div className="date">{comment.createdAt}</div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        // tests/CommentList.test.tsx
+        test('renders comments', () => {
+          const comments = [{ id: '1', author: 'John', content: 'Hello!', createdAt: '2024-01-01' }];
+          const { getByText } = render(<CommentList comments={comments} />);
+          expect(getByText('Hello!')).toBeInTheDocument();
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Critical security issue - XSS vulnerability. Using dangerouslySetInnerHTML with unsanitized user content. Should sanitize or use safe rendering."
+
+  # === EDGE CASE: MISSING ERROR HANDLING ===
+
+  - id: QR-010
+    name: "Fail missing error handling on async operations"
+    input:
+      task_title: "Add data export functionality"
+      implementation: |
+        // src/services/exportService.ts
+        export async function exportUserData(userId: string): Promise<string> {
+          const user = await db.users.findById(userId);
+          const orders = await db.orders.findByUserId(userId);
+          const preferences = await db.preferences.findByUserId(userId);
+
+          const data = {
+            user,
+            orders,
+            preferences,
+          };
+
+          const json = JSON.stringify(data, null, 2);
+          const filename = `user_${userId}_${Date.now()}.json`;
+
+          await fs.writeFile(`/tmp/${filename}`, json);
+
+          return filename;
+        }
+
+        // tests/export.test.ts
+        test('exports user data', async () => {
+          const filename = await exportUserData('user123');
+          expect(filename).toMatch(/^user_user123_\d+\.json$/);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Missing error handling for database queries and file operations. Should handle cases where user doesn't exist, orders fail, or file write fails."
+
+  # === EDGE CASE: NO NULL CHECKS ===
+
+  - id: QR-011
+    name: "Fail missing null/undefined checks"
+    input:
+      task_title: "Add order total calculation"
+      implementation: |
+        // src/services/orderService.ts
+        export function calculateOrderTotal(order: Order): number {
+          const itemsTotal = order.items.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+          }, 0);
+
+          const discount = order.discount.percentage * itemsTotal;
+          const tax = order.tax.rate * (itemsTotal - discount);
+          const shipping = order.shipping.cost;
+
+          return itemsTotal - discount + tax + shipping;
+        }
+
+        // tests/orderService.test.ts
+        test('calculates order total correctly', () => {
+          const order = {
+            items: [{ price: 10, quantity: 2 }, { price: 5, quantity: 1 }],
+            discount: { percentage: 0.1 },
+            tax: { rate: 0.08 },
+            shipping: { cost: 5 }
+          };
+          const total = calculateOrderTotal(order);
+          expect(total).toBe(27.3);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Missing null/undefined checks for discount, tax, and shipping objects. Code will crash if these are null/undefined."
+
+  # === GOOD CODE: WELL-STRUCTURED WITH TESTS ===
+
+  - id: QR-012
+    name: "Pass well-structured code with comprehensive tests"
+    input:
+      task_title: "Add email validation utility"
+      implementation: |
+        // src/utils/emailValidator.ts
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const MAX_EMAIL_LENGTH = 254;
+
+        export interface EmailValidationResult {
+          valid: boolean;
+          error?: string;
+        }
+
+        export function validateEmail(email: string): EmailValidationResult {
+          if (!email) {
+            return { valid: false, error: 'Email is required' };
+          }
+
+          if (typeof email !== 'string') {
+            return { valid: false, error: 'Email must be a string' };
+          }
+
+          if (email.length > MAX_EMAIL_LENGTH) {
+            return { valid: false, error: 'Email is too long' };
+          }
+
+          if (!EMAIL_REGEX.test(email)) {
+            return { valid: false, error: 'Email format is invalid' };
+          }
+
+          return { valid: true };
+        }
+
+        // tests/emailValidator.test.ts
+        import { validateEmail } from '../utils/emailValidator';
+
+        describe('validateEmail', () => {
+          test('accepts valid email', () => {
+            const result = validateEmail('user@example.com');
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          });
+
+          test('rejects empty email', () => {
+            const result = validateEmail('');
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('Email is required');
+          });
+
+          test('rejects non-string email', () => {
+            const result = validateEmail(123 as any);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('Email must be a string');
+          });
+
+          test('rejects email without @', () => {
+            const result = validateEmail('userexample.com');
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('Email format is invalid');
+          });
+
+          test('rejects email without domain', () => {
+            const result = validateEmail('user@');
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('Email format is invalid');
+          });
+
+          test('rejects email that is too long', () => {
+            const longEmail = 'a'.repeat(250) + '@example.com';
+            const result = validateEmail(longEmail);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('Email is too long');
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "Clean code with named constants, clear structure, proper error handling. Comprehensive tests covering happy path and all edge cases."
+
+  # === GOOD CODE: PROPER ABSTRACTIONS ===
+
+  - id: QR-013
+    name: "Pass well-abstracted code following conventions"
+    input:
+      task_title: "Add user registration endpoint"
+      implementation: |
+        // src/validators/userValidator.ts
+        export class UserValidator {
+          validateName(name: string): void {
+            if (!name || name.length < 2 || name.length > 100) {
+              throw new ValidationError('Name must be 2-100 characters');
+            }
+          }
+
+          validateEmail(email: string): void {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              throw new ValidationError('Invalid email format');
+            }
+          }
+
+          validatePassword(password: string): void {
+            if (password.length < 8) {
+              throw new ValidationError('Password must be at least 8 characters');
+            }
+          }
+        }
+
+        // src/services/userService.ts
+        export class UserService {
+          constructor(
+            private validator: UserValidator,
+            private repository: UserRepository
+          ) {}
+
+          async register(data: RegisterData): Promise<User> {
+            this.validator.validateName(data.name);
+            this.validator.validateEmail(data.email);
+            this.validator.validatePassword(data.password);
+
+            const existing = await this.repository.findByEmail(data.email);
+            if (existing) {
+              throw new ConflictError('Email already in use');
+            }
+
+            const hashedPassword = await bcrypt.hash(data.password, 10);
+            return this.repository.create({
+              ...data,
+              password: hashedPassword,
+            });
+          }
+        }
+
+        // tests/userService.test.ts
+        describe('UserService', () => {
+          let service: UserService;
+          let validator: UserValidator;
+          let repository: jest.Mocked<UserRepository>;
+
+          beforeEach(() => {
+            validator = new UserValidator();
+            repository = createMockRepository();
+            service = new UserService(validator, repository);
+          });
+
+          test('registers valid user', async () => {
+            const data = { name: 'John', email: 'john@example.com', password: 'password123' };
+            repository.findByEmail.mockResolvedValue(null);
+            repository.create.mockResolvedValue({ id: '1', ...data });
+
+            const user = await service.register(data);
+
+            expect(user.id).toBe('1');
+            expect(repository.create).toHaveBeenCalled();
+          });
+
+          test('rejects duplicate email', async () => {
+            repository.findByEmail.mockResolvedValue({ id: '1' } as User);
+
+            await expect(service.register({
+              name: 'John',
+              email: 'existing@example.com',
+              password: 'password123'
+            })).rejects.toThrow(ConflictError);
+          });
+
+          test('rejects invalid name', async () => {
+            await expect(service.register({
+              name: 'J',
+              email: 'john@example.com',
+              password: 'password123'
+            })).rejects.toThrow(ValidationError);
+          });
+
+          test('rejects weak password', async () => {
+            await expect(service.register({
+              name: 'John',
+              email: 'john@example.com',
+              password: 'weak'
+            })).rejects.toThrow(ValidationError);
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "Well-abstracted code with dependency injection, separation of concerns. Tests cover happy path and edge cases. Follows clear patterns."
+
+  # === GOOD CODE: PROPER ERROR HANDLING ===
+
+  - id: QR-014
+    name: "Pass code with comprehensive error handling"
+    input:
+      task_title: "Add API client with retry logic"
+      implementation: |
+        // src/clients/apiClient.ts
+        export class ApiClient {
+          private readonly maxRetries = 3;
+          private readonly retryDelay = 1000;
+
+          async fetchWithRetry<T>(url: string, options?: RequestInit): Promise<T> {
+            let lastError: Error;
+
+            for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+              try {
+                const response = await fetch(url, options);
+
+                if (!response.ok) {
+                  if (response.status >= 500) {
+                    throw new ServerError(`Server error: ${response.status}`);
+                  }
+                  throw new ClientError(`Client error: ${response.status}`);
+                }
+
+                return await response.json();
+              } catch (error) {
+                lastError = error instanceof Error ? error : new Error('Unknown error');
+
+                if (error instanceof ClientError) {
+                  throw error; // Don't retry client errors
+                }
+
+                if (attempt < this.maxRetries - 1) {
+                  await this.delay(this.retryDelay * (attempt + 1));
+                }
+              }
+            }
+
+            throw new MaxRetriesError(`Failed after ${this.maxRetries} attempts`, lastError);
+          }
+
+          private delay(ms: number): Promise<void> {
+            return new Promise(resolve => setTimeout(resolve, ms));
+          }
+        }
+
+        // tests/apiClient.test.ts
+        describe('ApiClient', () => {
+          let client: ApiClient;
+
+          beforeEach(() => {
+            client = new ApiClient();
+          });
+
+          test('returns data on successful request', async () => {
+            global.fetch = jest.fn().mockResolvedValue({
+              ok: true,
+              json: async () => ({ data: 'success' })
+            });
+
+            const result = await client.fetchWithRetry('/api/test');
+            expect(result).toEqual({ data: 'success' });
+          });
+
+          test('retries on server error', async () => {
+            global.fetch = jest.fn()
+              .mockResolvedValueOnce({ ok: false, status: 500 })
+              .mockResolvedValueOnce({ ok: false, status: 500 })
+              .mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'success' }) });
+
+            const result = await client.fetchWithRetry('/api/test');
+            expect(result).toEqual({ data: 'success' });
+            expect(fetch).toHaveBeenCalledTimes(3);
+          });
+
+          test('throws ClientError on 4xx without retry', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 400 });
+
+            await expect(client.fetchWithRetry('/api/test')).rejects.toThrow(ClientError);
+            expect(fetch).toHaveBeenCalledTimes(1);
+          });
+
+          test('throws MaxRetriesError after all retries fail', async () => {
+            global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 });
+
+            await expect(client.fetchWithRetry('/api/test')).rejects.toThrow(MaxRetriesError);
+            expect(fetch).toHaveBeenCalledTimes(3);
+          });
+
+          test('handles network errors', async () => {
+            global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+            await expect(client.fetchWithRetry('/api/test')).rejects.toThrow(MaxRetriesError);
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "Excellent error handling with proper error types, retry logic, and exponential backoff. Comprehensive tests cover all error scenarios and edge cases."
+
+  # === GOOD CODE: FOLLOWS CONVENTIONS ===
+
+  - id: QR-015
+    name: "Pass code following project conventions and patterns"
+    input:
+      task_title: "Add pagination helper for API responses"
+      implementation: |
+        // src/utils/pagination.ts
+        export interface PaginationParams {
+          page: number;
+          limit: number;
+        }
+
+        export interface PaginatedResponse<T> {
+          data: T[];
+          pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+          };
+        }
+
+        const DEFAULT_PAGE = 1;
+        const DEFAULT_LIMIT = 20;
+        const MAX_LIMIT = 100;
+
+        export function validatePaginationParams(
+          page?: number,
+          limit?: number
+        ): PaginationParams {
+          const validPage = Math.max(1, page || DEFAULT_PAGE);
+          const validLimit = Math.min(MAX_LIMIT, Math.max(1, limit || DEFAULT_LIMIT));
+
+          return { page: validPage, limit: validLimit };
+        }
+
+        export function createPaginatedResponse<T>(
+          data: T[],
+          total: number,
+          params: PaginationParams
+        ): PaginatedResponse<T> {
+          const totalPages = Math.ceil(total / params.limit);
+
+          return {
+            data,
+            pagination: {
+              page: params.page,
+              limit: params.limit,
+              total,
+              totalPages,
+              hasNext: params.page < totalPages,
+              hasPrev: params.page > 1,
+            },
+          };
+        }
+
+        // tests/pagination.test.ts
+        import { validatePaginationParams, createPaginatedResponse } from '../utils/pagination';
+
+        describe('validatePaginationParams', () => {
+          test('uses defaults when no params provided', () => {
+            const result = validatePaginationParams();
+            expect(result).toEqual({ page: 1, limit: 20 });
+          });
+
+          test('enforces minimum page of 1', () => {
+            const result = validatePaginationParams(0, 10);
+            expect(result.page).toBe(1);
+          });
+
+          test('enforces maximum limit of 100', () => {
+            const result = validatePaginationParams(1, 200);
+            expect(result.limit).toBe(100);
+          });
+
+          test('enforces minimum limit of 1', () => {
+            const result = validatePaginationParams(1, 0);
+            expect(result.limit).toBe(1);
+          });
+        });
+
+        describe('createPaginatedResponse', () => {
+          test('creates response with correct pagination metadata', () => {
+            const data = [1, 2, 3];
+            const response = createPaginatedResponse(data, 50, { page: 2, limit: 10 });
+
+            expect(response.data).toEqual(data);
+            expect(response.pagination).toEqual({
+              page: 2,
+              limit: 10,
+              total: 50,
+              totalPages: 5,
+              hasNext: true,
+              hasPrev: true,
+            });
+          });
+
+          test('sets hasNext to false on last page', () => {
+            const response = createPaginatedResponse([], 50, { page: 5, limit: 10 });
+            expect(response.pagination.hasNext).toBe(false);
+          });
+
+          test('sets hasPrev to false on first page', () => {
+            const response = createPaginatedResponse([], 50, { page: 1, limit: 10 });
+            expect(response.pagination.hasPrev).toBe(false);
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "Clean code with named constants, clear interfaces, proper TypeScript usage. Well-tested with edge cases covered. Follows common pagination patterns."
