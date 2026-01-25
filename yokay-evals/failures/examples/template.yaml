@@ -1,0 +1,234 @@
+# =============================================================================
+# Failure Case Template for Yokay Evals
+# =============================================================================
+#
+# This template provides a complete example of how to document an agent failure
+# case. Copy this file to create new failure cases in the appropriate category
+# directory.
+#
+# USAGE:
+#   1. Copy this template to the appropriate category directory:
+#      cp examples/template.yaml <category-name>/NEW-ID.yaml
+#
+#   2. Update the ID to match your category:
+#      - MT-XXX for missed-tasks
+#      - WT-XXX for missing-tests
+#      - WP-XXX for wrong-product
+#      - etc. (see category prefix mapping below)
+#
+#   3. Fill in all fields with your specific failure details
+#
+#   4. Validate against schema: yokay-evals/failures/schema.yaml
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ID: Unique identifier for this failure case
+# -----------------------------------------------------------------------------
+# Format: [CATEGORY_PREFIX]-[3-DIGIT-NUMBER]
+# Example: MT-001, WT-015, SF-042
+#
+# IMPORTANT: The prefix MUST match your category (see mapping at bottom)
+# Use sequential numbering within each category (001, 002, 003, ...)
+#
+id: MT-001
+
+# -----------------------------------------------------------------------------
+# CATEGORY: Type of failure
+# -----------------------------------------------------------------------------
+# Valid values:
+#   - missed-tasks          (MT) - Agent skipped required functionality
+#   - missing-tests         (WT) - Agent didn't write tests (Wrong Tests)
+#   - wrong-product         (WP) - Built something different than requested
+#   - regression           (RG) - Agent broke previously working code
+#   - premature-completion (PC) - Agent claimed done but wasn't
+#   - scope-creep          (SC) - Agent built more than asked
+#   - integration-failure  (IF) - Failed to integrate with existing code
+#   - session-amnesia      (SA) - Agent forgot earlier context
+#   - hallucinated-deps    (HD) - Made up non-existent dependencies
+#   - security-flaw        (SF) - Introduced security vulnerability
+#   - tool-misuse          (TM) - Misused tools or APIs
+#   - task-quality         (TQ) - Poor code quality or design
+#
+# BEST PRACTICE: Choose the most specific category. If multiple apply,
+# pick the one that best represents the PRIMARY failure mode.
+#
+category: missed-tasks
+
+# -----------------------------------------------------------------------------
+# DISCOVERED: When this failure was identified
+# -----------------------------------------------------------------------------
+# Format: YYYY-MM-DD (ISO 8601 date)
+# Example: 2026-01-25
+#
+# This helps track when failures started occurring and analyze trends over time.
+#
+discovered: 2026-01-20
+
+# -----------------------------------------------------------------------------
+# SEVERITY: Impact level of this failure
+# -----------------------------------------------------------------------------
+# Valid values:
+#   - low      - Minor issue, cosmetic or easily worked around
+#   - medium   - Moderate impact, affects some functionality
+#   - high     - Significant impact, breaks important features
+#   - critical - Severe impact, data loss, security breach, or system failure
+#
+# BEST PRACTICE: Consider:
+#   - User impact: How many users affected? How badly?
+#   - Business impact: Does it block critical workflows?
+#   - Security impact: Does it create vulnerabilities?
+#   - Data impact: Could it cause data loss or corruption?
+#
+severity: high
+
+# -----------------------------------------------------------------------------
+# CONTEXT: Information about where/when the failure occurred
+# -----------------------------------------------------------------------------
+context:
+  # TASK (required): High-level description of what the agent was asked to do
+  # Keep this concise but specific enough to understand the scope.
+  # Good: "Create user authentication API"
+  # Bad: "Do auth stuff"
+  task: "Create user authentication API"
+
+  # SESSION_ID (optional): Session or conversation ID where failure occurred
+  # Include this if you have it - helps with debugging and pattern analysis
+  # Format: Any string identifier (your choice)
+  session_id: abc123
+
+# -----------------------------------------------------------------------------
+# FAILURE: What went wrong and why
+# -----------------------------------------------------------------------------
+failure:
+  # DESCRIPTION (required): Clear explanation of what the agent failed to do
+  # Be specific about what was missed, broken, or done incorrectly.
+  # Focus on WHAT happened, not WHY (that goes in root_cause).
+  #
+  # Good: "Agent implemented login but forgot /logout endpoint"
+  # Bad: "Agent messed up the API"
+  #
+  description: "Agent implemented login but forgot /logout endpoint"
+
+  # ROOT_CAUSE (required): Analysis of WHY this failure occurred
+  # This helps inform prevention strategies and eval criteria.
+  # Consider:
+  #   - Was the task spec unclear?
+  #   - Did the agent misinterpret something?
+  #   - Did it lose context or focus?
+  #   - Was it a tool usage issue?
+  #
+  # Be honest and analytical - this is for learning, not blame.
+  #
+  root_cause: "Task description mentioned logout, agent focused on login only"
+
+# -----------------------------------------------------------------------------
+# EVIDENCE: Documentation proving the failure occurred
+# -----------------------------------------------------------------------------
+evidence:
+  # TASK_SPEC (required): The exact task specification given to the agent
+  # Use YAML multiline string format (|) to preserve formatting.
+  # Include:
+  #   - All requirements and acceptance criteria
+  #   - Relevant context the agent received
+  #   - Any examples or specifications
+  #
+  # IMPORTANT: This should be copy-pasteable - the EXACT spec the agent saw.
+  #
+  task_spec: |
+    Create authentication API with:
+    - POST /login
+    - POST /logout  # <-- This was missed
+    - GET /me
+
+  # WHAT_WAS_BUILT (required): Documentation of what the agent actually produced
+  # Can be a multiline string OR a YAML list of strings.
+  #
+  # BEST PRACTICE: Use checkmarks (✓) and crosses (✗) to clearly show
+  # what was completed vs what was missed.
+  #
+  # Format 1 - Multiline string (good for detailed output):
+  what_was_built: |
+    - POST /login ✓
+    - GET /me ✓
+    # /logout missing
+
+  # Format 2 - YAML list (good for structured data):
+  # what_was_built:
+  #   - "POST /login ✓"
+  #   - "GET /me ✓"
+  #   - "Missing POST /logout ✗"
+
+# -----------------------------------------------------------------------------
+# EVAL_CRITERIA: How to detect this failure in the future
+# -----------------------------------------------------------------------------
+# List of checks that would catch this type of failure.
+# Mix automated code-based checks with AI model-based semantic checks.
+#
+# BEST PRACTICE:
+#   - Start with code-based checks (faster, deterministic)
+#   - Add model-based checks for semantic/contextual issues
+#   - Be specific enough that the check could be implemented
+#   - Think: "What automated check would have caught this?"
+#
+eval_criteria:
+  # CODE-BASED CHECK: Automated check via code analysis, grep, AST parsing, etc.
+  # Write these as pseudo-code or actual commands that could be run.
+  # Examples:
+  #   - "endpoint_exists('/logout')"
+  #   - "grep -r 'def logout' src/"
+  #   - "ast_contains_function('validate_input')"
+  #
+  - type: code-based
+    check: "endpoint_exists('/logout')"
+
+  # MODEL-BASED CHECK: LLM-based semantic check
+  # Write these as natural language descriptions of what to verify.
+  # The evaluator will use an LLM to perform these checks.
+  # Examples:
+  #   - "all_endpoints_in_spec_are_implemented"
+  #   - "Verify all requirements from task spec are implemented"
+  #   - "Check that error handling matches the spec"
+  #
+  - type: model-based
+    check: "all_endpoints_in_spec_are_implemented"
+
+# =============================================================================
+# CATEGORY PREFIX MAPPING (for quick reference)
+# =============================================================================
+#
+# When creating a new failure case, use these prefixes in your ID:
+#
+#   MT - missed-tasks          Agent skipped required functionality
+#   WT - missing-tests         Agent didn't write tests (Wrong Tests)
+#   WP - wrong-product         Built something different than requested
+#   RG - regression           Agent broke previously working code
+#   PC - premature-completion Agent claimed done but wasn't
+#   SC - scope-creep          Agent built more than asked
+#   IF - integration-failure  Failed to integrate with existing code
+#   SA - session-amnesia      Agent forgot earlier context
+#   HD - hallucinated-deps    Made up non-existent dependencies
+#   SF - security-flaw        Introduced security vulnerability
+#   TM - tool-misuse          Misused tools or APIs
+#   TQ - task-quality         Poor code quality or design
+#
+# =============================================================================
+# VALIDATION
+# =============================================================================
+#
+# Before committing, validate your failure case:
+#
+#   1. Check it's valid YAML:
+#      python3 -c "import yaml; yaml.safe_load(open('your-file.yaml'))"
+#
+#   2. Verify against schema:
+#      # (validation tool TBD)
+#
+#   3. Ensure all required fields are present:
+#      - id, category, discovered, severity
+#      - context.task
+#      - failure.description, failure.root_cause
+#      - evidence.task_spec, evidence.what_was_built
+#      - eval_criteria (at least one)
+#
+# =============================================================================
