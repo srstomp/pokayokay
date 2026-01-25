@@ -1,0 +1,246 @@
+# Failure Case Schema for Yokay Evals
+# This schema defines the structure for documenting agent failure cases
+# Version: 1.0.0
+
+$schema: http://json-schema.org/draft-07/schema#
+title: Agent Failure Case
+description: >
+  A documented instance where an AI agent failed to correctly implement
+  a task, along with evidence and evaluation criteria to prevent regression.
+
+type: object
+required:
+  - id
+  - category
+  - discovered
+  - severity
+  - context
+  - failure
+  - evidence
+  - eval_criteria
+
+properties:
+
+  # Unique identifier for this failure case
+  # Format: [CATEGORY_PREFIX]-[NUMBER]
+  # Examples: MT-001 (missed-tasks), WT-001 (missing-tests), etc.
+  id:
+    type: string
+    pattern: ^[A-Z]{2,3}-\d{3}$
+    description: Unique identifier using category prefix and sequential number
+    examples:
+      - MT-001
+      - WT-002
+      - SF-015
+
+  # Category of failure - determines which directory the case belongs to
+  # This enum matches the subdirectory structure in yokay-evals/failures/
+  category:
+    type: string
+    enum:
+      - missed-tasks          # MT: Agent skipped required functionality
+      - missing-tests         # WT: Agent didn't write tests (Wrong Tests)
+      - wrong-product         # WP: Built something different than requested
+      - regression           # RG: Agent broke previously working code
+      - premature-completion # PC: Agent claimed done but wasn't
+      - scope-creep          # SC: Agent built more than asked
+      - integration-failure  # IF: Failed to integrate with existing code
+      - session-amnesia      # SA: Agent forgot earlier context
+      - hallucinated-deps    # HD: Made up non-existent dependencies
+      - security-flaw        # SF: Introduced security vulnerability
+      - tool-misuse          # TM: Misused tools or APIs
+      - task-quality         # TQ: Poor code quality or design
+    description: The type of failure that occurred
+
+  # ISO 8601 date when the failure was discovered
+  # Format: YYYY-MM-DD
+  discovered:
+    type: string
+    format: date
+    pattern: ^\d{4}-\d{2}-\d{2}$
+    description: Date when this failure was identified and documented
+    examples:
+      - "2026-01-20"
+      - "2026-01-25"
+
+  # Severity assessment for prioritizing fixes
+  severity:
+    type: string
+    enum:
+      - low       # Minor issue, cosmetic or easily worked around
+      - medium    # Moderate impact, affects some functionality
+      - high      # Significant impact, breaks important features
+      - critical  # Severe impact, data loss, security breach, or system failure
+    description: Impact level of the failure
+
+  # Context information about where and when the failure occurred
+  context:
+    type: object
+    required:
+      - task
+    properties:
+
+      # The task that was assigned to the agent
+      task:
+        type: string
+        description: High-level description of what the agent was asked to do
+        examples:
+          - "Create user authentication API"
+          - "Implement file upload feature"
+
+      # Optional session identifier for tracking
+      session_id:
+        type: string
+        description: Session or conversation ID where failure occurred (if available)
+        examples:
+          - abc123
+          - session_2026-01-20_001
+
+  # Details about what went wrong
+  failure:
+    type: object
+    required:
+      - description
+      - root_cause
+    properties:
+
+      # What the agent did wrong
+      description:
+        type: string
+        description: Clear explanation of what the agent failed to do or did incorrectly
+        examples:
+          - "Agent implemented login but forgot /logout endpoint"
+          - "Agent skipped writing unit tests for validation functions"
+
+      # Why it happened (to inform prevention strategies)
+      root_cause:
+        type: string
+        description: Analysis of why this failure occurred (helps prevent similar issues)
+        examples:
+          - "Task description mentioned logout, agent focused on login only"
+          - "Agent prioritized implementation speed over test coverage"
+
+  # Evidence documenting the failure
+  evidence:
+    type: object
+    required:
+      - task_spec
+      - what_was_built
+    properties:
+
+      # The original task specification or requirements
+      task_spec:
+        type: string
+        description: >
+          The exact task specification given to the agent. Use multiline YAML
+          string format (|) to preserve formatting. Should include all requirements,
+          acceptance criteria, and relevant context.
+        examples:
+          - |
+            Create authentication API with:
+            - POST /login
+            - POST /logout
+            - GET /me
+
+      # What the agent actually produced
+      what_was_built:
+        description: >
+          Documentation of what the agent actually implemented. Can be a multiline
+          string or a list of items. Use checkmarks (✓) and crosses (✗) to show
+          what was completed vs missed.
+        oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+        examples:
+          - |
+            - POST /login ✓
+            - GET /me ✓
+            # /logout missing
+          -
+            - POST /login ✓
+            - GET /me ✓
+            - Missing POST /logout ✗
+
+  # Evaluation criteria to detect this type of failure in the future
+  eval_criteria:
+    type: array
+    minItems: 1
+    description: >
+      List of checks that would catch this failure. Mix of automated code-based
+      checks and model-based semantic checks.
+    items:
+      type: object
+      required:
+        - type
+        - check
+      properties:
+
+        # Type of evaluation check
+        type:
+          type: string
+          enum:
+            - code-based    # Automated check via code analysis, grep, etc.
+            - model-based   # LLM-based semantic check
+          description: Whether this is an automated or AI-assisted check
+
+        # The actual check to perform
+        check:
+          type: string
+          description: >
+            Description of the check. For code-based: pseudo-code or command.
+            For model-based: natural language description of what to verify.
+          examples:
+            - endpoint_exists('/logout')
+            - all_endpoints_in_spec_are_implemented
+            - grep -r "test.*validate" tests/
+            - "Verify all requirements from task spec are implemented"
+
+# Category Prefix Mapping (for reference)
+# Use these prefixes when creating new failure case IDs:
+#
+# MT - missed-tasks
+# WT - missing-tests (Wrong Tests)
+# WP - wrong-product
+# RG - regression
+# PC - premature-completion
+# SC - scope-creep
+# IF - integration-failure
+# SA - session-amnesia
+# HD - hallucinated-deps
+# SF - security-flaw
+# TM - tool-misuse
+# TQ - task-quality
+
+# Example Usage:
+#
+# id: MT-001
+# category: missed-tasks
+# discovered: 2026-01-20
+# severity: high
+#
+# context:
+#   task: "Create user authentication API"
+#   session_id: abc123
+#
+# failure:
+#   description: "Agent implemented login but forgot /logout endpoint"
+#   root_cause: "Task description mentioned logout, agent focused on login only"
+#
+# evidence:
+#   task_spec: |
+#     Create authentication API with:
+#     - POST /login
+#     - POST /logout  # <-- This was missed
+#     - GET /me
+#   what_was_built:
+#     - POST /login ✓
+#     - GET /me ✓
+#     # /logout missing
+#
+# eval_criteria:
+#   - type: code-based
+#     check: "endpoint_exists('/logout')"
+#   - type: model-based
+#     check: "all_endpoints_in_spec_are_implemented"
