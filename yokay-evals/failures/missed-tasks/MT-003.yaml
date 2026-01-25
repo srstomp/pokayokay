@@ -1,0 +1,46 @@
+id: MT-003
+
+category: missed-tasks
+
+discovered: 2026-01-25
+
+severity: medium
+
+context:
+  task: "Add pagination support to user list API endpoint"
+
+failure:
+  description: "Agent added pagination parameters to the API signature but forgot to implement the actual offset/limit logic in the database query"
+  root_cause: "Agent updated the API interface layer (route handler, response structure) but didn't follow through to the data access layer where pagination actually happens"
+
+evidence:
+  task_spec: |
+    Add pagination to GET /api/users endpoint:
+    - Accept query params: page (default: 1) and limit (default: 20)
+    - Return paginated results with metadata:
+      {
+        "data": [...],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total": 150
+        }
+      }
+    - Update database query to use OFFSET and LIMIT
+
+  what_was_built: |
+    Changes made:
+    - Route accepts page and limit query params ✓
+    - Response structure includes pagination metadata ✓
+    - Database query updated with OFFSET/LIMIT ✗
+
+    Result: API returns correct structure but always returns ALL users,
+    ignoring pagination parameters. For large user bases, this causes
+    severe performance issues.
+
+eval_criteria:
+  - type: code-based
+    check: "database_query_contains('OFFSET') && database_query_contains('LIMIT') in user list function"
+
+  - type: model-based
+    check: "Verify pagination is implemented at all layers: API interface receives params, business logic calculates offset, and database query applies OFFSET/LIMIT"

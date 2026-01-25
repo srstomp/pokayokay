@@ -1,0 +1,40 @@
+id: MT-002
+
+category: missed-tasks
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Implement user input validation for registration form"
+
+failure:
+  description: "Agent implemented all validation rules but forgot to validate email format, even though it was explicitly listed in requirements"
+  root_cause: "Agent focused on implementing the more complex validation rules (password strength, username length) and skipped over the standard email validation, possibly assuming it was handled elsewhere"
+
+evidence:
+  task_spec: |
+    Implement validation for user registration form with the following rules:
+    - Username: 3-20 characters, alphanumeric only
+    - Email: must be valid email format
+    - Password: minimum 8 characters, must contain uppercase, lowercase, and number
+    - Password confirmation: must match password
+
+    Return validation errors as an object with field names as keys.
+
+  what_was_built: |
+    Validation implemented:
+    - Username length and format ✓
+    - Password strength requirements ✓
+    - Password confirmation match ✓
+    - Email format validation ✗ (completely missing)
+
+    Result: Users can register with invalid email addresses like "notanemail"
+
+eval_criteria:
+  - type: code-based
+    check: "function_contains_email_validation('validate_registration') && (regex_test_exists('email') || email_validator_called())"
+
+  - type: model-based
+    check: "Verify all validation rules from requirements are implemented in code, with special attention to standard validations like email format"

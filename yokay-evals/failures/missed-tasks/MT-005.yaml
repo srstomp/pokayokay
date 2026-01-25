@@ -1,0 +1,51 @@
+id: MT-005
+
+category: missed-tasks
+
+discovered: 2026-01-25
+
+severity: medium
+
+context:
+  task: "Add webhook notification system for order status changes"
+
+failure:
+  description: "Agent implemented webhook delivery for order_created and order_completed events but forgot order_cancelled, which was explicitly listed in requirements"
+  root_cause: "Agent likely implemented the 'happy path' events (created, completed) and overlooked the edge case event (cancelled), treating the list as examples rather than exhaustive requirements"
+
+evidence:
+  task_spec: |
+    Implement webhook notification system:
+
+    Trigger webhooks on these order events:
+    1. order_created - when new order is placed
+    2. order_completed - when order is fulfilled
+    3. order_cancelled - when order is cancelled by user or admin
+
+    For each event:
+    - POST to webhook URL(s) registered by merchant
+    - Include order ID, event type, timestamp, and order details
+    - Retry up to 3 times on failure with exponential backoff
+    - Log all webhook attempts
+
+  what_was_built: |
+    Webhook triggers implemented:
+    - order_created event ✓
+    - order_completed event ✓
+    - order_cancelled event ✗ (missing)
+
+    Webhook delivery features:
+    - HTTP POST to registered URLs ✓
+    - Payload includes required fields ✓
+    - Retry logic with exponential backoff ✓
+    - Logging ✓
+
+    Result: Merchants don't receive notifications when orders are
+    cancelled, breaking their inventory and accounting integrations.
+
+eval_criteria:
+  - type: code-based
+    check: "webhook_trigger_exists('order_cancelled') && all_events(['order_created', 'order_completed', 'order_cancelled'])"
+
+  - type: model-based
+    check: "Verify all event types listed in requirements have corresponding webhook triggers, not just the common 'happy path' events"

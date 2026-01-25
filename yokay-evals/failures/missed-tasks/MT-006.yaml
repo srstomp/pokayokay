@@ -1,0 +1,50 @@
+id: MT-006
+
+category: missed-tasks
+
+discovered: 2026-01-25
+
+severity: critical
+
+context:
+  task: "Migrate user authentication from basic auth to JWT tokens"
+
+failure:
+  description: "Agent implemented JWT token generation and validation but forgot to update the logout endpoint to invalidate tokens, leaving a major security gap"
+  root_cause: "Agent focused on the new JWT implementation (token generation, validation middleware) but didn't consider how existing auth operations (like logout) need to change. Treated it as 'just add JWT' rather than 'replace auth system'"
+
+evidence:
+  task_spec: |
+    Migrate from basic authentication to JWT tokens:
+
+    Changes required:
+    - POST /login: Generate JWT token on successful login (15min expiry)
+    - Authentication middleware: Validate JWT instead of basic auth
+    - POST /logout: Invalidate token by adding to blacklist/revocation list
+    - POST /refresh: Generate new token from valid refresh token
+
+    Security notes:
+    - Use RS256 algorithm with key rotation
+    - Store refresh tokens securely in database
+    - Implement token blacklist for logout (Redis recommended)
+    - Tokens should include user_id, roles, and expiry claims
+
+  what_was_built: |
+    JWT implementation status:
+    - Login generates JWT access token (15min) ✓
+    - Login generates refresh token (7 days) ✓
+    - Auth middleware validates JWT ✓
+    - Refresh endpoint implemented ✓
+    - Token blacklist/revocation ✗ (not implemented)
+    - Logout endpoint ✗ (still exists but does nothing)
+
+    Result: Users cannot actually log out. Tokens remain valid until
+    expiry even after logout. If token is stolen, attacker has 15min
+    guaranteed access with no way to revoke it. Critical security flaw.
+
+eval_criteria:
+  - type: code-based
+    check: "logout_function_adds_to_blacklist() && blacklist_checked_in_auth_middleware() && (redis_client_exists() || revocation_store_exists())"
+
+  - type: model-based
+    check: "Verify complete authentication lifecycle: login creates tokens, auth validates against blacklist, logout adds to blacklist, and refresh handles token rotation. All security requirements from spec must be implemented."

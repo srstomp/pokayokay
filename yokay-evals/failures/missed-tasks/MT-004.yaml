@@ -1,0 +1,47 @@
+id: MT-004
+
+category: missed-tasks
+
+discovered: 2026-01-25
+
+severity: high
+
+context:
+  task: "Create file upload handler with virus scanning"
+
+failure:
+  description: "Agent implemented file upload with size and type validation but completely skipped the virus scanning requirement"
+  root_cause: "Virus scanning was mentioned as a security requirement, but agent may have deprioritized it as 'nice to have' or been unsure how to implement it, then forgot to circle back"
+
+evidence:
+  task_spec: |
+    Implement file upload endpoint POST /api/upload:
+
+    Requirements:
+    - Accept multipart/form-data with file field
+    - Validate file size (max 10MB)
+    - Validate file type (only: .pdf, .doc, .docx, .jpg, .png)
+    - Scan uploaded file for viruses using ClamAV
+    - If virus detected, reject upload and log incident
+    - If clean, save to S3 and return file URL
+
+    Security: Virus scanning is critical - do not skip this step.
+
+  what_was_built: |
+    Implementation status:
+    - Multipart file upload handling ✓
+    - File size validation (10MB limit) ✓
+    - File type validation ✓
+    - ClamAV virus scanning ✗ (not implemented)
+    - S3 upload and URL return ✓
+    - Error handling and logging ✓
+
+    Result: Potentially malicious files are uploaded directly to S3
+    without any security scanning. Critical security vulnerability.
+
+eval_criteria:
+  - type: code-based
+    check: "imports_clamav_library() && function_calls('scan_file') before save_to_storage()"
+
+  - type: model-based
+    check: "Verify file upload flow includes virus scanning step before storage, and that malicious files are rejected with proper logging"
