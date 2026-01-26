@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/stevestomp/pokayokay/yokay-evals/meta/schema/eval.schema.json",
+  "title": "Meta-Evaluation Configuration",
+  "description": "Schema for agent meta-evaluation YAML files",
+  "type": "object",
+  "required": ["agent", "consistency_threshold", "test_cases"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "description": "Agent name to evaluate, must start with 'yokay-' and contain only lowercase letters and hyphens",
+      "pattern": "^yokay-[a-z-]+$",
+      "examples": ["yokay-brainstormer", "yokay-spec-reviewer", "yokay-quality-reviewer"]
+    },
+    "consistency_threshold": {
+      "type": "number",
+      "description": "Minimum consistency threshold (0.0 to 1.0) required for the agent to pass evaluation",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "examples": [0.8, 0.9, 0.95]
+    },
+    "test_cases": {
+      "type": "array",
+      "description": "Array of test cases to evaluate the agent",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/TestCase"
+      }
+    }
+  },
+  "definitions": {
+    "TestCase": {
+      "type": "object",
+      "description": "A single test case for evaluating agent behavior",
+      "required": ["id", "name", "input", "expected", "rationale"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique test case identifier with 2-3 uppercase letter prefix and 3-digit number (e.g., BR-001, QR-123)",
+          "pattern": "^[A-Z]{2,3}-\\d{3}$",
+          "examples": ["BR-001", "SR-042", "QAR-123"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name describing the test case",
+          "minLength": 1,
+          "examples": ["Pass valid task brainstorming", "Fail missing acceptance criteria"]
+        },
+        "input": {
+          "$ref": "#/definitions/TaskInput"
+        },
+        "expected": {
+          "type": "string",
+          "description": "Expected verdict from the agent (e.g., PASS, FAIL for reviewers; REFINED, SKIP, NEEDS_INPUT for brainstormer)",
+          "minLength": 1,
+          "examples": ["PASS", "FAIL", "REFINED", "SKIP", "NEEDS_INPUT"]
+        },
+        "k": {
+          "type": "integer",
+          "description": "Number of times to run this test case (1-100). Defaults to 5 if not specified or 0",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Explanation of why this test case should produce the expected result",
+          "minLength": 1,
+          "examples": ["Should pass because task has clear acceptance criteria", "Should fail due to missing implementation details"]
+        }
+      }
+    },
+    "TaskInput": {
+      "type": "object",
+      "description": "Input task to be evaluated by the agent. Either task_description or implementation must be provided (depending on agent type)",
+      "required": ["task_title"],
+      "properties": {
+        "task_title": {
+          "type": "string",
+          "description": "Title of the task",
+          "minLength": 1,
+          "examples": ["Add user authentication", "Fix database connection pooling"]
+        },
+        "task_description": {
+          "type": "string",
+          "description": "Detailed description of the task. Required for brainstormer, optional for quality reviewer",
+          "minLength": 1,
+          "examples": ["Implement JWT-based authentication for API endpoints"]
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "description": "Optional list of acceptance criteria for the task",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            ["User can log in with email and password", "JWT token expires after 24 hours"]
+          ]
+        },
+        "implementation": {
+          "type": "string",
+          "description": "Code implementation to be reviewed by the agent (can be multiline). Optional - required for quality reviewers but not for brainstormers",
+          "minLength": 1,
+          "examples": ["// src/auth.ts\nexport function login() { ... }"]
+        }
+      }
+    }
+  }
+}

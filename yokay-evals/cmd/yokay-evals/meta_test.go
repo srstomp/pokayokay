@@ -17,11 +17,11 @@ func TestLoadEvalYAML(t *testing.T) {
 	}
 
 	// Write a sample eval.yaml
-	sampleEval := `agent: test-agent
+	sampleEval := `agent: yokay-test-agent
 consistency_threshold: 0.95
 
 test_cases:
-  - id: TEST-001
+  - id: TST-001
     name: "Test case one"
     input:
       task_title: "Test Task"
@@ -35,7 +35,7 @@ test_cases:
     k: 5
     rationale: "Should pass because xyz"
 
-  - id: TEST-002
+  - id: TST-002
     name: "Test case two"
     input:
       task_title: "Another test"
@@ -61,8 +61,8 @@ test_cases:
 	}
 
 	// Verify
-	if evalConfig.Agent != "test-agent" {
-		t.Errorf("Expected agent 'test-agent', got '%s'", evalConfig.Agent)
+	if evalConfig.Agent != "yokay-test-agent" {
+		t.Errorf("Expected agent 'yokay-test-agent', got '%s'", evalConfig.Agent)
 	}
 
 	if evalConfig.ConsistencyThreshold != 0.95 {
@@ -75,8 +75,8 @@ test_cases:
 
 	// Verify first test case
 	tc1 := evalConfig.TestCases[0]
-	if tc1.ID != "TEST-001" {
-		t.Errorf("Expected ID 'TEST-001', got '%s'", tc1.ID)
+	if tc1.ID != "TST-001" {
+		t.Errorf("Expected ID 'TST-001', got '%s'", tc1.ID)
 	}
 	if tc1.Name != "Test case one" {
 		t.Errorf("Expected name 'Test case one', got '%s'", tc1.Name)
@@ -96,8 +96,8 @@ test_cases:
 
 	// Verify second test case
 	tc2 := evalConfig.TestCases[1]
-	if tc2.ID != "TEST-002" {
-		t.Errorf("Expected ID 'TEST-002', got '%s'", tc2.ID)
+	if tc2.ID != "TST-002" {
+		t.Errorf("Expected ID 'TST-002', got '%s'", tc2.ID)
 	}
 	if tc2.Expected != "FAIL" {
 		t.Errorf("Expected verdict 'FAIL', got '%s'", tc2.Expected)
@@ -156,11 +156,11 @@ func TestRunMetaEvaluation(t *testing.T) {
 	}
 
 	// Write a simple eval.yaml
-	sampleEval := `agent: test-agent
+	sampleEval := `agent: yokay-test-agent
 consistency_threshold: 0.95
 
 test_cases:
-  - id: TEST-001
+  - id: TST-001
     name: "Test pass case"
     input:
       task_title: "Test Task"
@@ -184,8 +184,8 @@ test_cases:
 	}
 
 	// Verify
-	if result.Agent != "test-agent" {
-		t.Errorf("Expected agent 'test-agent', got '%s'", result.Agent)
+	if result.Agent != "yokay-test-agent" {
+		t.Errorf("Expected agent 'yokay-test-agent', got '%s'", result.Agent)
 	}
 
 	if len(result.TestResults) != 1 {
@@ -194,8 +194,8 @@ test_cases:
 
 	// Note: Actual grading is stubbed, so we just verify structure
 	tr := result.TestResults[0]
-	if tr.TestID != "TEST-001" {
-		t.Errorf("Expected test ID 'TEST-001', got '%s'", tr.TestID)
+	if tr.TestID != "TST-001" {
+		t.Errorf("Expected test ID 'TST-001', got '%s'", tr.TestID)
 	}
 
 	// Verify k from YAML was used (k=3)
@@ -214,11 +214,11 @@ func TestRunMetaEvaluationWithKOverride(t *testing.T) {
 	}
 
 	// Write a simple eval.yaml with k=3
-	sampleEval := `agent: test-agent
+	sampleEval := `agent: yokay-test-agent
 consistency_threshold: 0.95
 
 test_cases:
-  - id: TEST-001
+  - id: TST-001
     name: "Test pass case"
     input:
       task_title: "Test Task"
@@ -264,11 +264,11 @@ func TestRunMetaEvaluationWithDefaultK(t *testing.T) {
 	}
 
 	// Write eval.yaml WITHOUT k specified (k=0 or missing)
-	sampleEval := `agent: test-agent
+	sampleEval := `agent: yokay-test-agent
 consistency_threshold: 0.95
 
 test_cases:
-  - id: TEST-001
+  - id: TST-001
     name: "Test pass case"
     input:
       task_title: "Test Task"
@@ -547,11 +547,11 @@ func TestRunMetaCommandWithAgent(t *testing.T) {
 	}
 
 	// Write a simple eval.yaml
-	sampleEval := `agent: test-agent
+	sampleEval := `agent: yokay-test-agent
 consistency_threshold: 0.95
 
 test_cases:
-  - id: TEST-001
+  - id: TST-001
     name: "Test case"
     input:
       task_title: "Test Task"
@@ -624,5 +624,462 @@ func TestLoadEvalYAMLFileNotFound(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "reading eval.yaml") {
 		t.Errorf("Expected error about reading file, got: %v", err)
+	}
+}
+
+// TestValidateEvalConfig tests validation of EvalConfig
+func TestValidateEvalConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      EvalConfig
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "Valid config",
+			config: EvalConfig{
+				Agent:                "yokay-brainstormer",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test case",
+						Input: TaskInput{
+							TaskTitle:       "Test task",
+							TaskDescription: "Description",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						K:         5,
+						Rationale: "Because reasons",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid agent name - no yokay prefix",
+			config: EvalConfig{
+				Agent:                "brainstormer",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "agent name must match pattern ^yokay-[a-z-]+$",
+		},
+		{
+			name: "Invalid agent name - uppercase",
+			config: EvalConfig{
+				Agent:                "yokay-Brainstormer",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "agent name must match pattern ^yokay-[a-z-]+$",
+		},
+		{
+			name: "Missing agent name",
+			config: EvalConfig{
+				Agent:                "",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "agent is required",
+		},
+		{
+			name: "Consistency threshold too low",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: -0.1,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "consistency_threshold must be between 0.0 and 1.0",
+		},
+		{
+			name: "Consistency threshold too high",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 1.5,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "consistency_threshold must be between 0.0 and 1.0",
+		},
+		{
+			name: "No test cases",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases:            []TestCase{},
+			},
+			expectError: true,
+			errorMsg:    "test_cases must contain at least 1 test case",
+		},
+		{
+			name: "Invalid test ID format - lowercase",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "br-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case ID 'br-001' must match pattern ^[A-Z]{2,3}-\\d{3}$",
+		},
+		{
+			name: "Invalid test ID format - missing dash",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case ID 'BR001' must match pattern ^[A-Z]{2,3}-\\d{3}$",
+		},
+		{
+			name: "Invalid test ID format - four letter prefix",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BRST-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case ID 'BRST-001' must match pattern ^[A-Z]{2,3}-\\d{3}$",
+		},
+		{
+			name: "Missing test name",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case BR-001: name is required",
+		},
+		{
+			name: "Missing expected value",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case BR-001: expected is required",
+		},
+		{
+			name: "K value too low",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						K:         0,
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: false, // K is optional, 0 means use default
+		},
+		{
+			name: "K value too high",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						K:         150,
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case BR-001: k must be between 1 and 100 (or 0 for default)",
+		},
+		{
+			name: "Missing task title",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case BR-001: input.task_title is required",
+		},
+		{
+			name: "Valid with implementation but no description (for quality reviewer)",
+			config: EvalConfig{
+				Agent:                "yokay-quality-reviewer",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "QR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Missing both description and implementation",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "",
+							Implementation:  "",
+						},
+						Expected:  "PASS",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "at least one of input.task_description or input.implementation is required",
+		},
+		{
+			name: "Valid without implementation (for brainstormer)",
+			config: EvalConfig{
+				Agent:                "yokay-brainstormer",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "",
+						},
+						Expected:  "REFINED",
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Missing rationale",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.95,
+				TestCases: []TestCase{
+					{
+						ID:   "BR-001",
+						Name: "Test",
+						Input: TaskInput{
+							TaskTitle:       "Test",
+							TaskDescription: "Desc",
+							Implementation:  "code",
+						},
+						Expected:  "PASS",
+						Rationale: "",
+					},
+				},
+			},
+			expectError: true,
+			errorMsg:    "test case BR-001: rationale is required",
+		},
+		{
+			name: "Valid with 3-letter ID prefix",
+			config: EvalConfig{
+				Agent:                "yokay-test",
+				ConsistencyThreshold: 0.8,
+				TestCases: []TestCase{
+					{
+						ID:   "QAR-123",
+						Name: "Test case",
+						Input: TaskInput{
+							TaskTitle:          "Test",
+							TaskDescription:    "Desc",
+							AcceptanceCriteria: []string{"Criterion 1", "Criterion 2"},
+							Implementation:     "code",
+						},
+						Expected:  "FAIL",
+						K:         10,
+						Rationale: "Reason",
+					},
+				},
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateEvalConfig(&tt.config)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error containing '%s', got nil", tt.errorMsg)
+				} else if !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error containing '%s', got '%s'", tt.errorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
 	}
 }

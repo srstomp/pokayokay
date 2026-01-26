@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -70,7 +71,85 @@ func loadEvalYAML(path string) (*EvalConfig, error) {
 		return nil, fmt.Errorf("parsing eval.yaml: %w", err)
 	}
 
+	// Validate the config
+	if err := ValidateEvalConfig(&config); err != nil {
+		return nil, fmt.Errorf("validating eval.yaml: %w", err)
+	}
+
 	return &config, nil
+}
+
+// ValidateEvalConfig validates an EvalConfig against the schema rules
+func ValidateEvalConfig(config *EvalConfig) error {
+	// Validate agent name
+	if config.Agent == "" {
+		return fmt.Errorf("agent is required")
+	}
+	agentPattern := regexp.MustCompile(`^yokay-[a-z-]+$`)
+	if !agentPattern.MatchString(config.Agent) {
+		return fmt.Errorf("agent name must match pattern ^yokay-[a-z-]+$, got: %s", config.Agent)
+	}
+
+	// Validate consistency threshold
+	if config.ConsistencyThreshold < 0.0 || config.ConsistencyThreshold > 1.0 {
+		return fmt.Errorf("consistency_threshold must be between 0.0 and 1.0, got: %f", config.ConsistencyThreshold)
+	}
+
+	// Validate test cases
+	if len(config.TestCases) == 0 {
+		return fmt.Errorf("test_cases must contain at least 1 test case")
+	}
+
+	// Validate each test case
+	testIDPattern := regexp.MustCompile(`^[A-Z]{2,3}-\d{3}$`)
+	for _, tc := range config.TestCases {
+		// Validate ID
+		if !testIDPattern.MatchString(tc.ID) {
+			return fmt.Errorf("test case ID '%s' must match pattern ^[A-Z]{2,3}-\\d{3}$", tc.ID)
+		}
+
+		// Validate name
+		if tc.Name == "" {
+			return fmt.Errorf("test case %s: name is required", tc.ID)
+		}
+
+		// Validate expected (must be non-empty, common values: PASS, FAIL, REFINED, NEEDS_INPUT, SKIP)
+		if tc.Expected == "" {
+			return fmt.Errorf("test case %s: expected is required", tc.ID)
+		}
+
+		// Validate k (optional, but if set must be in valid range)
+		if tc.K > 100 {
+			return fmt.Errorf("test case %s: k must be between 1 and 100 (or 0 for default), got: %d", tc.ID, tc.K)
+		}
+
+		// Validate rationale
+		if tc.Rationale == "" {
+			return fmt.Errorf("test case %s: rationale is required", tc.ID)
+		}
+
+		// Validate input
+		if err := validateTaskInput(tc.ID, &tc.Input); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateTaskInput validates a TaskInput structure
+func validateTaskInput(testID string, input *TaskInput) error {
+	if input.TaskTitle == "" {
+		return fmt.Errorf("test case %s: input.task_title is required", testID)
+	}
+	// TaskDescription and Implementation are optional - different agents need different fields:
+	// - Brainstormer needs: task_title, task_description, acceptance_criteria (optional)
+	// - Quality-reviewer needs: task_title, implementation
+	// At least one of task_description or implementation should be provided
+	if input.TaskDescription == "" && input.Implementation == "" {
+		return fmt.Errorf("test case %s: at least one of input.task_description or input.implementation is required", testID)
+	}
+	return nil
 }
 
 // findEvalFiles finds all eval.yaml files in the given directory
