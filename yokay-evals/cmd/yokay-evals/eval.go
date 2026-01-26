@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/stevestomp/yokay-evals/internal/harness"
 	"gopkg.in/yaml.v3"
 )
 
@@ -122,6 +123,7 @@ func findFailureCases(failuresDir string, category string) ([]FailureCase, error
 }
 
 // runEvaluation runs evaluation on a failure case k times
+// Each run is executed in an isolated context with its own temp directory
 // For now, this is stubbed to always return pass
 func runEvaluation(failureCase FailureCase, k int) (EvalResult, error) {
 	result := EvalResult{
@@ -130,10 +132,17 @@ func runEvaluation(failureCase FailureCase, k int) (EvalResult, error) {
 		Runs:     make([]bool, k),
 	}
 
-	// STUB: For now, always return pass
-	// TODO: Implement actual eval_criteria execution
+	// Run evaluation k times, each in its own isolated context
 	for i := 0; i < k; i++ {
-		result.Runs[i] = true // Stubbed to always pass
+		ctx, err := harness.NewIsolatedContext()
+		if err != nil {
+			return result, fmt.Errorf("creating isolated context for run %d: %w", i+1, err)
+		}
+		defer ctx.Cleanup()
+
+		// TODO: Execute eval_criteria in ctx.WorkingDir()
+		// For now, still stubbed to always pass
+		result.Runs[i] = true
 	}
 
 	return result, nil
