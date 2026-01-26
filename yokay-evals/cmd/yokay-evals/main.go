@@ -34,6 +34,12 @@ func main() {
 	k := metaCmd.Int("k", 5, "Number of runs for pass^k (default: 5)")
 	metaDirFlag := metaCmd.String("meta-dir", "", "Path to meta directory (default: yokay-evals/meta)")
 
+	evalCmd := flag.NewFlagSet("eval", flag.ExitOnError)
+	failuresDirFlag := evalCmd.String("failures-dir", "", "Path to failures directory (default: yokay-evals/failures)")
+	categoryFlag := evalCmd.String("category", "", "Filter to specific category (e.g., 'missing-tests')")
+	kFlag := evalCmd.Int("k", 1, "Number of evaluation runs (default: 1)")
+	formatFlag := evalCmd.String("format", "table", "Output format: 'table' or 'json'")
+
 	reportCmd := flag.NewFlagSet("report", flag.ExitOnError)
 	reportType := reportCmd.String("type", "grade", "Report type: 'grade', 'eval', or 'all'")
 	reportFormat := reportCmd.String("format", "markdown", "Output format: 'markdown' or 'json'")
@@ -46,6 +52,7 @@ func main() {
 		fmt.Println("\nCommands:")
 		fmt.Println("  grade-skills    Grade all pokayokay skills and generate report")
 		fmt.Println("  meta            Run meta-evaluations on agents or skills")
+		fmt.Println("  eval            Run eval suite against failure cases")
 		fmt.Println("  report          View and analyze evaluation reports")
 		os.Exit(1)
 	}
@@ -108,6 +115,43 @@ func main() {
 
 		if err := runMetaCommand(*suite, *agent, *k, metaDir); err != nil {
 			log.Fatalf("Failed to run meta-evaluation: %v", err)
+		}
+
+	case "eval":
+		evalCmd.Parse(os.Args[2:])
+
+		// Set default failures directory if not specified
+		failuresDir := *failuresDirFlag
+		if failuresDir == "" {
+			// Try to find failures directory relative to current working directory
+			cwd, err := os.Getwd()
+			if err != nil {
+				log.Fatalf("Failed to get current directory: %v", err)
+			}
+
+			// Check if we're in yokay-evals directory or a subdirectory
+			if strings.Contains(cwd, "yokay-evals") {
+				// Find the yokay-evals directory
+				parts := strings.Split(cwd, "yokay-evals")
+				if len(parts) > 0 {
+					evalsDir := parts[0] + "yokay-evals"
+					failuresDir = filepath.Join(evalsDir, "failures")
+				}
+			} else if strings.Contains(cwd, "pokayokay") {
+				// Find the project root
+				parts := strings.Split(cwd, "pokayokay")
+				if len(parts) > 0 {
+					projectRoot := parts[0] + "pokayokay"
+					failuresDir = filepath.Join(projectRoot, "yokay-evals", "failures")
+				}
+			} else {
+				// Assume failures is relative to current directory
+				failuresDir = "failures"
+			}
+		}
+
+		if err := runEvalCommand(failuresDir, *categoryFlag, *kFlag, *formatFlag); err != nil {
+			log.Fatalf("Failed to run eval command: %v", err)
 		}
 
 	case "report":
