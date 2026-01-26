@@ -189,6 +189,7 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
         # Run audit-gate for story boundary
         story_env = {**env, "BOUNDARY_TYPE": "story"}
         results.append(run_action("audit-gate", env=story_env))
+        results.append(run_action("eval-gate", env=story_env))
 
     # Run post-epic hooks if epic completed
     if epic_completed:
@@ -196,6 +197,7 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
         # Run audit-gate for epic boundary
         epic_env = {**env, "BOUNDARY_TYPE": "epic"}
         results.append(run_action("audit-gate", env=epic_env))
+        results.append(run_action("eval-gate", env=epic_env))
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
@@ -232,6 +234,36 @@ def handle_set_blocker(tool_input: dict, tool_response: dict) -> dict:
         "task_id": task_id,
         "blocker_reason": reason,
         "suggestion": "Consider working on a different task while this is blocked."
+    }
+
+
+def handle_task_created(tool_input: dict, tool_response: dict) -> dict:
+    """Handle mcp__ohno__create_task PostToolUse event - validate story linkage."""
+    task_id = tool_response.get("task_id", "unknown")
+    task_title = tool_input.get("title", "")
+    story_id = tool_input.get("story_id", "")
+    task_type = tool_input.get("task_type", "feature")
+
+    env = {
+        "TASK_ID": task_id,
+        "STORY_ID": story_id or "",
+        "TASK_TITLE": task_title,
+        "TASK_TYPE": task_type,
+    }
+
+    results = []
+    results.append(run_action("validate-task-linkage", env=env))
+
+    # Check if there was a warning (output contains WARN)
+    has_warning = any("WARN" in (r.get("output", "") or "") for r in results)
+
+    return {
+        "hooks_run": ["post-create-task"],
+        "task_id": task_id,
+        "story_id": story_id,
+        "results": results,
+        "has_warning": has_warning,
+        "summary": "warning: task needs story linkage" if has_warning else "ok"
     }
 
 
@@ -342,6 +374,9 @@ def main():
 
     elif tool_name == "mcp__ohno__set_blocker":
         result = handle_set_blocker(tool_input, tool_response)
+
+    elif tool_name == "mcp__ohno__create_task":
+        result = handle_task_created(tool_input, tool_response)
 
     elif tool_name == "Bash" and hook_event == "PreToolUse":
         result = handle_pre_commit(tool_input)
