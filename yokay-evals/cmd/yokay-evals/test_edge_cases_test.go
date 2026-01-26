@@ -11,9 +11,12 @@ import (
 func TestRunReportCommandNoReports(t *testing.T) {
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
-	
-	err := runReportCommand("grade", "markdown", false, "", reportsDir)
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
+	err = runReportCommand("grade", "markdown", false, "", reportsDir)
 	if err == nil {
 		t.Fatalf("Expected error when no reports found, got nil")
 	}
@@ -26,8 +29,11 @@ func TestRunReportCommandNoReports(t *testing.T) {
 func TestRunReportCommandInvalidFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
-	
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
 	reportPath := filepath.Join(reportsDir, "skill-clarity-2026-01-26.md")
 	reportContent := `# Skill Clarity Report
 Generated: 2026-01-26 21:30:43
@@ -37,9 +43,12 @@ Generated: 2026-01-26 21:30:43
 - **Pass Rate**: 100.0% (1/1)
 - **Passing Threshold**: 70.0
 `
-	os.WriteFile(reportPath, []byte(reportContent), 0644)
-	
-	err := runReportCommand("grade", "xml", false, "", reportsDir)
+	err = os.WriteFile(reportPath, []byte(reportContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = runReportCommand("grade", "xml", false, "", reportsDir)
 	if err == nil {
 		t.Fatalf("Expected error for unsupported format, got nil")
 	}
@@ -52,8 +61,11 @@ Generated: 2026-01-26 21:30:43
 func TestRunReportCommandUnsupportedType(t *testing.T) {
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
-	
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
 	reportPath := filepath.Join(reportsDir, "skill-clarity-2026-01-26.md")
 	reportContent := `# Skill Clarity Report
 Generated: 2026-01-26 21:30:43
@@ -63,9 +75,12 @@ Generated: 2026-01-26 21:30:43
 - **Pass Rate**: 100.0% (1/1)
 - **Passing Threshold**: 70.0
 `
-	os.WriteFile(reportPath, []byte(reportContent), 0644)
-	
-	err := runReportCommand("evaluation", "markdown", false, "", reportsDir)
+	err = os.WriteFile(reportPath, []byte(reportContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	err = runReportCommand("evaluation", "markdown", false, "", reportsDir)
 	if err == nil {
 		t.Fatalf("Expected error for unsupported report type, got nil")
 	}
@@ -156,7 +171,10 @@ func TestRunReportCommandWithOutputFile(t *testing.T) {
 	// Create temporary directory with a valid report
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
 
 	reportPath := filepath.Join(reportsDir, "skill-clarity-2026-01-26.md")
 	reportContent := `# Skill Clarity Report
@@ -167,11 +185,14 @@ Generated: 2026-01-26 21:30:43
 - **Pass Rate**: 100.0% (5/5)
 - **Passing Threshold**: 70.0
 `
-	os.WriteFile(reportPath, []byte(reportContent), 0644)
+	err = os.WriteFile(reportPath, []byte(reportContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// Test: Run report command with output file
 	outputFile := filepath.Join(tmpDir, "output.md")
-	err := runReportCommand("grade", "markdown", false, outputFile, reportsDir)
+	err = runReportCommand("grade", "markdown", false, outputFile, reportsDir)
 	if err != nil {
 		t.Fatalf("runReportCommand with output file failed: %v", err)
 	}
@@ -196,7 +217,10 @@ func TestRunReportCommandListModeWithOutputFile(t *testing.T) {
 	// Create temporary directory with test reports
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
 
 	// Create test reports
 	testFiles := []string{
@@ -206,12 +230,15 @@ func TestRunReportCommandListModeWithOutputFile(t *testing.T) {
 
 	for _, filename := range testFiles {
 		path := filepath.Join(reportsDir, filename)
-		os.WriteFile(path, []byte("# Test Report\n"), 0644)
+		err := os.WriteFile(path, []byte("# Test Report\n"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
 	}
 
 	// Test: Run report command in list mode with output file
 	outputFile := filepath.Join(tmpDir, "list.md")
-	err := runReportCommand("grade", "markdown", true, outputFile, reportsDir)
+	err = runReportCommand("grade", "markdown", true, outputFile, reportsDir)
 	if err != nil {
 		t.Fatalf("runReportCommand list mode with output file failed: %v", err)
 	}
@@ -238,7 +265,10 @@ func TestRunReportCommandJSONFormat(t *testing.T) {
 	// Create temporary directory with a valid report
 	tmpDir := t.TempDir()
 	reportsDir := filepath.Join(tmpDir, "reports")
-	os.MkdirAll(reportsDir, 0755)
+	err := os.MkdirAll(reportsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
 
 	reportPath := filepath.Join(reportsDir, "skill-clarity-2026-01-26.md")
 	reportContent := `# Skill Clarity Report
@@ -249,11 +279,14 @@ Generated: 2026-01-26 21:30:43
 - **Pass Rate**: 100.0% (5/5)
 - **Passing Threshold**: 70.0
 `
-	os.WriteFile(reportPath, []byte(reportContent), 0644)
+	err = os.WriteFile(reportPath, []byte(reportContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// Test: Run report command with JSON format and output file
 	outputFile := filepath.Join(tmpDir, "output.json")
-	err := runReportCommand("grade", "json", false, outputFile, reportsDir)
+	err = runReportCommand("grade", "json", false, outputFile, reportsDir)
 	if err != nil {
 		t.Fatalf("runReportCommand with JSON format failed: %v", err)
 	}
