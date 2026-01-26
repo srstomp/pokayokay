@@ -1,0 +1,744 @@
+# Meta-Evaluation for yokay-spec-reviewer
+# Tests the spec-reviewer agent's ability to verify implementations match task specifications
+
+agent: yokay-spec-reviewer
+consistency_threshold: 0.95
+
+test_cases:
+  # === FAIL: MISSING REQUIREMENTS ===
+
+  - id: SR-001
+    name: "Fail when acceptance criteria partially met"
+    input:
+      task_title: "Add user authentication endpoint"
+      task_description: "Implement POST /api/login endpoint that authenticates users with email and password"
+      acceptance_criteria:
+        - "POST /api/login endpoint exists"
+        - "Endpoint validates email and password"
+        - "Returns JWT token on success"
+        - "Returns 401 on invalid credentials"
+        - "Tests verify authentication flow"
+      implementation: |
+        // src/controllers/authController.ts
+        export async function login(req: Request, res: Response) {
+          const { email, password } = req.body;
+
+          const user = await db.users.findByEmail(email);
+          if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+          }
+
+          const valid = await bcrypt.compare(password, user.passwordHash);
+          if (!valid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+          }
+
+          const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+          res.json({ token });
+        }
+
+        // src/routes/auth.ts
+        router.post('/api/login', login);
+    expected: FAIL
+    k: 5
+    rationale: "Missing acceptance criterion: No tests were implemented. Implementation covers 4 of 5 criteria but lacks test verification."
+
+  - id: SR-002
+    name: "Fail when core functionality missing"
+    input:
+      task_title: "Add pagination to user list API"
+      task_description: "Update GET /api/users endpoint to support pagination"
+      acceptance_criteria:
+        - "Accepts page and limit query parameters"
+        - "Returns paginated user data"
+        - "Returns pagination metadata (total, totalPages, hasNext, hasPrev)"
+        - "Defaults to page=1, limit=20"
+        - "Tests cover pagination edge cases"
+      implementation: |
+        // src/controllers/userController.ts
+        export async function listUsers(req: Request, res: Response) {
+          const page = parseInt(req.query.page as string) || 1;
+          const limit = parseInt(req.query.limit as string) || 20;
+
+          const users = await db.users.findAll({
+            offset: (page - 1) * limit,
+            limit: limit
+          });
+
+          res.json({ users });
+        }
+
+        // tests/userController.test.ts
+        test('returns users with pagination params', async () => {
+          const res = await request(app).get('/api/users?page=2&limit=10');
+          expect(res.body.users).toHaveLength(10);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Missing pagination metadata. Criteria 3 not met - no total, totalPages, hasNext, hasPrev returned. Tests also don't cover edge cases."
+
+  - id: SR-003
+    name: "Fail when error handling omitted"
+    input:
+      task_title: "Add file upload validation"
+      task_description: "Validate uploaded files before processing"
+      acceptance_criteria:
+        - "Reject files larger than 5MB"
+        - "Only accept image/jpeg, image/png, application/pdf"
+        - "Return 400 with specific error message for each validation failure"
+        - "Handle missing file gracefully"
+        - "Tests verify all validation scenarios"
+      implementation: |
+        // src/middleware/uploadValidator.ts
+        const MAX_SIZE = 5 * 1024 * 1024;
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+        export function validateUpload(req: Request, res: Response, next: NextFunction) {
+          if (!req.file) {
+            return res.status(400).json({ error: 'No file provided' });
+          }
+
+          if (req.file.size > MAX_SIZE) {
+            return res.status(400).json({ error: 'File too large' });
+          }
+
+          if (!ALLOWED_TYPES.includes(req.file.mimetype)) {
+            return res.status(400).json({ error: 'Invalid file type' });
+          }
+
+          next();
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Missing tests entirely. While implementation covers all validation logic, criterion 5 (tests verify all validation scenarios) is not met."
+
+  # === FAIL: SCOPE CREEP ===
+
+  - id: SR-004
+    name: "Fail when unrequested features added"
+    input:
+      task_title: "Add logout endpoint"
+      task_description: "Implement POST /api/logout endpoint that invalidates user session"
+      acceptance_criteria:
+        - "POST /api/logout endpoint exists"
+        - "Endpoint invalidates session token"
+        - "Returns 200 on success"
+        - "Tests verify token invalidation"
+      implementation: |
+        // src/controllers/authController.ts
+        export async function logout(req: Request, res: Response) {
+          const token = req.headers.authorization?.split(' ')[1];
+
+          if (token) {
+            await db.sessions.invalidate(token);
+            await db.auditLog.create({
+              action: 'logout',
+              userId: req.user.id,
+              timestamp: new Date(),
+              ipAddress: req.ip
+            });
+          }
+
+          res.status(200).json({ message: 'Logged out successfully' });
+        }
+
+        // src/middleware/sessionCleanup.ts
+        export async function cleanupExpiredSessions() {
+          const expired = await db.sessions.findExpired();
+          await db.sessions.deleteMany(expired.map(s => s.id));
+        }
+
+        setInterval(cleanupExpiredSessions, 60000);
+
+        // tests/authController.test.ts
+        test('logout invalidates token', async () => {
+          const res = await request(app)
+            .post('/api/logout')
+            .set('Authorization', 'Bearer validtoken');
+
+          expect(res.status).toBe(200);
+          const session = await db.sessions.findByToken('validtoken');
+          expect(session).toBeNull();
+        });
+
+        test('audit log records logout', async () => {
+          await request(app).post('/api/logout').set('Authorization', 'Bearer validtoken');
+          const logs = await db.auditLog.findByAction('logout');
+          expect(logs).toHaveLength(1);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Scope creep: Added audit logging (not requested) and session cleanup background job (not requested). Only basic logout functionality was specified."
+
+  - id: SR-005
+    name: "Fail when refactoring unrelated code"
+    input:
+      task_title: "Fix validation error message"
+      task_description: "Update email validation to return more specific error message"
+      acceptance_criteria:
+        - "Email validation returns 'Invalid email format' instead of 'Validation failed'"
+        - "Error response structure unchanged"
+        - "Tests updated for new message"
+      implementation: |
+        // src/validators/userValidator.ts
+        export class UserValidator {
+          validateEmail(email: string): ValidationResult {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              throw new ValidationError('Invalid email format');
+            }
+            return { valid: true };
+          }
+
+          validatePassword(password: string): ValidationResult {
+            if (password.length < 8) {
+              throw new ValidationError('Password must be at least 8 characters');
+            }
+            if (!/[A-Z]/.test(password)) {
+              throw new ValidationError('Password must contain uppercase letter');
+            }
+            if (!/[0-9]/.test(password)) {
+              throw new ValidationError('Password must contain number');
+            }
+            if (!/[^A-Za-z0-9]/.test(password)) {
+              throw new ValidationError('Password must contain special character');
+            }
+            return { valid: true };
+          }
+
+          validateName(name: string): ValidationResult {
+            const trimmed = name.trim();
+            if (trimmed.length < 2) {
+              throw new ValidationError('Name too short');
+            }
+            if (trimmed.length > 100) {
+              throw new ValidationError('Name too long');
+            }
+            if (!/^[a-zA-Z\s-']+$/.test(trimmed)) {
+              throw new ValidationError('Name contains invalid characters');
+            }
+            return { valid: true };
+          }
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Scope creep: Enhanced password validation with uppercase/number/special char requirements (not requested) and improved name validation (not requested). Only email error message change was specified."
+
+  - id: SR-006
+    name: "Fail when adding unrequested optimizations"
+    input:
+      task_title: "Add user search by email"
+      task_description: "Create endpoint to search for user by email address"
+      acceptance_criteria:
+        - "GET /api/users/search endpoint accepts email query param"
+        - "Returns user if found, 404 if not"
+        - "Tests verify search functionality"
+      implementation: |
+        // src/services/userCache.ts
+        export class UserCache {
+          private cache = new Map<string, User>();
+          private ttl = 300000; // 5 minutes
+
+          set(email: string, user: User): void {
+            this.cache.set(email, user);
+            setTimeout(() => this.cache.delete(email), this.ttl);
+          }
+
+          get(email: string): User | undefined {
+            return this.cache.get(email);
+          }
+        }
+
+        // src/controllers/userController.ts
+        const userCache = new UserCache();
+
+        export async function searchByEmail(req: Request, res: Response) {
+          const email = req.query.email as string;
+
+          let user = userCache.get(email);
+
+          if (!user) {
+            user = await db.users.findByEmail(email);
+            if (user) {
+              userCache.set(email, user);
+            }
+          }
+
+          if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+
+          res.json({ user });
+        }
+
+        // tests/userController.test.ts
+        test('searches user by email', async () => {
+          const res = await request(app).get('/api/users/search?email=test@example.com');
+          expect(res.status).toBe(200);
+        });
+
+        test('caching improves performance', async () => {
+          await request(app).get('/api/users/search?email=test@example.com');
+          const start = Date.now();
+          await request(app).get('/api/users/search?email=test@example.com');
+          const duration = Date.now() - start;
+          expect(duration).toBeLessThan(10);
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Scope creep: Added caching layer (not requested). Task only asked for search endpoint, not performance optimizations."
+
+  # === FAIL: MISINTERPRETATION ===
+
+  - id: SR-007
+    name: "Fail when requirement misunderstood"
+    input:
+      task_title: "Add rate limiting to API endpoints"
+      task_description: "Implement rate limiting to prevent API abuse"
+      acceptance_criteria:
+        - "Limit requests to 100 per minute per IP address"
+        - "Return 429 status when limit exceeded"
+        - "Include retry-after header in rate limit response"
+        - "Tests verify rate limiting behavior"
+      implementation: |
+        // src/middleware/rateLimit.ts
+        const userLimits = new Map<string, number>();
+
+        export function rateLimit(req: Request, res: Response, next: NextFunction) {
+          const userId = req.user?.id;
+
+          if (!userId) {
+            return next();
+          }
+
+          const count = userLimits.get(userId) || 0;
+
+          if (count >= 100) {
+            return res.status(429).json({
+              error: 'Too many requests',
+              retryAfter: 60
+            });
+          }
+
+          userLimits.set(userId, count + 1);
+
+          setTimeout(() => {
+            userLimits.set(userId, 0);
+          }, 60000);
+
+          next();
+        }
+    expected: FAIL
+    k: 5
+    rationale: "Misinterpretation: Rate limiting by user ID instead of IP address. Also missing retry-after header (only in JSON body). Spec clearly stated 'per IP address'."
+
+  - id: SR-008
+    name: "Fail when feature implemented in wrong location"
+    input:
+      task_title: "Add input sanitization to comment creation"
+      task_description: "Sanitize user input when creating comments to prevent XSS"
+      acceptance_criteria:
+        - "Comment content sanitized before saving to database"
+        - "HTML tags stripped except safe ones (b, i, em, strong, a)"
+        - "URLs in links validated"
+        - "Tests verify XSS prevention"
+      implementation: |
+        // src/components/CommentForm.tsx
+        import DOMPurify from 'dompurify';
+
+        export function CommentForm({ onSubmit }: Props) {
+          const [content, setContent] = useState('');
+
+          const handleSubmit = (e: FormEvent) => {
+            e.preventDefault();
+
+            const sanitized = DOMPurify.sanitize(content, {
+              ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a'],
+              ALLOWED_ATTR: ['href']
+            });
+
+            onSubmit(sanitized);
+          };
+
+          return (
+            <form onSubmit={handleSubmit}>
+              <textarea value={content} onChange={e => setContent(e.target.value)} />
+              <button type="submit">Post Comment</button>
+            </form>
+          );
+        }
+
+        // tests/CommentForm.test.tsx
+        test('sanitizes XSS attempts', () => {
+          const onSubmit = jest.fn();
+          const { getByRole } = render(<CommentForm onSubmit={onSubmit} />);
+
+          fireEvent.change(getByRole('textbox'), {
+            target: { value: '<script>alert("xss")</script>Safe text' }
+          });
+          fireEvent.click(getByRole('button'));
+
+          expect(onSubmit).toHaveBeenCalledWith('Safe text');
+        });
+    expected: FAIL
+    k: 5
+    rationale: "Wrong location: Sanitization done in frontend component instead of backend before database save. Spec said 'before saving to database', not client-side."
+
+  # === PASS: COMPLETE IMPLEMENTATIONS ===
+
+  - id: SR-009
+    name: "Pass complete implementation meeting all criteria"
+    input:
+      task_title: "Add password reset functionality"
+      task_description: "Implement password reset flow with token-based verification"
+      acceptance_criteria:
+        - "POST /api/password-reset/request generates reset token"
+        - "Token expires after 1 hour"
+        - "POST /api/password-reset/confirm validates token and updates password"
+        - "Email sent with reset link"
+        - "Tests verify token generation, expiry, and reset flow"
+      implementation: |
+        // src/controllers/passwordResetController.ts
+        export async function requestReset(req: Request, res: Response) {
+          const { email } = req.body;
+          const user = await db.users.findByEmail(email);
+
+          if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+
+          const token = crypto.randomBytes(32).toString('hex');
+          const expiry = Date.now() + 3600000; // 1 hour
+
+          await db.resetTokens.create({ userId: user.id, token, expiry });
+          await sendEmail(email, 'Password Reset', `Reset: /reset?token=${token}`);
+
+          res.json({ message: 'Reset email sent' });
+        }
+
+        export async function confirmReset(req: Request, res: Response) {
+          const { token, newPassword } = req.body;
+          const reset = await db.resetTokens.findByToken(token);
+
+          if (!reset || reset.expiry < Date.now()) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+          }
+
+          const hashed = await bcrypt.hash(newPassword, 10);
+          await db.users.updatePassword(reset.userId, hashed);
+          await db.resetTokens.delete(reset.id);
+
+          res.json({ message: 'Password updated' });
+        }
+
+        // tests/passwordReset.test.ts
+        describe('Password Reset', () => {
+          test('generates reset token', async () => {
+            const res = await request(app)
+              .post('/api/password-reset/request')
+              .send({ email: 'user@example.com' });
+
+            expect(res.status).toBe(200);
+            const token = await db.resetTokens.findByUserId('user123');
+            expect(token).toBeDefined();
+          });
+
+          test('token expires after 1 hour', async () => {
+            const token = await createResetToken('user123');
+            jest.advanceTimersByTime(3600001);
+
+            const res = await request(app)
+              .post('/api/password-reset/confirm')
+              .send({ token, newPassword: 'newpass123' });
+
+            expect(res.status).toBe(400);
+          });
+
+          test('resets password with valid token', async () => {
+            const token = await createResetToken('user123');
+
+            const res = await request(app)
+              .post('/api/password-reset/confirm')
+              .send({ token, newPassword: 'newpass123' });
+
+            expect(res.status).toBe(200);
+            const user = await db.users.findById('user123');
+            const valid = await bcrypt.compare('newpass123', user.passwordHash);
+            expect(valid).toBe(true);
+          });
+
+          test('sends reset email', async () => {
+            await request(app)
+              .post('/api/password-reset/request')
+              .send({ email: 'user@example.com' });
+
+            expect(sendEmail).toHaveBeenCalledWith(
+              'user@example.com',
+              'Password Reset',
+              expect.stringContaining('/reset?token=')
+            );
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "All 5 acceptance criteria clearly met: token generation endpoint, 1-hour expiry, confirmation endpoint, email sent, comprehensive tests covering all flows."
+
+  - id: SR-010
+    name: "Pass implementation with all edge cases handled"
+    input:
+      task_title: "Add order total calculation with discounts"
+      task_description: "Calculate order total including items, discount, tax, and shipping"
+      acceptance_criteria:
+        - "Calculate items total from price and quantity"
+        - "Apply percentage discount if present"
+        - "Calculate tax on discounted subtotal"
+        - "Add shipping cost to final total"
+        - "Handle missing discount/tax/shipping gracefully"
+        - "Tests verify calculations and edge cases"
+      implementation: |
+        // src/services/orderService.ts
+        interface OrderInput {
+          items: Array<{ price: number; quantity: number }>;
+          discount?: { percentage: number };
+          tax?: { rate: number };
+          shipping?: { cost: number };
+        }
+
+        export function calculateOrderTotal(order: OrderInput): number {
+          const itemsTotal = order.items.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+          }, 0);
+
+          const discountAmount = order.discount
+            ? itemsTotal * order.discount.percentage
+            : 0;
+
+          const subtotal = itemsTotal - discountAmount;
+
+          const taxAmount = order.tax
+            ? subtotal * order.tax.rate
+            : 0;
+
+          const shippingCost = order.shipping?.cost || 0;
+
+          return subtotal + taxAmount + shippingCost;
+        }
+
+        // tests/orderService.test.ts
+        describe('calculateOrderTotal', () => {
+          test('calculates total with all components', () => {
+            const order = {
+              items: [{ price: 10, quantity: 2 }],
+              discount: { percentage: 0.1 },
+              tax: { rate: 0.08 },
+              shipping: { cost: 5 }
+            };
+            expect(calculateOrderTotal(order)).toBeCloseTo(24.44);
+          });
+
+          test('handles missing discount', () => {
+            const order = {
+              items: [{ price: 10, quantity: 2 }],
+              tax: { rate: 0.08 },
+              shipping: { cost: 5 }
+            };
+            expect(calculateOrderTotal(order)).toBeCloseTo(26.6);
+          });
+
+          test('handles missing tax', () => {
+            const order = {
+              items: [{ price: 10, quantity: 2 }],
+              discount: { percentage: 0.1 },
+              shipping: { cost: 5 }
+            };
+            expect(calculateOrderTotal(order)).toBe(23);
+          });
+
+          test('handles missing shipping', () => {
+            const order = {
+              items: [{ price: 10, quantity: 2 }],
+              discount: { percentage: 0.1 },
+              tax: { rate: 0.08 }
+            };
+            expect(calculateOrderTotal(order)).toBeCloseTo(19.44);
+          });
+
+          test('handles all optional fields missing', () => {
+            const order = {
+              items: [{ price: 10, quantity: 2 }]
+            };
+            expect(calculateOrderTotal(order)).toBe(20);
+          });
+
+          test('handles empty items array', () => {
+            const order = {
+              items: [],
+              shipping: { cost: 5 }
+            };
+            expect(calculateOrderTotal(order)).toBe(5);
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "All 6 criteria met including edge case handling. Tests comprehensively verify all combinations of missing optional fields."
+
+  - id: SR-011
+    name: "Pass well-structured implementation following patterns"
+    input:
+      task_title: "Add API request retry logic"
+      task_description: "Implement retry mechanism for failed API requests"
+      acceptance_criteria:
+        - "Retry failed requests up to 3 times"
+        - "Use exponential backoff (1s, 2s, 4s)"
+        - "Don't retry 4xx client errors"
+        - "Throw error after max retries exceeded"
+        - "Tests verify retry behavior and backoff timing"
+      implementation: |
+        // src/utils/apiRetry.ts
+        const MAX_RETRIES = 3;
+        const BASE_DELAY = 1000;
+
+        export async function fetchWithRetry<T>(
+          url: string,
+          options?: RequestInit
+        ): Promise<T> {
+          let lastError: Error;
+
+          for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+              const response = await fetch(url, options);
+
+              if (!response.ok) {
+                if (response.status >= 400 && response.status < 500) {
+                  throw new Error(`Client error: ${response.status}`);
+                }
+                throw new Error(`Server error: ${response.status}`);
+              }
+
+              return await response.json();
+            } catch (error) {
+              lastError = error instanceof Error ? error : new Error('Unknown error');
+
+              if (error.message.startsWith('Client error')) {
+                throw error;
+              }
+
+              if (attempt < MAX_RETRIES - 1) {
+                const delay = BASE_DELAY * Math.pow(2, attempt);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+            }
+          }
+
+          throw new Error(`Failed after ${MAX_RETRIES} attempts: ${lastError.message}`);
+        }
+
+        // tests/apiRetry.test.ts
+        describe('fetchWithRetry', () => {
+          beforeEach(() => {
+            jest.useFakeTimers();
+          });
+
+          test('retries up to 3 times on server error', async () => {
+            global.fetch = jest.fn()
+              .mockResolvedValueOnce({ ok: false, status: 500 })
+              .mockResolvedValueOnce({ ok: false, status: 500 })
+              .mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'success' }) });
+
+            const promise = fetchWithRetry('/api/test');
+
+            jest.advanceTimersByTime(1000);
+            await Promise.resolve();
+            jest.advanceTimersByTime(2000);
+            await Promise.resolve();
+
+            const result = await promise;
+            expect(result).toEqual({ data: 'success' });
+            expect(fetch).toHaveBeenCalledTimes(3);
+          });
+
+          test('uses exponential backoff', async () => {
+            global.fetch = jest.fn()
+              .mockResolvedValue({ ok: false, status: 500 });
+
+            const promise = fetchWithRetry('/api/test');
+
+            await Promise.resolve();
+            expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 1000);
+
+            jest.advanceTimersByTime(1000);
+            await Promise.resolve();
+            expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 2000);
+
+            jest.advanceTimersByTime(2000);
+            await Promise.resolve();
+            expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
+          });
+
+          test('does not retry 4xx errors', async () => {
+            global.fetch = jest.fn()
+              .mockResolvedValue({ ok: false, status: 400 });
+
+            await expect(fetchWithRetry('/api/test')).rejects.toThrow('Client error');
+            expect(fetch).toHaveBeenCalledTimes(1);
+          });
+
+          test('throws after max retries', async () => {
+            global.fetch = jest.fn()
+              .mockResolvedValue({ ok: false, status: 500 });
+
+            const promise = fetchWithRetry('/api/test');
+
+            jest.advanceTimersByTime(1000);
+            await Promise.resolve();
+            jest.advanceTimersByTime(2000);
+            await Promise.resolve();
+            jest.advanceTimersByTime(4000);
+            await Promise.resolve();
+
+            await expect(promise).rejects.toThrow('Failed after 3 attempts');
+          });
+        });
+    expected: PASS
+    k: 5
+    rationale: "All 5 criteria met: 3 retries, exponential backoff (1s, 2s, 4s), no retry on 4xx, error after max retries, comprehensive timing tests."
+
+  # === PASS: MINIMAL BUT SUFFICIENT ===
+
+  - id: SR-012
+    name: "Pass minimal implementation with no extras"
+    input:
+      task_title: "Add health check endpoint"
+      task_description: "Create simple health check endpoint for monitoring"
+      acceptance_criteria:
+        - "GET /health endpoint returns 200 OK"
+        - "Response includes status: 'healthy'"
+        - "Test verifies endpoint response"
+      implementation: |
+        // src/controllers/healthController.ts
+        export function healthCheck(req: Request, res: Response) {
+          res.status(200).json({ status: 'healthy' });
+        }
+
+        // src/routes/health.ts
+        import { Router } from 'express';
+        import { healthCheck } from '../controllers/healthController';
+
+        const router = Router();
+        router.get('/health', healthCheck);
+
+        export default router;
+
+        // tests/health.test.ts
+        import request from 'supertest';
+        import app from '../app';
+
+        test('health check returns 200 with healthy status', async () => {
+          const res = await request(app).get('/health');
+
+          expect(res.status).toBe(200);
+          expect(res.body).toEqual({ status: 'healthy' });
+        });
+    expected: PASS
+    k: 5
+    rationale: "Simple, minimal implementation that meets all 3 criteria exactly. No scope creep, no missing requirements. Just what was asked for."
