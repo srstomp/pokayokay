@@ -638,6 +638,319 @@ test_cases:
 	}
 }
 
+// TestLoadActualFailureCase tests that the CLI can load and parse an actual failure case
+func TestLoadActualFailureCase(t *testing.T) {
+	// This test verifies that actual failure case YAML files from /yokay-evals/failures/
+	// can be properly loaded and parsed by the system
+
+	failureCasePath := filepath.Join("/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml")
+
+	// Verify the failure case file exists
+	if _, err := os.Stat(failureCasePath); os.IsNotExist(err) {
+		t.Fatalf("Failure case file does not exist: %s", failureCasePath)
+	}
+
+	// Read the failure case file
+	content, err := os.ReadFile(failureCasePath)
+	if err != nil {
+		t.Fatalf("Failed to read failure case: %v", err)
+	}
+
+	// Verify content is not empty
+	if len(content) == 0 {
+		t.Fatal("Failure case file is empty")
+	}
+
+	contentStr := string(content)
+
+	// Verify required fields are present in the YAML
+	requiredFields := []string{
+		"id:", "category:", "discovered:", "severity:",
+		"context:", "task:", "failure:", "description:",
+		"root_cause:", "evidence:", "task_spec:", "what_was_built:",
+		"eval_criteria:",
+	}
+
+	for _, field := range requiredFields {
+		if !strings.Contains(contentStr, field) {
+			t.Errorf("Failure case missing required field: %s", field)
+		}
+	}
+
+	// Verify specific values for MT-002
+	expectedValues := map[string]string{
+		"id:":       "MT-002",
+		"category:": "missed-tasks",
+		"severity:": "high",
+	}
+
+	for field, expected := range expectedValues {
+		if !strings.Contains(contentStr, field) || !strings.Contains(contentStr, expected) {
+			t.Errorf("Expected %s to contain '%s'", field, expected)
+		}
+	}
+}
+
+// TestLoadMultipleFailureCases tests loading failure cases from different categories
+func TestLoadMultipleFailureCases(t *testing.T) {
+	// Test that we can load failure cases from different categories
+	testCases := []struct {
+		name     string
+		path     string
+		id       string
+		category string
+	}{
+		{
+			name:     "Missed Task",
+			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml",
+			id:       "MT-002",
+			category: "missed-tasks",
+		},
+		{
+			name:     "Wrong Product",
+			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/wrong-product/WP-002.yaml",
+			id:       "WP-002",
+			category: "wrong-product",
+		},
+		{
+			name:     "Security Flaw",
+			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml",
+			id:       "SF-001",
+			category: "security-flaw",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Verify file exists
+			if _, err := os.Stat(tc.path); os.IsNotExist(err) {
+				t.Fatalf("Failure case file does not exist: %s", tc.path)
+			}
+
+			// Read file
+			content, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatalf("Failed to read failure case %s: %v", tc.name, err)
+			}
+
+			contentStr := string(content)
+
+			// Verify ID matches
+			if !strings.Contains(contentStr, "id: "+tc.id) {
+				t.Errorf("Expected ID %s not found in %s", tc.id, tc.name)
+			}
+
+			// Verify category matches
+			if !strings.Contains(contentStr, "category: "+tc.category) {
+				t.Errorf("Expected category %s not found in %s", tc.category, tc.name)
+			}
+
+			// Verify eval_criteria section exists and has items
+			if !strings.Contains(contentStr, "eval_criteria:") {
+				t.Errorf("Missing eval_criteria in %s", tc.name)
+			}
+
+			// Verify it has at least one type: field in eval_criteria
+			if !strings.Contains(contentStr, "- type:") {
+				t.Errorf("eval_criteria should have at least one criterion in %s", tc.name)
+			}
+		})
+	}
+}
+
+// TestDiscoverAllFailureCases tests discovering all failure case files in the directory
+func TestDiscoverAllFailureCases(t *testing.T) {
+	failuresDir := "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures"
+
+	// Verify failures directory exists
+	if _, err := os.Stat(failuresDir); os.IsNotExist(err) {
+		t.Fatalf("Failures directory does not exist: %s", failuresDir)
+	}
+
+	// Find all .yaml files except schema.yaml and templates
+	var failureCases []string
+	err := filepath.Walk(failuresDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip schema.yaml and example templates
+		if !info.IsDir() && filepath.Ext(path) == ".yaml" {
+			base := filepath.Base(path)
+			if base != "schema.yaml" && base != "template.yaml" && base != ".gitkeep" {
+				failureCases = append(failureCases, path)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to walk failures directory: %v", err)
+	}
+
+	// Verify we found some failure cases
+	if len(failureCases) == 0 {
+		t.Fatal("No failure case YAML files found in failures directory")
+	}
+
+	t.Logf("Found %d failure case files", len(failureCases))
+
+	// Verify we have cases from different categories
+	categoriesFound := make(map[string]int)
+	for _, path := range failureCases {
+		// Extract category from path (e.g., .../missed-tasks/MT-002.yaml -> missed-tasks)
+		parts := strings.Split(path, string(filepath.Separator))
+		for i, part := range parts {
+			if part == "failures" && i+1 < len(parts) {
+				category := parts[i+1]
+				categoriesFound[category]++
+				break
+			}
+		}
+	}
+
+	// Verify we have multiple categories
+	if len(categoriesFound) < 3 {
+		t.Errorf("Expected at least 3 categories, found %d: %v", len(categoriesFound), categoriesFound)
+	}
+
+	t.Logf("Categories found: %v", categoriesFound)
+}
+
+// TestFailureCaseStructure tests that failure cases follow the expected schema
+func TestFailureCaseStructure(t *testing.T) {
+	// Test with a known failure case
+	failureCasePath := filepath.Join("/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml")
+
+	content, err := os.ReadFile(failureCasePath)
+	if err != nil {
+		t.Fatalf("Failed to read failure case: %v", err)
+	}
+
+	contentStr := string(content)
+
+	// Verify required top-level fields
+	topLevelFields := []string{"id:", "category:", "discovered:", "severity:", "context:", "failure:", "evidence:", "eval_criteria:"}
+	for _, field := range topLevelFields {
+		if !strings.Contains(contentStr, field) {
+			t.Errorf("Missing required top-level field: %s", field)
+		}
+	}
+
+	// Verify context subfields
+	contextFields := []string{"task:"}
+	for _, field := range contextFields {
+		if !strings.Contains(contentStr, field) {
+			t.Errorf("Missing required context field: %s", field)
+		}
+	}
+
+	// Verify failure subfields
+	failureFields := []string{"description:", "root_cause:"}
+	for _, field := range failureFields {
+		if !strings.Contains(contentStr, field) {
+			t.Errorf("Missing required failure field: %s", field)
+		}
+	}
+
+	// Verify evidence subfields
+	evidenceFields := []string{"task_spec:", "what_was_built:"}
+	for _, field := range evidenceFields {
+		if !strings.Contains(contentStr, field) {
+			t.Errorf("Missing required evidence field: %s", field)
+		}
+	}
+
+	// Verify eval_criteria has both type and check fields
+	if !strings.Contains(contentStr, "type:") {
+		t.Error("eval_criteria missing type field")
+	}
+	if !strings.Contains(contentStr, "check:") {
+		t.Error("eval_criteria missing check field")
+	}
+
+	// Verify eval_criteria has valid types (code-based or model-based)
+	hasValidType := strings.Contains(contentStr, "type: code-based") ||
+	                strings.Contains(contentStr, "type: model-based")
+	if !hasValidType {
+		t.Error("eval_criteria should have type: code-based or type: model-based")
+	}
+}
+
+// TestFailureCaseIDFormat tests that failure case IDs follow the expected pattern
+func TestFailureCaseIDFormat(t *testing.T) {
+	testCases := []struct {
+		filePath       string
+		expectedID     string
+		expectedPrefix string
+	}{
+		{
+			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml",
+			expectedID:     "MT-002",
+			expectedPrefix: "MT",
+		},
+		{
+			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/wrong-product/WP-002.yaml",
+			expectedID:     "WP-002",
+			expectedPrefix: "WP",
+		},
+		{
+			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml",
+			expectedID:     "SF-001",
+			expectedPrefix: "SF",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.expectedID, func(t *testing.T) {
+			content, err := os.ReadFile(tc.filePath)
+			if err != nil {
+				t.Fatalf("Failed to read file: %v", err)
+			}
+
+			contentStr := string(content)
+
+			// Verify ID is present
+			if !strings.Contains(contentStr, "id: "+tc.expectedID) {
+				t.Errorf("Expected ID %s not found in file", tc.expectedID)
+			}
+
+			// Verify ID format matches pattern: XX-NNN (2-3 letters, dash, 3 digits)
+			// This is a simple check - a full YAML parser would be better but this tests basic structure
+			lines := strings.Split(contentStr, "\n")
+			var idLine string
+			for _, line := range lines {
+				if strings.HasPrefix(strings.TrimSpace(line), "id:") {
+					idLine = strings.TrimSpace(line)
+					break
+				}
+			}
+
+			if idLine == "" {
+				t.Fatal("No 'id:' line found")
+			}
+
+			// Extract ID value
+			parts := strings.SplitN(idLine, ":", 2)
+			if len(parts) != 2 {
+				t.Fatal("Invalid id line format")
+			}
+
+			idValue := strings.TrimSpace(parts[1])
+
+			// Verify prefix
+			if !strings.HasPrefix(idValue, tc.expectedPrefix) {
+				t.Errorf("ID %s should start with prefix %s", idValue, tc.expectedPrefix)
+			}
+
+			// Verify format: should be like "XX-NNN"
+			if !strings.Contains(idValue, "-") {
+				t.Errorf("ID %s should contain a dash", idValue)
+			}
+		})
+	}
+}
+
 // buildBinary builds the yokay-evals binary and returns its path
 // The binary is built in a temp directory and should be removed by the caller
 func buildBinary(t *testing.T) string {
