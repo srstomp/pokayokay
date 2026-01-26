@@ -15,13 +15,26 @@ The evaluation summary provides a quick, actionable view of the current state of
 
 ## Steps
 
-### 1. Generate the Summary Dashboard
+### 1. Check for Refresh Flag
 
-Run the summary without arguments to display the latest metrics:
+If `--refresh` flag is provided, regenerate reports before displaying:
 
 ```bash
 cd /Users/sis4m4/Projects/stevestomp/pokayokay
 
+# Check if --refresh flag was passed
+if echo "$ARGUMENTS" | grep -q "\-\-refresh"; then
+    echo "Refreshing reports..."
+    ./yokay-evals/bin/yokay-evals grade-skills
+    echo ""
+fi
+```
+
+### 2. Generate the Summary Dashboard
+
+Run the summary to display the latest metrics:
+
+```bash
 # Display the dashboard
 echo "# Evaluation Summary"
 echo ""
@@ -29,7 +42,7 @@ echo "**Generated**: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 ```
 
-### 2. Display Skill Quality Metrics
+### 3. Display Skill Quality Metrics
 
 Show latest grade report summary with per-category breakdown:
 
@@ -112,7 +125,7 @@ else
 fi
 ```
 
-### 3. Display Failure Case Analysis
+### 4. Display Failure Case Analysis
 
 Show failure category distribution from analysis report:
 
@@ -180,7 +193,7 @@ else
 fi
 ```
 
-### 4. Display Quality Gate Indicators
+### 5. Display Quality Gate Indicators
 
 Highlight critical quality issues:
 
@@ -223,7 +236,7 @@ fi
 echo ""
 ```
 
-### 5. Generate Recommendations
+### 6. Generate Recommendations
 
 Provide actionable next steps based on metrics:
 
@@ -270,27 +283,6 @@ echo "- Review failure cases in \`yokay-evals/failures/\`"
 echo "- Create tasks for skills scoring < 70"
 echo "- Address critical severity failures first"
 echo ""
-```
-
-### 6. Optional: Refresh Reports
-
-To generate fresh metrics before displaying:
-
-```bash
-# Check if --refresh flag was passed
-if echo "$ARGUMENTS" | grep -q "\-\-refresh"; then
-    echo "Refreshing reports..."
-
-    # Regenerate grade report
-    ./yokay-evals/bin/yokay-evals grade-skills
-
-    echo ""
-    echo "Reports refreshed. Re-run summary to see updated metrics."
-else
-    # If no --refresh, proceed with displaying current metrics
-    echo "Using existing reports. Pass --refresh to regenerate."
-    echo ""
-fi
 ```
 
 ## Understanding the Output
