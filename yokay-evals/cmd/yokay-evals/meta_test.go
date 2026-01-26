@@ -177,8 +177,8 @@ test_cases:
 		t.Fatalf("Failed to write test eval.yaml: %v", err)
 	}
 
-	// Execute
-	result, err := runMetaEvaluation(evalPath)
+	// Execute with no override (kOverride = 0)
+	result, err := runMetaEvaluation(evalPath, 0)
 	if err != nil {
 		t.Fatalf("runMetaEvaluation failed: %v", err)
 	}
@@ -196,6 +196,110 @@ test_cases:
 	tr := result.TestResults[0]
 	if tr.TestID != "TEST-001" {
 		t.Errorf("Expected test ID 'TEST-001', got '%s'", tr.TestID)
+	}
+
+	// Verify k from YAML was used (k=3)
+	if len(tr.Runs) != 3 {
+		t.Errorf("Expected 3 runs (from YAML k=3), got %d", len(tr.Runs))
+	}
+}
+
+func TestRunMetaEvaluationWithKOverride(t *testing.T) {
+	// Setup: Create temp directory with test eval.yaml
+	tmpDir := t.TempDir()
+	agentDir := filepath.Join(tmpDir, "meta", "agents", "test-agent")
+	err := os.MkdirAll(agentDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test agent dir: %v", err)
+	}
+
+	// Write a simple eval.yaml with k=3
+	sampleEval := `agent: test-agent
+consistency_threshold: 0.95
+
+test_cases:
+  - id: TEST-001
+    name: "Test pass case"
+    input:
+      task_title: "Test Task"
+      task_description: "A test task"
+      acceptance_criteria: ["Criterion 1"]
+      implementation: "// code"
+    expected: PASS
+    k: 3
+    rationale: "Should pass"
+`
+	evalPath := filepath.Join(agentDir, "eval.yaml")
+	err = os.WriteFile(evalPath, []byte(sampleEval), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test eval.yaml: %v", err)
+	}
+
+	// Execute with kOverride = 10 (should override YAML k=3)
+	result, err := runMetaEvaluation(evalPath, 10)
+	if err != nil {
+		t.Fatalf("runMetaEvaluation failed: %v", err)
+	}
+
+	// Verify
+	if len(result.TestResults) != 1 {
+		t.Fatalf("Expected 1 test result, got %d", len(result.TestResults))
+	}
+
+	tr := result.TestResults[0]
+
+	// Verify kOverride=10 was used instead of YAML k=3
+	if len(tr.Runs) != 10 {
+		t.Errorf("Expected 10 runs (from kOverride=10), got %d", len(tr.Runs))
+	}
+}
+
+func TestRunMetaEvaluationWithDefaultK(t *testing.T) {
+	// Setup: Create temp directory with test eval.yaml
+	tmpDir := t.TempDir()
+	agentDir := filepath.Join(tmpDir, "meta", "agents", "test-agent")
+	err := os.MkdirAll(agentDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test agent dir: %v", err)
+	}
+
+	// Write eval.yaml WITHOUT k specified (k=0 or missing)
+	sampleEval := `agent: test-agent
+consistency_threshold: 0.95
+
+test_cases:
+  - id: TEST-001
+    name: "Test pass case"
+    input:
+      task_title: "Test Task"
+      task_description: "A test task"
+      acceptance_criteria: ["Criterion 1"]
+      implementation: "// code"
+    expected: PASS
+    rationale: "Should pass"
+`
+	evalPath := filepath.Join(agentDir, "eval.yaml")
+	err = os.WriteFile(evalPath, []byte(sampleEval), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test eval.yaml: %v", err)
+	}
+
+	// Execute with no override (kOverride = 0)
+	result, err := runMetaEvaluation(evalPath, 0)
+	if err != nil {
+		t.Fatalf("runMetaEvaluation failed: %v", err)
+	}
+
+	// Verify
+	if len(result.TestResults) != 1 {
+		t.Fatalf("Expected 1 test result, got %d", len(result.TestResults))
+	}
+
+	tr := result.TestResults[0]
+
+	// Verify default k=5 was used (since neither YAML nor CLI specified k)
+	if len(tr.Runs) != 5 {
+		t.Errorf("Expected 5 runs (default when k not specified), got %d", len(tr.Runs))
 	}
 }
 

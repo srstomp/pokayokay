@@ -119,7 +119,8 @@ func findSkillEvalFiles(skillsDir string) ([]string, error) {
 }
 
 // runMetaEvaluation runs meta-evaluation on a single eval.yaml file
-func runMetaEvaluation(evalPath string) (EvaluationResult, error) {
+// kOverride: if > 0, overrides the k value from YAML test cases
+func runMetaEvaluation(evalPath string, kOverride int) (EvaluationResult, error) {
 	config, err := loadEvalYAML(evalPath)
 	if err != nil {
 		return EvaluationResult{}, err
@@ -132,9 +133,13 @@ func runMetaEvaluation(evalPath string) (EvaluationResult, error) {
 
 	// For each test case, run k times
 	for _, tc := range config.TestCases {
-		k := tc.K
+		// Determine k: CLI override takes precedence over YAML, with 5 as default
+		k := kOverride
 		if k <= 0 {
-			k = 5 // default
+			k = tc.K
+			if k <= 0 {
+				k = 5 // default
+			}
 		}
 
 		testResult := TestResult{
@@ -325,7 +330,7 @@ func runMetaCommand(suite, agent string, k int, metaDir string) error {
 		fmt.Printf("\nRunning evaluation: %s\n", evalPath)
 		fmt.Println(strings.Repeat("=", 60))
 
-		result, err := runMetaEvaluation(evalPath)
+		result, err := runMetaEvaluation(evalPath, k)
 		if err != nil {
 			return fmt.Errorf("running evaluation for %s: %w", evalPath, err)
 		}
