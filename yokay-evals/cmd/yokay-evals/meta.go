@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -72,11 +73,11 @@ func loadEvalYAML(path string) (*EvalConfig, error) {
 	return &config, nil
 }
 
-// findAgentEvalFiles finds all eval.yaml files in the agents directory
-func findAgentEvalFiles(agentsDir string) ([]string, error) {
+// findEvalFiles finds all eval.yaml files in the given directory
+func findEvalFiles(dir string) ([]string, error) {
 	var evalFiles []string
 
-	err := filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -95,27 +96,16 @@ func findAgentEvalFiles(agentsDir string) ([]string, error) {
 	return evalFiles, nil
 }
 
+// findAgentEvalFiles finds all eval.yaml files in the agents directory
+// DEPRECATED: Use findEvalFiles instead
+func findAgentEvalFiles(agentsDir string) ([]string, error) {
+	return findEvalFiles(agentsDir)
+}
+
 // findSkillEvalFiles finds all eval.yaml files in the skills directory
+// DEPRECATED: Use findEvalFiles instead
 func findSkillEvalFiles(skillsDir string) ([]string, error) {
-	var evalFiles []string
-
-	err := filepath.Walk(skillsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && info.Name() == "eval.yaml" {
-			evalFiles = append(evalFiles, path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return evalFiles, nil
+	return findEvalFiles(skillsDir)
 }
 
 // runMetaEvaluation runs meta-evaluation on a single eval.yaml file
@@ -201,6 +191,7 @@ func calculateMetrics(results []TestResult) Metrics {
 }
 
 // getMajorityVerdict returns the most common verdict from runs
+// In case of a tie, returns the alphabetically first verdict for determinism
 func getMajorityVerdict(runs []string) string {
 	if len(runs) == 0 {
 		return ""
@@ -212,16 +203,25 @@ func getMajorityVerdict(runs []string) string {
 	}
 
 	// Find the verdict with highest count
+	// In case of tie, collect all tied verdicts and return alphabetically first
 	maxCount := 0
-	majorityVerdict := ""
+	var tiedVerdicts []string
+
 	for verdict, count := range counts {
 		if count > maxCount {
 			maxCount = count
-			majorityVerdict = verdict
+			tiedVerdicts = []string{verdict}
+		} else if count == maxCount {
+			tiedVerdicts = append(tiedVerdicts, verdict)
 		}
 	}
 
-	return majorityVerdict
+	// If multiple verdicts are tied, sort and return first (deterministic)
+	if len(tiedVerdicts) > 1 {
+		sort.Strings(tiedVerdicts)
+	}
+
+	return tiedVerdicts[0]
 }
 
 // areAllRunsConsistent checks if all runs returned the same verdict
@@ -250,25 +250,27 @@ func formatMetaReport(result EvaluationResult) string {
 	sb.WriteString(fmt.Sprintf("Agent: %s\n", result.Agent))
 	sb.WriteString(fmt.Sprintf("Test Cases: %d\n\n", len(result.TestResults)))
 
-	// Calculate metrics
+	// Calculate metrics once
 	metrics := calculateMetrics(result.TestResults)
 
 	sb.WriteString("Results:\n")
 	for _, tr := range result.TestResults {
+		// Get majority verdict (calculate once)
+		verdict := getMajorityVerdict(tr.Runs)
+
+		// Calculate consistent count
 		consistentCount := 0
 		if areAllRunsConsistent(tr.Runs) {
 			consistentCount = len(tr.Runs)
 		} else {
 			// Count how many agree with majority
-			majority := getMajorityVerdict(tr.Runs)
-			for _, verdict := range tr.Runs {
-				if verdict == majority {
+			for _, v := range tr.Runs {
+				if v == verdict {
 					consistentCount++
 				}
 			}
 		}
 
-		verdict := getMajorityVerdict(tr.Runs)
 		status := "PASS"
 		if verdict != tr.Expected {
 			status = fmt.Sprintf("FAIL (expected %s, got %s)", tr.Expected, verdict)

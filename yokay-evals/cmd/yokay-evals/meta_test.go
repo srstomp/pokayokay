@@ -390,3 +390,239 @@ func TestFormatMetaReport(t *testing.T) {
 		t.Error("Report missing consistency notation for T1")
 	}
 }
+
+// TestGetMajorityVerdictTieBreaking tests deterministic tie-breaking behavior
+func TestGetMajorityVerdictTieBreaking(t *testing.T) {
+	tests := []struct {
+		name     string
+		runs     []string
+		expected string
+	}{
+		{
+			name:     "Two-way tie - alphabetically first wins",
+			runs:     []string{"PASS", "FAIL"},
+			expected: "FAIL", // "FAIL" comes before "PASS" alphabetically
+		},
+		{
+			name:     "Three-way tie - alphabetically first wins",
+			runs:     []string{"PASS", "FAIL", "WARN"},
+			expected: "FAIL", // "FAIL" < "PASS" < "WARN"
+		},
+		{
+			name:     "No tie - majority wins",
+			runs:     []string{"PASS", "PASS", "FAIL"},
+			expected: "PASS",
+		},
+		{
+			name:     "Empty runs",
+			runs:     []string{},
+			expected: "",
+		},
+		{
+			name:     "Single run",
+			runs:     []string{"PASS"},
+			expected: "PASS",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getMajorityVerdict(tt.runs)
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestFindEvalFiles tests the consolidated findEvalFiles function
+func TestFindEvalFiles(t *testing.T) {
+	// Setup: Create temp directory with eval files
+	tmpDir := t.TempDir()
+	testDir := filepath.Join(tmpDir, "test-suite")
+
+	// Create structure with multiple subdirectories
+	subdirs := []string{"component-a", "component-b", "component-c"}
+	for _, subdir := range subdirs {
+		dir := filepath.Join(testDir, subdir)
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", subdir, err)
+		}
+
+		evalContent := "test: " + subdir + "\ntest_cases: []"
+		err = os.WriteFile(filepath.Join(dir, "eval.yaml"), []byte(evalContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write eval.yaml for %s: %v", subdir, err)
+		}
+	}
+
+	// Also create a non-eval.yaml file to ensure it's not picked up
+	err := os.WriteFile(filepath.Join(testDir, "component-a", "other.yaml"), []byte("test: other"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write other.yaml: %v", err)
+	}
+
+	// Execute
+	files, err := findEvalFiles(testDir)
+	if err != nil {
+		t.Fatalf("findEvalFiles failed: %v", err)
+	}
+
+	// Verify
+	if len(files) != 3 {
+		t.Errorf("Expected 3 eval files, got %d", len(files))
+	}
+
+	// Verify all files end with eval.yaml
+	for _, file := range files {
+		if !strings.HasSuffix(file, "eval.yaml") {
+			t.Errorf("File %s does not end with eval.yaml", file)
+		}
+	}
+}
+
+// TestRunMetaCommandErrors tests error handling in runMetaCommand
+func TestRunMetaCommandErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	metaDir := filepath.Join(tmpDir, "meta")
+	err := os.MkdirAll(metaDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create meta dir: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		suite       string
+		agent       string
+		expectError string
+	}{
+		{
+			name:        "No suite or agent specified",
+			suite:       "",
+			agent:       "",
+			expectError: "must specify either --suite or --agent",
+		},
+		{
+			name:        "Invalid suite",
+			suite:       "invalid",
+			agent:       "",
+			expectError: "suite directory not found",
+		},
+		{
+			name:        "Agent not found",
+			suite:       "",
+			agent:       "nonexistent-agent",
+			expectError: "eval.yaml not found for agent",
+		},
+		{
+			name:        "Suite directory not found",
+			suite:       "agents",
+			agent:       "",
+			expectError: "suite directory not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := runMetaCommand(tt.suite, tt.agent, 0, metaDir)
+			if err == nil {
+				t.Fatalf("Expected error containing %q, got nil", tt.expectError)
+			}
+			if !strings.Contains(err.Error(), tt.expectError) {
+				t.Errorf("Expected error containing %q, got %q", tt.expectError, err.Error())
+			}
+		})
+	}
+}
+
+// TestRunMetaCommandWithAgent tests running meta command with specific agent
+func TestRunMetaCommandWithAgent(t *testing.T) {
+	tmpDir := t.TempDir()
+	metaDir := filepath.Join(tmpDir, "meta")
+	agentDir := filepath.Join(metaDir, "agents", "test-agent")
+	err := os.MkdirAll(agentDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create agent dir: %v", err)
+	}
+
+	// Write a simple eval.yaml
+	sampleEval := `agent: test-agent
+consistency_threshold: 0.95
+
+test_cases:
+  - id: TEST-001
+    name: "Test case"
+    input:
+      task_title: "Test Task"
+      task_description: "A test task"
+      acceptance_criteria: ["Criterion 1"]
+      implementation: "// code"
+    expected: PASS
+    k: 3
+    rationale: "Should pass"
+`
+	evalPath := filepath.Join(agentDir, "eval.yaml")
+	err = os.WriteFile(evalPath, []byte(sampleEval), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test eval.yaml: %v", err)
+	}
+
+	// Execute - should not return error
+	err = runMetaCommand("", "test-agent", 0, metaDir)
+	if err != nil {
+		t.Errorf("runMetaCommand failed: %v", err)
+	}
+}
+
+// TestLoadEvalYAMLErrors tests error handling when loading invalid YAML
+func TestLoadEvalYAMLErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		yamlContent string
+		expectError string
+	}{
+		{
+			name:        "Invalid YAML syntax",
+			yamlContent: "agent: test\n\tinvalid: [unclosed",
+			expectError: "parsing eval.yaml",
+		},
+		{
+			name:        "Empty file",
+			yamlContent: "",
+			expectError: "", // Empty YAML is valid, just results in zero values
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			evalPath := filepath.Join(tmpDir, "eval.yaml")
+			err := os.WriteFile(evalPath, []byte(tt.yamlContent), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write test eval.yaml: %v", err)
+			}
+
+			_, err = loadEvalYAML(evalPath)
+			if tt.expectError != "" {
+				if err == nil {
+					t.Fatalf("Expected error containing %q, got nil", tt.expectError)
+				}
+				if !strings.Contains(err.Error(), tt.expectError) {
+					t.Errorf("Expected error containing %q, got %q", tt.expectError, err.Error())
+				}
+			}
+		})
+	}
+}
+
+// TestLoadEvalYAMLFileNotFound tests error when file doesn't exist
+func TestLoadEvalYAMLFileNotFound(t *testing.T) {
+	_, err := loadEvalYAML("/nonexistent/path/eval.yaml")
+	if err == nil {
+		t.Fatal("Expected error for nonexistent file, got nil")
+	}
+	if !strings.Contains(err.Error(), "reading eval.yaml") {
+		t.Errorf("Expected error about reading file, got: %v", err)
+	}
+}
