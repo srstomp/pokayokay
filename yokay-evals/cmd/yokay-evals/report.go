@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+// CriteriaScore represents the average score for a specific criteria across all skills
+type CriteriaScore struct {
+	Name    string
+	Average float64
+}
+
 // GradeReport represents parsed data from a skill-clarity report
 type GradeReport struct {
 	FilePath         string
@@ -19,6 +25,7 @@ type GradeReport struct {
 	AverageScore     float64
 	PassRate         float64
 	PassingThreshold float64
+	CriteriaScores   []CriteriaScore
 }
 
 // findGradeReports finds all skill-clarity-*.md reports in the given directory
@@ -105,7 +112,78 @@ func parseGradeReport(reportPath string) (GradeReport, error) {
 		}
 	}
 
+	// Extract per-criteria scores from Detailed Breakdown section
+	report.CriteriaScores = extractCriteriaScores(lines)
+
 	return report, nil
+}
+
+// extractCriteriaScores parses the Detailed Breakdown section and aggregates per-criteria scores
+func extractCriteriaScores(lines []string) []CriteriaScore {
+	// Map to accumulate scores for each criteria
+	criteriaMap := make(map[string][]float64)
+
+	// Regex pattern to match criteria score lines like:
+	// - **Clear Instructions** (weight: 30%): 75.0/100
+	criteriaPattern := regexp.MustCompile(`^\s*-\s*\*\*([^*]+)\*\*\s*\(weight:[^)]+\):\s*([\d.]+)/100`)
+
+	inDetailedBreakdown := false
+
+	for _, line := range lines {
+		// Check if we're in the Detailed Breakdown section
+		if strings.Contains(line, "## Detailed Breakdown") {
+			inDetailedBreakdown = true
+			continue
+		}
+
+		// Stop if we reach another second-level section (##) after Detailed Breakdown
+		// Note: Don't stop at third-level sections (###) which are skill names
+		if inDetailedBreakdown && strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") && !strings.Contains(line, "Detailed Breakdown") {
+			break
+		}
+
+		// Extract criteria scores
+		if inDetailedBreakdown {
+			if matches := criteriaPattern.FindStringSubmatch(line); matches != nil {
+				criteriaName := strings.TrimSpace(matches[1])
+				score, err := strconv.ParseFloat(matches[2], 64)
+				if err == nil {
+					criteriaMap[criteriaName] = append(criteriaMap[criteriaName], score)
+				}
+			}
+		}
+	}
+
+	// Calculate averages and create result slice
+	var result []CriteriaScore
+
+	// Define the expected criteria order
+	criteriaOrder := []string{
+		"Clear Instructions",
+		"Actionable Steps",
+		"Good Examples",
+		"Appropriate Scope",
+	}
+
+	for _, criteriaName := range criteriaOrder {
+		if scores, exists := criteriaMap[criteriaName]; exists && len(scores) > 0 {
+			sum := 0.0
+			for _, score := range scores {
+				sum += score
+			}
+			average := sum / float64(len(scores))
+
+			// Round to 1 decimal place
+			average = float64(int(average*10+0.5)) / 10
+
+			result = append(result, CriteriaScore{
+				Name:    criteriaName,
+				Average: average,
+			})
+		}
+	}
+
+	return result
 }
 
 // formatReportSummaryMarkdown formats a GradeReport as markdown
@@ -122,11 +200,31 @@ func formatReportSummaryMarkdown(report GradeReport) string {
 	sb.WriteString(fmt.Sprintf("- **Pass Rate**: %.1f%%\n", report.PassRate))
 	sb.WriteString(fmt.Sprintf("- **Passing Threshold**: %.1f/100\n", report.PassingThreshold))
 
+	// Add per-category breakdown if available
+	if len(report.CriteriaScores) > 0 {
+		sb.WriteString("\n## Per-Category Breakdown\n\n")
+		sb.WriteString("| Criteria | Average Score |\n")
+		sb.WriteString("|----------|---------------|\n")
+
+		for _, criteria := range report.CriteriaScores {
+			sb.WriteString(fmt.Sprintf("| %s | %.1f |\n", criteria.Name, criteria.Average))
+		}
+	}
+
 	return sb.String()
 }
 
 // formatReportSummaryJSON formats a GradeReport as JSON
 func formatReportSummaryJSON(report GradeReport) (string, error) {
+	// Convert CriteriaScores to JSON-friendly format
+	criteriaScores := make([]map[string]interface{}, 0, len(report.CriteriaScores))
+	for _, criteria := range report.CriteriaScores {
+		criteriaScores = append(criteriaScores, map[string]interface{}{
+			"name":    criteria.Name,
+			"average": criteria.Average,
+		})
+	}
+
 	data := map[string]interface{}{
 		"file_path":         report.FilePath,
 		"generated_date":    report.GeneratedDate,
@@ -134,6 +232,7 @@ func formatReportSummaryJSON(report GradeReport) (string, error) {
 		"average_score":     report.AverageScore,
 		"pass_rate":         report.PassRate,
 		"passing_threshold": report.PassingThreshold,
+		"criteria_scores":   criteriaScores,
 	}
 
 	jsonBytes, err := json.MarshalIndent(data, "", "  ")
