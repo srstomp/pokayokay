@@ -34,11 +34,19 @@ func main() {
 	k := metaCmd.Int("k", 5, "Number of runs for pass^k (default: 5)")
 	metaDirFlag := metaCmd.String("meta-dir", "", "Path to meta directory (default: yokay-evals/meta)")
 
+	reportCmd := flag.NewFlagSet("report", flag.ExitOnError)
+	reportType := reportCmd.String("type", "grade", "Report type: 'grade', 'eval', or 'all'")
+	reportFormat := reportCmd.String("format", "markdown", "Output format: 'markdown' or 'json'")
+	listReports := reportCmd.Bool("list", false, "List available reports without aggregating")
+	outputFile := reportCmd.String("output", "", "Write output to file instead of stdout")
+	reportsDirFlag := reportCmd.String("reports-dir", "", "Path to reports directory (default: reports/)")
+
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: yokay-evals <command> [options]")
 		fmt.Println("\nCommands:")
 		fmt.Println("  grade-skills    Grade all pokayokay skills and generate report")
 		fmt.Println("  meta            Run meta-evaluations on agents or skills")
+		fmt.Println("  report          View and analyze evaluation reports")
 		os.Exit(1)
 	}
 
@@ -100,6 +108,36 @@ func main() {
 
 		if err := runMetaCommand(*suite, *agent, *k, metaDir); err != nil {
 			log.Fatalf("Failed to run meta-evaluation: %v", err)
+		}
+
+	case "report":
+		reportCmd.Parse(os.Args[2:])
+
+		// Set default reports directory if not specified
+		reportsDir := *reportsDirFlag
+		if reportsDir == "" {
+			// Try to find reports directory relative to current working directory
+			cwd, err := os.Getwd()
+			if err != nil {
+				log.Fatalf("Failed to get current directory: %v", err)
+			}
+
+			// Check if we're in the project root or a subdirectory
+			if strings.Contains(cwd, "pokayokay") {
+				// Find the project root
+				parts := strings.Split(cwd, "pokayokay")
+				if len(parts) > 0 {
+					projectRoot := parts[0] + "pokayokay"
+					reportsDir = filepath.Join(projectRoot, "reports")
+				}
+			} else {
+				// Assume reports is relative to current directory
+				reportsDir = "reports"
+			}
+		}
+
+		if err := runReportCommand(*reportType, *reportFormat, *listReports, *outputFile, reportsDir); err != nil {
+			log.Fatalf("Failed to run report command: %v", err)
 		}
 
 	default:
