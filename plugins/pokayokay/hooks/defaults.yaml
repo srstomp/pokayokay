@@ -62,6 +62,11 @@ hooks:
         path: actions/audit-gate.sh
         env:
           BOUNDARY_TYPE: story
+      - name: eval-gate
+        type: script
+        path: actions/eval-gate.sh
+        env:
+          BOUNDARY_TYPE: story
 
   post-epic:
     enabled: true
@@ -73,6 +78,11 @@ hooks:
       - name: audit-gate
         type: script
         path: actions/audit-gate.sh
+        env:
+          BOUNDARY_TYPE: epic
+      - name: eval-gate
+        type: script
+        path: actions/eval-gate.sh
         env:
           BOUNDARY_TYPE: epic
 
@@ -202,6 +212,16 @@ modes:
           type: script
           path: actions/test.sh
           args: ["--bail", "--related"]
+
+# Eval integration settings
+eval:
+  enabled: true
+  quality_gate:
+    enabled: true
+    story_threshold: 60  # Minimum average score for story boundaries
+    epic_threshold: 70   # Minimum average score for epic boundaries
+    pass_rate_threshold: 50  # Minimum pass rate percentage
+  consistency_threshold: 80  # For future meta-eval consistency checks
 
 # Variables available in hooks
 variables:

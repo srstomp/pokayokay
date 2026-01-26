@@ -42,9 +42,10 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 |------|---------|-----------------|
 | pre-session | Session start | verify-clean |
 | pre-task | Task start | check-blockers, suggest-skills |
+| post-create-task | Task created | validate-task-linkage |
 | post-task | Task complete | sync, commit, detect-spike, capture-knowledge |
-| post-story | Story complete | test, mini-audit, audit-gate |
-| post-epic | Epic complete | full-audit, audit-gate |
+| post-story | Story complete | test, mini-audit, audit-gate, eval-gate |
+| post-epic | Epic complete | full-audit, audit-gate, eval-gate |
 | on-error | Error occurs | log, block, recover |
 | pre-commit | Before commit | lint |
 | post-session | Session end | final-sync, summary |
@@ -163,6 +164,107 @@ Checks quality thresholds at story/epic boundaries:
 
 Outputs warnings when thresholds not met, suggests `/pokayokay:audit` for full assessment.
 
+### Eval Integration (post-story, post-epic)
+
+The yokay-evals framework evaluates skill clarity at story/epic boundaries. The eval-gate hook checks:
+
+- **Average Score**: Mean score across all skill clarity criteria
+- **Pass Rate**: Percentage of skills meeting the passing threshold (70)
+
+Thresholds vary by boundary type:
+- **Story boundaries**: 60 average score, 50% pass rate
+- **Epic boundaries**: 70 average score, 50% pass rate
+
+#### What Gets Checked
+
+The eval framework grades skills on four criteria:
+1. **Clear Instructions** - Are the skill steps unambiguous?
+2. **Actionable Steps** - Can the skill be executed as written?
+3. **Good Examples** - Are there concrete examples showing usage?
+4. **Appropriate Scope** - Is the skill focused and not too broad?
+
+#### Configuration
+
+Customize thresholds in `defaults.yaml`:
+
+```yaml
+eval:
+  enabled: true
+  quality_gate:
+    enabled: true
+    story_threshold: 60
+    epic_threshold: 70
+    pass_rate_threshold: 50
+  consistency_threshold: 80  # For future meta-eval consistency checks
+```
+
+#### Disabling Eval Gates
+
+To disable eval gates entirely:
+
+```yaml
+# In .yokay/hooks.yaml
+hooks:
+  post-story:
+    actions:
+      - test
+      - mini-audit
+      - audit-gate
+      # Remove eval-gate
+
+  post-epic:
+    actions:
+      - full-audit
+      - audit-gate
+      # Remove eval-gate
+```
+
+Or disable via configuration:
+
+```yaml
+eval:
+  enabled: false
+  # or
+  quality_gate:
+    enabled: false
+```
+
+#### Example Output
+
+When thresholds are met:
+
+```
+Checking eval gates for story...
+Eval gates passed (avg: 72.5, pass rate: 55.6%)
+```
+
+When thresholds not met:
+
+```
+Checking eval gates for story...
+
+## Eval Gate Warning
+
+Eval metrics at story completion:
+
+- Average Score: 60.3 (threshold: 60)
+- Pass Rate: 3.7% (threshold: 50%)
+
+Warning: Pass rate below threshold
+
+Consider:
+- Run `yokay-evals report` for detailed breakdown
+- Review failing skills with `yokay-evals report --type grade`
+- Improve skill clarity before moving forward
+```
+
+#### Fail-Safe Behavior
+
+The eval-gate hook is fail-safe:
+- If yokay-evals binary not found, gracefully skips
+- If report command fails, logs warning and continues
+- Never blocks session progress
+
 ## Post-Command Hooks
 
 Post-command hooks verify that audit commands created expected tasks. They fire after specific commands complete.
@@ -251,6 +353,7 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 |-------------------|---------|----------------------|
 | SessionStart | — | pre-session (verify-clean) |
 | SessionEnd | — | post-session (sync, summary) |
+| PostToolUse | `mcp__ohno__create_task` | post-create-task (validate-task-linkage) |
 | PostToolUse | `mcp__ohno__update_task_status` (done) | post-task, post-story (if boundary), post-epic (if boundary) |
 | PostToolUse | `mcp__ohno__update_task_status` (in_progress) | pre-task (check-blockers) |
 | PostToolUse | `mcp__ohno__set_blocker` | on-blocker |
@@ -286,11 +389,13 @@ The bridge script uses this to determine which hooks to run:
 | `actions/verify-clean.sh` | Checks for uncommitted changes (pre-session) |
 | `actions/check-blockers.sh` | Checks for blocked tasks (pre-task) |
 | `actions/suggest-skills.sh` | Suggests relevant skills based on task content (pre-task) |
+| `actions/validate-task-linkage.sh` | Warns when feature tasks lack story_id (post-create-task) |
 | `actions/sync.sh` | Syncs ohno kanban state |
 | `actions/commit.sh` | Smart git commit |
 | `actions/detect-spike.sh` | Detects uncertainty signals, suggests spike conversion (post-task) |
 | `actions/capture-knowledge.sh` | Auto-suggests docs for spike/research tasks (post-task) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
+| `actions/eval-gate.sh` | Checks eval metrics at boundaries (post-story, post-epic) |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/lint.sh` | Runs linter |
