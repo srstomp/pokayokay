@@ -28,10 +28,17 @@ func main() {
 	skillsDir := gradeCmd.String("skills-dir", "/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/skills", "Path to skills directory")
 	reportPath := gradeCmd.String("output", "", "Output report path (default: yokay-evals/reports/skill-clarity-YYYY-MM-DD.md)")
 
+	metaCmd := flag.NewFlagSet("meta", flag.ExitOnError)
+	suite := metaCmd.String("suite", "", "Suite to run: 'agents' or 'skills'")
+	agent := metaCmd.String("agent", "", "Specific agent to run (e.g., 'yokay-spec-reviewer')")
+	k := metaCmd.Int("k", 5, "Number of runs for pass^k (default: 5)")
+	metaDirFlag := metaCmd.String("meta-dir", "", "Path to meta directory (default: yokay-evals/meta)")
+
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: yokay-evals <command> [options]")
 		fmt.Println("\nCommands:")
 		fmt.Println("  grade-skills    Grade all pokayokay skills and generate report")
+		fmt.Println("  meta            Run meta-evaluations on agents or skills")
 		os.Exit(1)
 	}
 
@@ -64,6 +71,36 @@ func main() {
 		}
 
 		fmt.Printf("Report generated: %s\n", output)
+
+	case "meta":
+		metaCmd.Parse(os.Args[2:])
+
+		// Set default meta directory if not specified
+		metaDir := *metaDirFlag
+		if metaDir == "" {
+			// Try to find meta directory relative to current working directory
+			cwd, err := os.Getwd()
+			if err != nil {
+				log.Fatalf("Failed to get current directory: %v", err)
+			}
+
+			// Check if we're in yokay-evals directory or a subdirectory
+			if strings.Contains(cwd, "yokay-evals") {
+				// Find the yokay-evals directory
+				parts := strings.Split(cwd, "yokay-evals")
+				if len(parts) > 0 {
+					evalsDir := parts[0] + "yokay-evals"
+					metaDir = filepath.Join(evalsDir, "meta")
+				}
+			} else {
+				// Assume meta is relative to current directory
+				metaDir = "meta"
+			}
+		}
+
+		if err := runMetaCommand(*suite, *agent, *k, metaDir); err != nil {
+			log.Fatalf("Failed to run meta-evaluation: %v", err)
+		}
 
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
