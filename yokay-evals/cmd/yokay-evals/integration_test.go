@@ -643,7 +643,8 @@ func TestLoadActualFailureCase(t *testing.T) {
 	// This test verifies that actual failure case YAML files from /yokay-evals/failures/
 	// can be properly loaded and parsed by the system
 
-	failureCasePath := filepath.Join("/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml")
+	gitRoot := getGitRoot(t)
+	failureCasePath := filepath.Join(gitRoot, "yokay-evals/failures/missed-tasks/MT-002.yaml")
 
 	// Verify the failure case file exists
 	if _, err := os.Stat(failureCasePath); os.IsNotExist(err) {
@@ -694,6 +695,8 @@ func TestLoadActualFailureCase(t *testing.T) {
 // TestLoadMultipleFailureCases tests loading failure cases from different categories
 func TestLoadMultipleFailureCases(t *testing.T) {
 	// Test that we can load failure cases from different categories
+	gitRoot := getGitRoot(t)
+
 	testCases := []struct {
 		name     string
 		path     string
@@ -702,19 +705,19 @@ func TestLoadMultipleFailureCases(t *testing.T) {
 	}{
 		{
 			name:     "Missed Task",
-			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml",
+			path:     filepath.Join(gitRoot, "yokay-evals/failures/missed-tasks/MT-002.yaml"),
 			id:       "MT-002",
 			category: "missed-tasks",
 		},
 		{
 			name:     "Wrong Product",
-			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/wrong-product/WP-002.yaml",
+			path:     filepath.Join(gitRoot, "yokay-evals/failures/wrong-product/WP-002.yaml"),
 			id:       "WP-002",
 			category: "wrong-product",
 		},
 		{
 			name:     "Security Flaw",
-			path:     "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml",
+			path:     filepath.Join(gitRoot, "yokay-evals/failures/security-flaw/SF-001.yaml"),
 			id:       "SF-001",
 			category: "security-flaw",
 		},
@@ -760,7 +763,8 @@ func TestLoadMultipleFailureCases(t *testing.T) {
 
 // TestDiscoverAllFailureCases tests discovering all failure case files in the directory
 func TestDiscoverAllFailureCases(t *testing.T) {
-	failuresDir := "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures"
+	gitRoot := getGitRoot(t)
+	failuresDir := filepath.Join(gitRoot, "yokay-evals/failures")
 
 	// Verify failures directory exists
 	if _, err := os.Stat(failuresDir); os.IsNotExist(err) {
@@ -820,7 +824,8 @@ func TestDiscoverAllFailureCases(t *testing.T) {
 // TestFailureCaseStructure tests that failure cases follow the expected schema
 func TestFailureCaseStructure(t *testing.T) {
 	// Test with a known failure case
-	failureCasePath := filepath.Join("/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml")
+	gitRoot := getGitRoot(t)
+	failureCasePath := filepath.Join(gitRoot, "yokay-evals/failures/security-flaw/SF-001.yaml")
 
 	content, err := os.ReadFile(failureCasePath)
 	if err != nil {
@@ -879,23 +884,25 @@ func TestFailureCaseStructure(t *testing.T) {
 
 // TestFailureCaseIDFormat tests that failure case IDs follow the expected pattern
 func TestFailureCaseIDFormat(t *testing.T) {
+	gitRoot := getGitRoot(t)
+
 	testCases := []struct {
 		filePath       string
 		expectedID     string
 		expectedPrefix string
 	}{
 		{
-			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/missed-tasks/MT-002.yaml",
+			filePath:       filepath.Join(gitRoot, "yokay-evals/failures/missed-tasks/MT-002.yaml"),
 			expectedID:     "MT-002",
 			expectedPrefix: "MT",
 		},
 		{
-			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/wrong-product/WP-002.yaml",
+			filePath:       filepath.Join(gitRoot, "yokay-evals/failures/wrong-product/WP-002.yaml"),
 			expectedID:     "WP-002",
 			expectedPrefix: "WP",
 		},
 		{
-			filePath:       "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/security-flaw/SF-001.yaml",
+			filePath:       filepath.Join(gitRoot, "yokay-evals/failures/security-flaw/SF-001.yaml"),
 			expectedID:     "SF-001",
 			expectedPrefix: "SF",
 		},
@@ -951,6 +958,18 @@ func TestFailureCaseIDFormat(t *testing.T) {
 	}
 }
 
+// getGitRoot finds and returns the git repository root directory
+func getGitRoot(t *testing.T) string {
+	t.Helper()
+
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to find git root: %v", err)
+	}
+	return strings.TrimSpace(string(output))
+}
+
 // buildBinary builds the yokay-evals binary and returns its path
 // The binary is built in a temp directory and should be removed by the caller
 func buildBinary(t *testing.T) string {
@@ -959,9 +978,12 @@ func buildBinary(t *testing.T) string {
 	tmpDir := t.TempDir()
 	binaryPath := filepath.Join(tmpDir, "yokay-evals")
 
-	// Build the binary
+	// Build the binary using git root to find the source directory
+	gitRoot := getGitRoot(t)
+	buildDir := filepath.Join(gitRoot, "yokay-evals/cmd/yokay-evals")
+
 	cmd := exec.Command("go", "build", "-o", binaryPath, ".")
-	cmd.Dir = "/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/cmd/yokay-evals"
+	cmd.Dir = buildDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, string(output))
