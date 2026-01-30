@@ -85,7 +85,7 @@ kaizen init
 ```
 
 This creates a `.kaizen/` directory in your project with:
-- `failures/` - Captured failure patterns by category
+- `failures.db` - SQLite database for captured failure patterns
 - `config.yaml` - Configuration settings
 
 If you skip this step, kaizen will use global storage at `~/.config/kaizen/`.
@@ -165,9 +165,9 @@ kaizen capture \
   --source "quality-review"
 ```
 
-This creates a failure record at:
-- Project-local: `.kaizen/failures/missing-tests/task-123.md`
-- Global: `~/.config/kaizen/failures/missing-tests/task-123.md`
+This stores the failure in kaizen's SQLite database:
+- Project-local: `.kaizen/failures.db`
+- Global: `~/.config/kaizen/failures.db`
 
 ### 3. Get Suggestion
 
@@ -224,15 +224,15 @@ The `post-review-fail.sh` hook expects these environment variables (automaticall
 
 ### Confidence Thresholds
 
-Kaizen determines confidence based on:
-- **Pattern frequency** - How often this failure type has occurred
-- **Past resolution success** - How often similar failures were successfully fixed
-- **Specificity** - How specific the failure pattern is
+Kaizen determines confidence based on **occurrence count** - how often this failure type has been captured:
 
-Default thresholds (in kaizen):
-- **High** (>= 80%) → AUTO action
-- **Medium** (50-79%) → SUGGEST action
-- **Low** (< 50%) → LOGGED action
+| Occurrences | Confidence | Action |
+|-------------|------------|--------|
+| 5+ | High | AUTO (auto-create fix task) |
+| 2-4 | Medium | SUGGEST (prompt user) |
+| 0-1 | Low | LOGGED (just record) |
+
+The more frequently a failure pattern occurs, the more confident kaizen becomes that it knows how to fix it.
 
 ### Storage Location
 
@@ -392,17 +392,17 @@ Hook always returns `{"action": "LOGGED"}` even for common failures.
    - Solution: Ensure reviews provide specific failure reasons
 
 3. **Storage issues**
-   - Check if `.kaizen/failures/` or `~/.config/kaizen/failures/` is writable
-   - Solution: Fix permissions
+   - Check if `.kaizen/` or `~/.config/kaizen/` directories are writable
+   - Solution: Fix permissions or run `kaizen init`
 
 **Debug:**
 ```bash
 # Manually test detection
 kaizen detect-category --details "Your failure message"
 
-# Check what's captured
-ls -la .kaizen/failures/  # Project-local
-ls -la ~/.config/kaizen/failures/  # Global
+# Check database exists
+ls -la .kaizen/failures.db  # Project-local
+ls -la ~/.config/kaizen/failures.db  # Global
 
 # Test suggestion directly
 kaizen suggest --task-id "test" --category "missing-tests"
@@ -445,47 +445,27 @@ export FAILURE_SOURCE="quality-review"
 
 ## Advanced Usage
 
-### Custom Confidence Thresholds
+### Understanding Confidence Thresholds
 
-You can adjust how kaizen determines confidence by tuning the pattern matcher:
+Confidence is based on **occurrence count** - how many times kaizen has seen similar failures:
 
-```bash
-# View current patterns
-ls -la .kaizen/failures/missing-tests/
-
-# Each failure file builds the pattern database
-# More similar failures = higher confidence
-```
-
-### Integration with CI/CD
-
-Use kaizen gates in your CI pipeline:
-
-```bash
-# Pre-task gate: Check task quality before starting
-kaizen grade-task-quality \
-  --task-id "$TASK_ID" \
-  --task-title "$TITLE" \
-  --task-type "feature" \
-  --description "$DESC"
-
-# Post-task gate: Verify implementation quality
-kaizen grade-task \
-  --task-id "$TASK_ID" \
-  --changed-files "$CHANGED_FILES"
-```
+| Occurrences | Confidence | What Happens |
+|-------------|------------|--------------|
+| 5+ times | High | Hook outputs AUTO, pokayokay creates fix task automatically |
+| 2-4 times | Medium | Hook outputs SUGGEST, pokayokay prompts user |
+| 0-1 times | Low | Hook outputs LOGGED, failure recorded for learning |
 
 ### Viewing Captured Patterns
 
+Kaizen stores failures in a SQLite database:
+
 ```bash
-# List all captured failures
-find .kaizen/failures -name "*.md"
+# Check if database exists
+ls -la .kaizen/failures.db       # Project-local
+ls -la ~/.config/kaizen/failures.db  # Global
 
-# View specific category
-ls -la .kaizen/failures/missing-tests/
-
-# Read a failure
-cat .kaizen/failures/missing-tests/task-123.md
+# Query the database (requires sqlite3)
+sqlite3 .kaizen/failures.db "SELECT category, COUNT(*) FROM failures GROUP BY category"
 ```
 
 ### Global vs Project-Local Storage
