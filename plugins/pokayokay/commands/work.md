@@ -42,6 +42,29 @@ npx @stevestomp/ohno-cli next
 ```
 Or use ohno MCP `get_next_task`.
 
+## Parallel State Tracking
+
+When running with `--parallel N` where N > 1:
+
+### State Variables
+
+Track these during the work loop:
+- **active_agents**: Map of {task_id: agent_status} for in-flight implementers
+- **queued_tasks**: List of task IDs ready to dispatch
+- **completed_this_batch**: List of task IDs completed since last checkpoint
+- **failed_blocked**: List of task IDs that failed or got blocked
+
+### Filling the Queue
+
+1. Call `get_tasks(status="todo")` to get available tasks
+2. Filter out tasks where `blockedBy` contains any task NOT in "done" status
+3. Filter out tasks where `blockedBy` contains any task in `active_agents`
+4. Add up to N tasks to `queued_tasks`
+
+### Invariant
+
+At any time: `len(active_agents) + len(queued_tasks) <= N`
+
 ### 4. Start the Task
 ```bash
 npx @stevestomp/ohno-cli start <task-id>
