@@ -20,6 +20,12 @@ if ! command -v kaizen &> /dev/null; then
     exit 0
 fi
 
+# Check if jq command exists (required for JSON parsing)
+if ! command -v jq &> /dev/null; then
+    echo '{"action": "LOGGED", "message": "jq not installed"}'
+    exit 0
+fi
+
 # Validate required environment variables
 if [ -z "$TASK_ID" ] || [ -z "$FAILURE_DETAILS" ] || [ -z "$FAILURE_SOURCE" ]; then
     echo '{"action": "LOGGED", "message": "missing required environment variables"}'
@@ -28,7 +34,7 @@ fi
 
 # Detect category from failure details
 CATEGORY_RESULT=$(kaizen detect-category --details "$FAILURE_DETAILS" 2>/dev/null || echo '{"detected_category": "unknown", "confidence": "low"}')
-CATEGORY=$(echo "$CATEGORY_RESULT" | jq -r '.detected_category')
+CATEGORY=$(echo "$CATEGORY_RESULT" | jq -r '.detected_category' 2>/dev/null || echo "unknown")
 
 # Capture the failure
 kaizen capture \
@@ -39,17 +45,27 @@ kaizen capture \
 
 # Get suggestion (confidence-based action)
 SUGGESTION=$(kaizen suggest --task-id "$TASK_ID" --category "$CATEGORY" 2>/dev/null || echo '{"action": "log"}')
-ACTION=$(echo "$SUGGESTION" | jq -r '.action')
+ACTION=$(echo "$SUGGESTION" | jq -r '.action' 2>/dev/null || echo "log")
 
 # Output action for pokayokay to handle
 case "$ACTION" in
     "auto-create")
         # Extract fix task details and output for auto-creation
-        echo "$SUGGESTION" | jq '{action: "AUTO", fix_task: .fix_task}'
+        OUTPUT=$(echo "$SUGGESTION" | jq '{action: "AUTO", fix_task: .fix_task}' 2>/dev/null)
+        if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "null" ]; then
+            echo "$OUTPUT"
+        else
+            echo '{"action": "LOGGED", "message": "failed to parse auto-create suggestion"}'
+        fi
         ;;
     "suggest")
         # Output suggestion for user confirmation
-        echo "$SUGGESTION" | jq '{action: "SUGGEST", fix_task: .fix_task, confidence: .confidence}'
+        OUTPUT=$(echo "$SUGGESTION" | jq '{action: "SUGGEST", fix_task: .fix_task, confidence: .confidence}' 2>/dev/null)
+        if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "null" ]; then
+            echo "$OUTPUT"
+        else
+            echo '{"action": "LOGGED", "message": "failed to parse suggestion"}'
+        fi
         ;;
     *)
         # Log only, continue with existing behavior
