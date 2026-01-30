@@ -1,5 +1,6 @@
 import prompts from 'prompts';
 import chalk from 'chalk';
+import { execute, commandExists } from '../utils/execute.js';
 
 /**
  * Step 4: Configure kaizen integration (optional)
@@ -11,8 +12,9 @@ export async function configureKaizen(env) {
   console.log('  kaizen captures failure patterns and auto-creates fix tasks.');
   console.log('  Improves over time as it learns from your review failures.\n');
 
-  if (env.kaizenConfigured) {
-    console.log(chalk.green('  ✓ kaizen integration already configured'));
+  // Already fully configured
+  if (env.kaizenCliInstalled && env.kaizenInitialized) {
+    console.log(chalk.green('  ✓ kaizen already configured'));
     return true;
   }
 
@@ -20,7 +22,7 @@ export async function configureKaizen(env) {
     type: 'confirm',
     name: 'confirm',
     message: 'Enable kaizen integration?',
-    initial: false  // Optional, default to no
+    initial: false
   });
 
   if (!confirm) {
@@ -28,13 +30,40 @@ export async function configureKaizen(env) {
     return false;
   }
 
-  // For now, just print instructions
-  // Full implementation would copy hook files
-  console.log(chalk.cyan('\n  To complete kaizen setup:'));
-  console.log('  1. Install kaizen: npm install -g @stevestomp/kaizen');
-  console.log('  2. Copy hook files from pokayokay/hooks/ to your project');
-  console.log('  3. See: https://github.com/srstomp/kaizen\n');
+  // Install kaizen if not present
+  if (!env.kaizenCliInstalled) {
+    const goInstalled = await commandExists('go');
 
-  console.log(chalk.green('  ✓ kaizen integration guidance provided'));
+    if (!goInstalled) {
+      console.log(chalk.yellow('\n  ⚠ Go is required to install kaizen'));
+      console.log('  Install Go from: https://go.dev/dl/');
+      console.log('  Then run `npx pokayokay` again to complete setup.\n');
+      return false;
+    }
+
+    console.log('  Installing kaizen via Go...');
+    const installResult = await execute('go', ['install', 'github.com/srstomp/kaizen/cmd/kaizen@latest']);
+
+    if (!installResult.success) {
+      console.log(chalk.red(`  ✗ Failed to install kaizen: ${installResult.stderr}`));
+      return false;
+    }
+
+    console.log(chalk.green('  ✓ kaizen installed'));
+  }
+
+  // Initialize kaizen if not present
+  if (!env.kaizenInitialized) {
+    console.log('  Initializing kaizen...');
+    const initResult = await execute('kaizen', ['init']);
+
+    if (!initResult.success) {
+      console.log(chalk.red(`  ✗ Failed to initialize kaizen: ${initResult.stderr}`));
+      return false;
+    }
+
+    console.log(chalk.green('  ✓ kaizen initialized (.kaizen/ created)'));
+  }
+
   return true;
 }
