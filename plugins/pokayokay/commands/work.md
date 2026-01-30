@@ -143,6 +143,53 @@ Each task commits independently when its review passes:
 
 Story/epic boundaries still trigger pauses per mode settings.
 
+## Git Conflict Handling (Parallel Mode)
+
+When multiple agents complete around the same time, git conflicts may occur at commit.
+
+### Detection
+
+After implementer completes and reviews pass, the commit hook runs. If commit fails:
+
+1. Check if failure is a merge conflict (exit code + stderr contains "conflict")
+2. If yes, attempt resolution
+3. If no, report error and continue
+
+### Resolution Strategy
+
+```
+1. Run: git fetch origin && git rebase origin/$(git branch --show-current)
+2. If rebase succeeds:
+   - Run: git add -A && git rebase --continue
+   - Commit should now succeed
+3. If rebase fails (complex conflict):
+   - Run: git rebase --abort
+   - Flag task: "Git conflict - needs manual resolution"
+   - Add to failed_blocked list
+   - Continue with other tasks
+```
+
+### Reporting
+
+At checkpoint, report conflict status:
+
+```markdown
+## Parallel Batch Status
+
+✓ task-001: completed, committed
+✓ task-002: completed, committed
+⚠️ task-003: completed, git conflict (flagged for manual resolution)
+⟳ task-004: implementing...
+
+Continue? [y/n/resolve task-003]
+```
+
+### User Options
+
+- **y**: Continue with remaining tasks
+- **n**: Stop session
+- **resolve task-XXX**: Pause to manually resolve conflict, then continue
+
 ---
 
 ## Work Loop Details
