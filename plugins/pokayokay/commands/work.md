@@ -72,7 +72,82 @@ npx @stevestomp/ohno-cli start <task-id>
 
 ## Work Loop
 
+### Sequential Mode (parallel=1)
+
 For each task:
+
+1. **Get next task**: `get_next_task()` from ohno
+2. **Understand the task**: Read task details via `get_task()`
+3. **Route to skill** (if needed): Based on task type
+4. **Brainstorm gate** (conditional): See Brainstorm Gate section
+5. **Dispatch implementer**: Single Task tool call
+6. **Browser verification** (conditional): See Browser Verification section
+7. **Two-stage review**: Spec review → Quality review
+8. **Complete task**: Mark done, trigger hooks
+9. **Checkpoint**: Based on mode
+
+### Parallel Mode (parallel > 1)
+
+Coordinator maintains N concurrent implementers:
+
+#### Initial Dispatch
+
+1. **Fill queue**: Get up to N tasks that are:
+   - Status = "todo"
+   - No unmet `blockedBy` dependencies
+   - Not blocked by another task in active_agents
+
+2. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
+   ```
+   Task tool (yokay-implementer):
+     description: "Implement: {task1.title}"
+     prompt: [template for task1]
+
+   Task tool (yokay-implementer):
+     description: "Implement: {task2.title}"
+     prompt: [template for task2]
+
+   ... up to N tasks
+   ```
+
+3. **Track state**: Add all dispatched tasks to `active_agents`
+
+#### Processing Results
+
+As each agent returns:
+
+1. **Remove from active_agents**
+2. **Run review pipeline** (sequential for this task):
+   - Spec review
+   - Quality review (if spec passes)
+3. **Handle result**:
+   - PASS: Add to `completed_this_batch`, attempt commit
+   - FAIL: Re-dispatch or add to `failed_blocked`
+4. **Refill**: If `len(active_agents) < N` and queue not empty:
+   - Dispatch next task from queue
+   - Replenish queue from ohno if needed
+
+#### Commit Handling
+
+Each task commits independently when its review passes:
+- Git conflicts at commit time → try rebase once
+- If rebase fails → flag task, continue with others
+
+#### Checkpoint Behavior
+
+| Mode | Sequential | Parallel |
+|------|------------|----------|
+| supervised | After each task | After each task completes |
+| semi-auto | Log & continue | Log & continue |
+| autonomous | Skip | Skip |
+
+Story/epic boundaries still trigger pauses per mode settings.
+
+---
+
+## Work Loop Details
+
+The following sections provide detailed implementation guidance for each step:
 
 ### 1. Understand the Task
 Read task details via ohno MCP `get_task`.
