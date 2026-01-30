@@ -434,4 +434,4 @@ To contribute a new integration:
 
 For questions or discussions:
 - GitHub Issues: https://github.com/srstomp/pokayokay/issues
-- See also: [kaizen integrations](https://github.com/srstomp/kaizen/docs/INTEGRATION.md)
+- See also: [kaizen integrations](https://github.com/srstomp/kaizen/blob/master/docs/INTEGRATION.md)
