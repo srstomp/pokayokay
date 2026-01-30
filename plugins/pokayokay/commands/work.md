@@ -565,6 +565,8 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 
 ### 7. Checkpoint (based on mode)
 
+#### Sequential Mode
+
 **Supervised** (default):
 - PAUSE after every task
 - Ask user: Continue / Modify / Stop / Switch task?
@@ -572,11 +574,51 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 **Semi-auto**:
 - Log task completion, continue
 - PAUSE at story/epic boundaries
-- Ask user for review
 
 **Autonomous**:
 - Log and continue
 - Only PAUSE at epic boundaries
+
+#### Parallel Mode
+
+**Supervised** (default):
+- PAUSE after each task completes (not waiting for batch)
+- Show batch status table
+- Ask user: Continue / Modify / Stop / Drain / Resolve conflict?
+
+**Semi-auto**:
+- Log each completion
+- PAUSE at story/epic boundaries
+- Show batch status at pause
+
+**Autonomous**:
+- Log and continue
+- PAUSE at epic boundaries
+- Show summary at pause
+
+#### Batch Status Table
+
+When pausing in parallel mode, show:
+
+```markdown
+## Parallel Batch Status
+
+| Task | Title | Status | Notes |
+|------|-------|--------|-------|
+| task-001 | User auth | ✓ completed | committed abc123 |
+| task-002 | Login endpoint | ✓ completed | committed def456 |
+| task-003 | Password hash | ⚠️ conflict | needs resolution |
+| task-004 | Session mgmt | ⟳ implementing | agent-xyz |
+
+**Queue**: 3 tasks waiting
+**Completed this session**: 5 tasks
+
+Options:
+- **continue** / **c**: Keep going
+- **drain**: Finish active, don't start new
+- **resolve <task>**: Pause to fix conflict
+- **stop**: End session now
+```
 
 ### 8. Repeat
 Get next task and continue until:
