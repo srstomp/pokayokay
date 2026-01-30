@@ -498,6 +498,153 @@ Only runs if spec review passes.
 - Edge case handling
 - Project convention compliance
 
+#### Review Failure Hook Integration
+
+When either spec or quality review fails, the post-review-fail hook is invoked to analyze the failure and suggest corrective actions.
+
+**Hook Execution:**
+
+```bash
+# Set environment variables and call hook
+export TASK_ID="<current-task-id>"
+export FAILURE_DETAILS="<review-failure-details>"
+export FAILURE_SOURCE="<spec-review|quality-review>"
+
+./hooks/post-review-fail.sh
+```
+
+The hook analyzes the failure using kaizen and returns JSON with one of three actions:
+
+**1. AUTO Action (High Confidence)**
+
+Hook detects a well-known failure pattern and auto-creates a fix task.
+
+```json
+{
+  "action": "AUTO",
+  "fix_task": {
+    "title": "Fix: Missing error handling in API endpoint",
+    "description": "Review failed due to missing error handling...",
+    "type": "bug",
+    "estimate": 2
+  }
+}
+```
+
+Coordinator behavior:
+1. Create fix task in ohno:
+   ```bash
+   npx @stevestomp/ohno-cli create "${fix_task.title}" \
+     -t ${fix_task.type} \
+     --description "${fix_task.description}" \
+     -e ${fix_task.estimate} \
+     --source "kaizen-fix"
+   ```
+2. Block current task on the fix task:
+   ```bash
+   npx @stevestomp/ohno-cli dep add <current-task-id> <fix-task-id>
+   npx @stevestomp/ohno-cli block <current-task-id> "Blocked by fix task ${fix_task_id}"
+   ```
+3. Log activity:
+   ```bash
+   add_task_activity(task_id, "note", "Review failed, fix task auto-created: ${fix_task_id}")
+   ```
+4. Get next task and continue work loop
+
+**2. SUGGEST Action (Medium Confidence)**
+
+Hook has a suggestion but needs user confirmation.
+
+```json
+{
+  "action": "SUGGEST",
+  "fix_task": {
+    "title": "Fix: Improve test coverage for edge cases",
+    "description": "Review suggests adding tests for...",
+    "type": "test",
+    "estimate": 3
+  },
+  "confidence": "medium"
+}
+```
+
+Coordinator behavior:
+1. Present suggestion to user:
+   ```markdown
+   Review failed. Suggested fix task:
+   - Title: ${fix_task.title}
+   - Type: ${fix_task.type}
+   - Estimate: ${fix_task.estimate}h
+   - Description: ${fix_task.description}
+
+   Create fix task? (yes/no/customize)
+   ```
+2. Handle user response:
+   - **yes**: Create fix task, block current task, get next task
+   - **no**: Continue with existing re-dispatch behavior (max 3 cycles)
+   - **customize**: Let user modify fix_task details, then create
+
+**3. LOGGED Action (Low Confidence)**
+
+Hook cannot confidently suggest a fix task, only logs the failure.
+
+```json
+{
+  "action": "LOGGED",
+  "message": "Failure logged to kaizen database"
+}
+```
+
+Coordinator behavior:
+1. Log activity:
+   ```bash
+   add_task_activity(task_id, "note", "Review failed: ${FAILURE_DETAILS}")
+   ```
+2. Continue with existing re-dispatch behavior (max 3 cycles)
+
+**Hook Integration Flow:**
+
+```
+Review FAIL
+     │
+     ▼
+┌─────────────────┐
+│ Call post-      │
+│ review-fail.sh  │
+└────────┬────────┘
+         │
+         ▼
+    Parse JSON
+         │
+    ┌────┴─────┬─────────────┐
+    │          │             │
+    ▼          ▼             ▼
+┌──────┐  ┌─────────┐  ┌──────────┐
+│ AUTO │  │ SUGGEST │  │ LOGGED   │
+└───┬──┘  └────┬────┘  └─────┬────┘
+    │          │              │
+    ▼          ▼              │
+┌──────────┐  ┌──────────┐   │
+│ Create   │  │ Prompt   │   │
+│ fix task │  │ user     │   │
+└─────┬────┘  └────┬─────┘   │
+      │            │         │
+      │       ┌────┴─────┐   │
+      │       │          │   │
+      │      yes        no   │
+      │       │          │   │
+      ▼       ▼          ▼   ▼
+┌─────────────────────────────┐
+│ Block current task          │
+│ Get next task               │
+└─────────────────────────────┘
+                  OR
+┌─────────────────────────────┐
+│ Re-dispatch implementer     │
+│ (existing behavior)         │
+└─────────────────────────────┘
+```
+
 #### Review Loop
 
 ```
@@ -520,14 +667,46 @@ Only runs if spec review passes.
        │ PASS/SKIP             ▲
        ▼                       │
 ┌──────────────┐     FAIL      │
-│ Spec Review  │───────────────┘
-└──────┬───────┘
-       │ PASS
-       ▼
-┌──────────────┐     FAIL
-│Quality Review│───────────────►(back to implementer)
-└──────┬───────┘
-       │ PASS
+│ Spec Review  │───────────────┤
+└──────┬───────┘               │
+       │ PASS                  │
+       ▼                       │
+┌──────────────┐     FAIL      │
+│Quality Review│───────────────┤
+└──────┬───────┘               │
+       │ PASS                  │
+       │                       │
+       │ ┌─────────────────────┘
+       │ │ Review FAIL
+       │ ▼
+       │ ┌─────────────────┐
+       │ │ post-review-    │
+       │ │ fail.sh hook    │
+       │ └────────┬────────┘
+       │          │
+       │     ┌────┴─────┬──────────┐
+       │     │          │          │
+       │     ▼          ▼          ▼
+       │ ┌──────┐  ┌────────┐  ┌───────┐
+       │ │ AUTO │  │SUGGEST │  │LOGGED │
+       │ └───┬──┘  └───┬────┘  └───┬───┘
+       │     │         │           │
+       │     ▼         ▼           │
+       │ ┌────────┐ ┌──────┐      │
+       │ │ Create │ │Prompt│      │
+       │ │fix task│ │ user │      │
+       │ └───┬────┘ └──┬───┘      │
+       │     │      yes│ │no      │
+       │     │      ┌──┘ │        │
+       │     ▼      ▼    ▼        ▼
+       │ ┌────────────────────────────┐
+       │ │ Block current, get next    │
+       │ └────────────────────────────┘
+       │              OR
+       │ ┌────────────────────────────┐
+       └─┤ Re-dispatch implementer    │
+         │ (max 3 cycles)             │
+         └────────────────────────────┘
        ▼
 ┌──────────────┐
 │   Complete   │

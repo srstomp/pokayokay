@@ -437,6 +437,96 @@ Action: If findings were discovered, ensure tasks were created using ohno MCP cr
 
 This ensures audit findings become tracked, actionable work items.
 
+## Kaizen Integration
+
+Kaizen is an optional tool that learns from review failures and automatically suggests or creates fix tasks based on pattern confidence.
+
+### What is Kaizen?
+
+When spec-review or quality-review fails, the `post-review-fail.sh` hook can integrate with kaizen to:
+- Detect the failure category (missing-tests, scope-creep, wrong-product)
+- Capture the failure in a pattern database
+- Suggest actions based on confidence from historical data
+
+Over time, kaizen learns which failures are common and can auto-create fix tasks for them.
+
+### Installation
+
+**Required:**
+```bash
+# Install kaizen CLI
+go install github.com/srstomp/kaizen@latest
+
+# Install jq (for JSON parsing)
+brew install jq  # macOS
+# or: sudo apt-get install jq  # Linux
+```
+
+**Optional - Initialize in your project:**
+```bash
+kaizen init  # Creates .kaizen/ for project-local storage
+```
+
+If not initialized, kaizen uses global storage at `~/.config/kaizen/`.
+
+### How It Works
+
+```
+Review Fails → post-review-fail.sh → kaizen analyze → Action
+                                                        |
+                        ┌───────────────────────────────┼──────────────┐
+                        ▼                               ▼              ▼
+                      AUTO                          SUGGEST        LOGGED
+                (auto-create task)            (prompt user)    (just record)
+```
+
+The hook is automatically invoked by pokayokay when reviews fail. It sets environment variables (`TASK_ID`, `FAILURE_DETAILS`, `FAILURE_SOURCE`) and kaizen responds with an action.
+
+### Confidence Thresholds
+
+Kaizen determines confidence based on how often it has seen similar failures:
+
+| Occurrences | Confidence | Action | pokayokay Behavior |
+|-------------|------------|--------|--------------------|
+| 5+ times | High | AUTO | Automatically creates fix task in ohno |
+| 2-4 times | Medium | SUGGEST | Prompts user to create fix task |
+| 0-1 times | Low | LOGGED | Logs failure, no task created |
+
+The more failures captured, the smarter kaizen becomes.
+
+### Configuration
+
+**Storage Location:**
+- **Project-local**: `.kaizen/` (recommended for team projects)
+- **Global**: `~/.config/kaizen/` (default if not initialized)
+
+**Hook Integration:**
+The `hooks/post-review-fail.sh` hook is built into pokayokay and requires no configuration. It automatically checks for kaizen availability.
+
+### Example Workflow
+
+**First time a failure occurs:**
+```bash
+# Review fails: "No test file found for src/api/users.go"
+# → kaizen captures it as "missing-tests" category
+# → Returns: {"action": "LOGGED"}
+# → pokayokay logs the failure, no fix task created
+```
+
+**After 5 similar failures:**
+```bash
+# Review fails again: "Missing test coverage for API endpoint"
+# → kaizen recognizes pattern with high confidence
+# → Returns: {"action": "AUTO", "fix_task": {...}}
+# → pokayokay auto-creates: "Add tests for task-123"
+```
+
+### Full Documentation
+
+For detailed configuration, troubleshooting, and advanced usage, see:
+- [docs/integrations/kaizen.md](docs/integrations/kaizen.md) - Complete integration guide
+- [kaizen GitHub](https://github.com/srstomp/kaizen) - kaizen CLI repository
+
 ---
 
 ## Complete Workflow Example
