@@ -28,12 +28,19 @@ export async function installPlugin(env) {
     return false;
   }
 
-  // Add marketplace
+  // Add marketplace (ignore "already installed" error)
   console.log('  Adding marketplace...');
   const addResult = await execute('claude', ['plugin', 'marketplace', 'add', 'srstomp/pokayokay']);
   if (!addResult.success) {
-    console.log(chalk.red(`  ✗ Failed to add marketplace: ${addResult.stderr}`));
-    return false;
+    const isAlreadyInstalled = addResult.stderr.includes('already installed');
+    if (isAlreadyInstalled) {
+      console.log(chalk.dim('  Marketplace already added'));
+    } else {
+      console.log(chalk.red(`  ✗ Failed to add marketplace: ${addResult.stderr}`));
+      return false;
+    }
+  } else {
+    console.log(chalk.green('  ✓ Marketplace added'));
   }
 
   // Install plugin
