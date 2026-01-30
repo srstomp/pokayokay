@@ -199,9 +199,14 @@ kaizen suggest --task-id "task-123" --category "missing-tests"
 **Output (Low Confidence - LOGGED):**
 ```json
 {
-  "action": "log"
+  "action": "log-only"
 }
 ```
+
+> **Note:** The `post-review-fail.sh` hook transforms kaizen's action values for pokayokay:
+> - `"auto-create"` → `"AUTO"`
+> - `"suggest"` → `"SUGGEST"`
+> - `"log-only"` → `"LOGGED"`
 
 ## Configuration Options
 
