@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous]
+argument-hint: [supervised|semi-auto|autonomous] [--parallel N]
 skill: project-harness
 ---
 
@@ -9,6 +9,18 @@ skill: project-harness
 Start or continue a development session with configurable human control.
 
 **Mode**: `$ARGUMENTS` (default: supervised)
+**Parallel**: Extract `--parallel N` or `-p N` from arguments (default: 1, max: 5)
+
+## Argument Parsing
+
+Parse `$ARGUMENTS` to extract:
+1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
+2. **Parallel count**: Value after `--parallel` or `-p` flag, default 1, max 5
+
+Example arguments:
+- `semi-auto --parallel 3` → mode=semi-auto, parallel=3
+- `-p 2` → mode=supervised, parallel=2
+- `autonomous` → mode=autonomous, parallel=1
 
 ## Session Start
 
