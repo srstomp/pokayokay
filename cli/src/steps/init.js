@@ -3,16 +3,26 @@ import chalk from 'chalk';
 import { execute } from '../utils/execute.js';
 
 /**
+ * Print useful ohno CLI commands
+ */
+function printCliHints() {
+  console.log(chalk.cyan('\n  Useful commands:'));
+  console.log(chalk.dim('    npx @srstomp/ohno-cli status   View project status'));
+  console.log(chalk.dim('    npx @srstomp/ohno-cli serve    Start MCP server manually'));
+}
+
+/**
  * Step 3: Initialize ohno in current project
  * @param {object} env - Environment state
  * @returns {Promise<boolean>} True if successful or skipped
  */
 export async function initOhno(env) {
   console.log(chalk.bold('\nStep 3/4: Initialize Project'));
-  console.log(`  Create .ohno/ directory in current project for task tracking.\n`);
+  console.log('  Create .ohno/ directory in current project for task tracking.\n');
 
   if (env.ohnoInitialized) {
     console.log(chalk.green('  ✓ ohno already initialized (.ohno/ exists)'));
+    printCliHints();
     return true;
   }
 
@@ -38,5 +48,6 @@ export async function initOhno(env) {
   }
 
   console.log(chalk.green('  ✓ ohno initialized'));
+  printCliHints();
   return true;
 }
