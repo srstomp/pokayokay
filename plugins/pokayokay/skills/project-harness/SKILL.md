@@ -71,6 +71,42 @@ Tasks are implemented by fresh subagents, not inline in the coordinator session.
 
 See [references/subagent-dispatch.md](references/subagent-dispatch.md) for details.
 
+## Parallel Execution
+
+When running with `--parallel N`, multiple implementers run simultaneously.
+
+### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| Throughput | N independent tasks process in ~1x time instead of Nx |
+| Resource utilization | Better use of available API capacity |
+| Faster feedback | Complete more work per session |
+
+### Tradeoffs
+
+| Tradeoff | Mitigation |
+|----------|------------|
+| Git conflicts | Auto-rebase, manual fallback |
+| No shared learning | Agents already isolated in sequential mode |
+| Higher token usage | N concurrent contexts |
+
+### Recommended Settings
+
+| Scenario | Parallel Count |
+|----------|----------------|
+| Default (safe) | 1 (sequential) |
+| Independent tasks | 2-3 |
+| Large backlog | 3-4 |
+| Maximum | 5 |
+
+### Dependency Handling
+
+The ohno `blockedBy` graph is the safety mechanism:
+- Tasks with unmet dependencies are not dispatched
+- If Task B depends on Task A, B waits for A to complete
+- No additional conflict detection - trust the dependency graph
+
 ## Quick Start
 
 ### 1. Initialize ohno
@@ -198,6 +234,29 @@ WHILE tasks remain:
   5. Process subagent result
 
   [post-task hooks]  <- GUARANTEED: sync, commit
+
+  6. CHECKPOINT based on mode
+
+[post-session hooks] <- Final sync, summary
+```
+
+### Work Loop with Hooks (Parallel)
+
+```
+[pre-session hooks]  <- Verify clean state
+
+WHILE tasks remain:
+  [pre-task hooks]   <- Check blockers (per task)
+
+  1. Get up to N tasks (ohno)
+  2. Filter by dependencies
+  3. Dispatch N subagents      <- PARALLEL: single message, N Task tools
+  4. Wait for results
+  5. Process each result:
+     - Reviews (sequential per task)
+     - Commit (may conflict)
+
+  [post-task hooks]  <- Per completed task
 
   6. CHECKPOINT based on mode
 
