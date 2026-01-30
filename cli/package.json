@@ -1,0 +1,29 @@
+{
+  "name": "pokayokay",
+  "version": "0.1.0",
+  "description": "Setup wizard for pokayokay - AI-assisted development orchestration",
+  "bin": {
+    "pokayokay": "./bin/cli.js"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "keywords": [
+    "claude-code",
+    "setup",
+    "wizard",
+    "cli"
+  ],
+  "author": "Steve Stomp <https://github.com/srstomp>",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "prompts": "^2.4.2",
+    "which": "^4.0.0"
+  }
+}
