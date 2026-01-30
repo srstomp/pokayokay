@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous]
+argument-hint: [supervised|semi-auto|autonomous] [--parallel N]
 skill: project-harness
 ---
 
@@ -9,6 +9,18 @@ skill: project-harness
 Start or continue a development session with configurable human control.
 
 **Mode**: `$ARGUMENTS` (default: supervised)
+**Parallel**: Extract `--parallel N` or `-p N` from arguments (default: 1, max: 5)
+
+## Argument Parsing
+
+Parse `$ARGUMENTS` to extract:
+1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
+2. **Parallel count**: Value after `--parallel` or `-p` flag, default 1, max 5
+
+Example arguments:
+- `semi-auto --parallel 3` → mode=semi-auto, parallel=3
+- `-p 2` → mode=supervised, parallel=2
+- `autonomous` → mode=autonomous, parallel=1
 
 ## Session Start
 
@@ -30,6 +42,29 @@ npx @stevestomp/ohno-cli next
 ```
 Or use ohno MCP `get_next_task`.
 
+## Parallel State Tracking
+
+When running with `--parallel N` where N > 1:
+
+### State Variables
+
+Track these during the work loop:
+- **active_agents**: Map of {task_id: agent_status} for in-flight implementers
+- **queued_tasks**: List of task IDs ready to dispatch
+- **completed_this_batch**: List of task IDs completed since last checkpoint
+- **failed_blocked**: List of task IDs that failed or got blocked
+
+### Filling the Queue
+
+1. Call `get_tasks(status="todo")` to get available tasks
+2. Filter out tasks where `blockedBy` contains any task NOT in "done" status
+3. Filter out tasks where `blockedBy` contains any task in `active_agents`
+4. Add up to N tasks to `queued_tasks`
+
+### Invariant
+
+At any time: `len(active_agents) + len(queued_tasks) <= N`
+
 ### 4. Start the Task
 ```bash
 npx @stevestomp/ohno-cli start <task-id>
@@ -37,7 +72,129 @@ npx @stevestomp/ohno-cli start <task-id>
 
 ## Work Loop
 
+### Sequential Mode (parallel=1)
+
 For each task:
+
+1. **Get next task**: `get_next_task()` from ohno
+2. **Understand the task**: Read task details via `get_task()`
+3. **Route to skill** (if needed): Based on task type
+4. **Brainstorm gate** (conditional): See Brainstorm Gate section
+5. **Dispatch implementer**: Single Task tool call
+6. **Browser verification** (conditional): See Browser Verification section
+7. **Two-stage review**: Spec review → Quality review
+8. **Complete task**: Mark done, trigger hooks
+9. **Checkpoint**: Based on mode
+
+### Parallel Mode (parallel > 1)
+
+Coordinator maintains N concurrent implementers:
+
+#### Initial Dispatch
+
+1. **Fill queue**: Get up to N tasks that are:
+   - Status = "todo"
+   - No unmet `blockedBy` dependencies
+   - Not blocked by another task in active_agents
+
+2. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
+   ```
+   Task tool (yokay-implementer):
+     description: "Implement: {task1.title}"
+     prompt: [template for task1]
+
+   Task tool (yokay-implementer):
+     description: "Implement: {task2.title}"
+     prompt: [template for task2]
+
+   ... up to N tasks
+   ```
+
+3. **Track state**: Add all dispatched tasks to `active_agents`
+
+#### Processing Results
+
+As each agent returns:
+
+1. **Remove from active_agents**
+2. **Run review pipeline** (sequential for this task):
+   - Spec review
+   - Quality review (if spec passes)
+3. **Handle result**:
+   - PASS: Add to `completed_this_batch`, attempt commit
+   - FAIL: Re-dispatch or add to `failed_blocked`
+4. **Refill**: If `len(active_agents) < N` and queue not empty:
+   - Dispatch next task from queue
+   - Replenish queue from ohno if needed
+
+#### Commit Handling
+
+Each task commits independently when its review passes:
+- Git conflicts at commit time → try rebase once
+- If rebase fails → flag task, continue with others
+
+#### Checkpoint Behavior
+
+| Mode | Sequential | Parallel |
+|------|------------|----------|
+| supervised | After each task | After each task completes |
+| semi-auto | Log & continue | Log & continue |
+| autonomous | Skip | Skip |
+
+Story/epic boundaries still trigger pauses per mode settings.
+
+## Git Conflict Handling (Parallel Mode)
+
+When multiple agents complete around the same time, git conflicts may occur at commit.
+
+### Detection
+
+After implementer completes and reviews pass, the commit hook runs. If commit fails:
+
+1. Check if failure is a merge conflict (exit code + stderr contains "conflict")
+2. If yes, attempt resolution
+3. If no, report error and continue
+
+### Resolution Strategy
+
+```
+1. Run: git fetch origin && git rebase origin/$(git branch --show-current)
+2. If rebase succeeds:
+   - Run: git add -A && git rebase --continue
+   - Commit should now succeed
+3. If rebase fails (complex conflict):
+   - Run: git rebase --abort
+   - Flag task: "Git conflict - needs manual resolution"
+   - Add to failed_blocked list
+   - Continue with other tasks
+```
+
+### Reporting
+
+At checkpoint, report conflict status:
+
+```markdown
+## Parallel Batch Status
+
+✓ task-001: completed, committed
+✓ task-002: completed, committed
+⚠️ task-003: completed, git conflict (flagged for manual resolution)
+⟳ task-004: implementing...
+
+Continue? [y/n/resolve task-003]
+```
+
+### User Options
+
+- **y**: Continue with remaining tasks
+- **n**: Stop session
+- **resolve task-XXX**: Pause to manually resolve conflict, then continue
+
+---
+
+## Work Loop Details
+
+The following sections provide detailed implementation guidance for each step:
 
 ### 1. Understand the Task
 Read task details via ohno MCP `get_task`.
@@ -408,6 +565,8 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 
 ### 7. Checkpoint (based on mode)
 
+#### Sequential Mode
+
 **Supervised** (default):
 - PAUSE after every task
 - Ask user: Continue / Modify / Stop / Switch task?
@@ -415,11 +574,51 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 **Semi-auto**:
 - Log task completion, continue
 - PAUSE at story/epic boundaries
-- Ask user for review
 
 **Autonomous**:
 - Log and continue
 - Only PAUSE at epic boundaries
+
+#### Parallel Mode
+
+**Supervised** (default):
+- PAUSE after each task completes (not waiting for batch)
+- Show batch status table
+- Ask user: Continue / Modify / Stop / Drain / Resolve conflict?
+
+**Semi-auto**:
+- Log each completion
+- PAUSE at story/epic boundaries
+- Show batch status at pause
+
+**Autonomous**:
+- Log and continue
+- PAUSE at epic boundaries
+- Show summary at pause
+
+#### Batch Status Table
+
+When pausing in parallel mode, show:
+
+```markdown
+## Parallel Batch Status
+
+| Task | Title | Status | Notes |
+|------|-------|--------|-------|
+| task-001 | User auth | ✓ completed | committed abc123 |
+| task-002 | Login endpoint | ✓ completed | committed def456 |
+| task-003 | Password hash | ⚠️ conflict | needs resolution |
+| task-004 | Session mgmt | ⟳ implementing | agent-xyz |
+
+**Queue**: 3 tasks waiting
+**Completed this session**: 5 tasks
+
+Options:
+- **continue** / **c**: Keep going
+- **drain**: Finish active, don't start new
+- **resolve <task>**: Pause to fix conflict
+- **stop**: End session now
+```
 
 ### 8. Repeat
 Get next task and continue until:

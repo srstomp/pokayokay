@@ -29,3 +29,6 @@ npm-debug.log*
 .claude/
 
 docs/
+
+# Git worktrees
+.worktrees/
