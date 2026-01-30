@@ -31,7 +31,8 @@ function printEnvironment(env) {
 
 /**
  * Print completion summary
- * @param {object} results - Step results
+ * @param {object} results - Step results with scopes
+ * @param {boolean} needsRestart - Whether Claude Code needs restart
  */
 function printSummary(results, needsRestart) {
   console.log(chalk.bold.green('\n  ✓ Setup complete!\n'));
@@ -39,17 +40,29 @@ function printSummary(results, needsRestart) {
   const installed = [];
   const skipped = [];
 
-  if (results.plugin) installed.push('pokayokay plugin');
-  else skipped.push('pokayokay plugin');
+  if (results.plugin.success) {
+    installed.push(`pokayokay plugin (${results.plugin.scope})`);
+  } else {
+    skipped.push('pokayokay plugin');
+  }
 
-  if (results.mcp) installed.push('ohno MCP server');
-  else skipped.push('ohno MCP server');
+  if (results.mcp.success) {
+    installed.push(`ohno MCP server (${results.mcp.scope})`);
+  } else {
+    skipped.push('ohno MCP server');
+  }
 
-  if (results.init) installed.push('ohno project initialized');
-  else skipped.push('ohno project init');
+  if (results.init) {
+    installed.push('ohno project initialized');
+  } else {
+    skipped.push('ohno project init');
+  }
 
-  if (results.kaizen) installed.push('kaizen integration');
-  else skipped.push('kaizen integration');
+  if (results.kaizen) {
+    installed.push('kaizen');
+  } else {
+    skipped.push('kaizen integration');
+  }
 
   if (installed.length > 0) {
     console.log('  Installed:');
@@ -59,6 +72,14 @@ function printSummary(results, needsRestart) {
   if (skipped.length > 0) {
     console.log('\n  Skipped:');
     skipped.forEach(item => console.log(chalk.dim(`    • ${item}`)));
+  }
+
+  // Useful commands section
+  console.log(chalk.cyan('\n  Useful commands:'));
+  console.log(chalk.dim('    npx @srstomp/ohno-cli status   View project status'));
+  console.log(chalk.dim('    npx @srstomp/ohno-cli serve    Start MCP server manually'));
+  if (results.kaizen) {
+    console.log(chalk.dim('    kaizen suggest                 Get fix suggestions'));
   }
 
   if (needsRestart) {
@@ -96,16 +117,21 @@ export async function main() {
     process.exit(1);
   }
 
-  // Run steps
+  // Run steps and track results with scopes
+  const pluginResult = await installPlugin(env);
+  const mcpResult = await configureMcp(env);
+  const initResult = await initOhno(env);
+  const kaizenResult = await configureKaizen(env);
+
   const results = {
-    plugin: await installPlugin(env),
-    mcp: await configureMcp(env),
-    init: await initOhno(env),
-    kaizen: await configureKaizen(env)
+    plugin: pluginResult,
+    mcp: mcpResult,
+    init: initResult,
+    kaizen: kaizenResult
   };
 
-  // Determine if restart needed (MCP was just configured)
-  const needsRestart = results.mcp && !env.mcpConfigured;
+  // Determine if restart needed
+  const needsRestart = mcpResult.needsRestart;
 
   // Print summary
   printSummary(results, needsRestart);
