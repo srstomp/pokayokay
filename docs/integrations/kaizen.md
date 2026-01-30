@@ -139,19 +139,12 @@ kaizen detect-category --details "Missing test coverage for new API endpoint"
 }
 ```
 
-**Categories:**
+**Currently supported categories:**
 - `missing-tests` - No tests for implementation
-- `missed-tasks` - Requirements not implemented
-- `wrong-product` - Misunderstood requirements
-- `regression` - Broke existing functionality
-- `premature-completion` - Claimed done before complete
 - `scope-creep` - Extra work beyond spec
-- `integration-failure` - Integration issues
-- `session-amnesia` - Lost context between sessions
-- `hallucinated-deps` - Used non-existent dependencies
-- `security-flaw` - Security vulnerability
-- `tool-misuse` - Incorrect tool/API usage
-- `task-quality` - Poor task execution quality
+- `wrong-product` - Misunderstood requirements or wrong file modified
+
+*Note: Additional categories may be added in future versions.*
 
 ### 2. Capture Failure
 
