@@ -16,7 +16,6 @@ export async function doctor() {
   printHeader();
 
   const env = await detectEnvironment();
-  let allGood = true;
   let requiredGood = true;
 
   // Claude Code
@@ -30,19 +29,19 @@ export async function doctor() {
 
   // Plugin
   if (env.pluginInstalled) {
-    console.log(chalk.green('  ✓ pokayokay plugin active'));
+    console.log(chalk.green(`  ✓ pokayokay plugin active (${env.pluginScope})`));
   } else {
     console.log(chalk.red('  ✗ pokayokay plugin not installed'));
-    console.log(chalk.dim('    Run: claude plugin install pokayokay@srstomp-pokayokay'));
+    console.log(chalk.dim('    Run: npx pokayokay'));
     requiredGood = false;
   }
 
   // MCP
   if (env.mcpConfigured) {
-    console.log(chalk.green('  ✓ ohno MCP server configured'));
+    console.log(chalk.green(`  ✓ ohno MCP server configured (${env.mcpScope})`));
   } else {
     console.log(chalk.red('  ✗ ohno MCP server not configured'));
-    console.log(chalk.dim('    Run: npx pokayokay (to configure)'));
+    console.log(chalk.dim('    Run: npx pokayokay'));
     requiredGood = false;
   }
 
@@ -52,24 +51,22 @@ export async function doctor() {
   } else {
     console.log(chalk.yellow('  ○ ohno not initialized in this project'));
     console.log(chalk.dim('    Run: npx @stevestomp/ohno-cli init'));
-    allGood = false;
   }
 
   // kaizen (optional)
-  if (env.kaizenConfigured) {
-    console.log(chalk.green('  ✓ kaizen integration configured'));
+  if (env.kaizenCliInstalled && env.kaizenInitialized) {
+    console.log(chalk.green('  ✓ kaizen configured'));
+  } else if (env.kaizenCliInstalled) {
+    console.log(chalk.yellow('  ○ kaizen CLI installed but not initialized'));
+    console.log(chalk.dim('    Run: kaizen init'));
   } else {
-    console.log(chalk.dim('  ○ kaizen integration not configured (optional)'));
+    console.log(chalk.dim('  ○ kaizen not installed (optional)'));
   }
 
   // Summary
   console.log();
   if (requiredGood) {
-    if (allGood) {
-      console.log(chalk.green.bold('  All components working!\n'));
-    } else {
-      console.log(chalk.yellow.bold('  Required components working. Optional items pending.\n'));
-    }
+    console.log(chalk.green.bold('  All required components working!\n'));
     process.exit(0);
   } else {
     console.log(chalk.red.bold('  Some required components missing. Run npx pokayokay to fix.\n'));
