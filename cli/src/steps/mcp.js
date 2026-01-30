@@ -1,11 +1,35 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import prompts from 'prompts';
 import chalk from 'chalk';
 import { readClaudeConfig, writeClaudeConfig } from '../utils/config.js';
 
 /**
+ * Read .mcp.json or return empty object
+ * @returns {object}
+ */
+function readLocalMcpConfig() {
+  if (!existsSync('.mcp.json')) {
+    return {};
+  }
+  try {
+    return JSON.parse(readFileSync('.mcp.json', 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write .mcp.json
+ * @param {object} config
+ */
+function writeLocalMcpConfig(config) {
+  writeFileSync('.mcp.json', JSON.stringify(config, null, 2) + '\n');
+}
+
+/**
  * Step 2: Configure ohno MCP server
  * @param {object} env - Environment state
- * @returns {Promise<boolean>} True if successful or skipped
+ * @returns {Promise<{success: boolean, scope: string|null, needsRestart: boolean}>}
  */
 export async function configureMcp(env) {
   console.log(chalk.bold('\nStep 2/4: ohno Task Management'));
@@ -13,45 +37,56 @@ export async function configureMcp(env) {
   console.log('  Required for /work and /plan commands.\n');
 
   if (env.mcpConfigured) {
-    console.log(chalk.green('  ✓ ohno MCP server already configured'));
-    return true;
+    console.log(chalk.green(`  ✓ ohno MCP server already configured (${env.mcpScope})`));
+    return { success: true, scope: env.mcpScope, needsRestart: false };
   }
 
-  const { confirm } = await prompts({
-    type: 'confirm',
-    name: 'confirm',
+  const { scope } = await prompts({
+    type: 'select',
+    name: 'scope',
     message: 'Configure ohno MCP server?',
-    initial: true
+    choices: [
+      { title: 'Global (recommended)', description: 'Available in all projects', value: 'global' },
+      { title: 'Project-local', description: 'Only this project, stored in .mcp.json', value: 'local' },
+      { title: 'Skip', value: 'skip' }
+    ],
+    initial: 0
   });
 
-  if (!confirm) {
+  if (scope === 'skip' || !scope) {
     console.log(chalk.yellow('  ○ Skipped MCP configuration'));
-    return false;
+    return { success: false, scope: null, needsRestart: false };
   }
 
+  const mcpEntry = {
+    command: 'npx',
+    args: ['@stevestomp/ohno-mcp']
+  };
+
   try {
-    // Read current config
-    const config = readClaudeConfig(env.claudeConfigPath);
+    if (scope === 'global') {
+      // Add to global Claude config
+      const config = readClaudeConfig(env.claudeConfigPath);
+      config.mcpServers = config.mcpServers || {};
+      config.mcpServers.ohno = mcpEntry;
 
-    // Add ohno MCP server
-    config.mcpServers = config.mcpServers || {};
-    config.mcpServers.ohno = {
-      command: 'npx',
-      args: ['@stevestomp/ohno-mcp']
-    };
-
-    // Write with backup
-    const backupPath = writeClaudeConfig(env.claudeConfigPath, config);
-
-    if (backupPath) {
-      console.log(chalk.dim(`  Backed up existing config to ${backupPath}`));
+      const backupPath = writeClaudeConfig(env.claudeConfigPath, config);
+      if (backupPath) {
+        console.log(chalk.dim(`  Backed up config to ${backupPath}`));
+      }
+    } else {
+      // Add to project-local .mcp.json
+      const config = readLocalMcpConfig();
+      config.mcpServers = config.mcpServers || {};
+      config.mcpServers.ohno = mcpEntry;
+      writeLocalMcpConfig(config);
     }
 
-    console.log(chalk.green('  ✓ MCP server configured'));
+    console.log(chalk.green(`  ✓ MCP server configured (${scope})`));
     console.log(chalk.yellow('  ⚠ Restart Claude Code to activate'));
-    return true;
+    return { success: true, scope, needsRestart: true };
   } catch (err) {
     console.log(chalk.red(`  ✗ Failed: ${err.message}`));
-    return false;
+    return { success: false, scope: null, needsRestart: false };
   }
 }
