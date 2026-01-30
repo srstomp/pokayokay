@@ -193,6 +193,35 @@ The `/pokayokay:audit` command checks 5 dimensions:
 | `semi-auto` | log | PAUSE | PAUSE |
 | `autonomous` | skip | log | PAUSE |
 
+### Parallel Execution
+
+Run multiple tasks simultaneously for faster throughput:
+
+```bash
+# Run up to 3 tasks in parallel
+/work semi-auto --parallel 3
+
+# Short form
+/work -p 3
+```
+
+**How it works:**
+- Coordinator dispatches N implementer agents in a single message
+- Each agent works independently with fresh context
+- Results processed as they complete
+- Dependency graph prevents unsafe parallelization
+
+**Recommended settings:**
+- Default: 1 (sequential, safest)
+- Independent tasks: 2-3
+- Large backlog: 3-4
+- Maximum: 5
+
+**Tradeoffs:**
+- Higher token usage (N concurrent contexts)
+- Potential git conflicts (auto-resolved when possible)
+- No shared learning between parallel agents
+
 ## Sub-Agents
 
 pokayokay includes **10 specialized sub-agents** that run in isolated context windows for verbose operations:
