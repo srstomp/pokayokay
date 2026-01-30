@@ -135,7 +135,8 @@ kaizen detect-category --details "Missing test coverage for new API endpoint"
 ```json
 {
   "detected_category": "missing-tests",
-  "confidence": "high"
+  "all_categories": ["missing-tests"],
+  "matched": true
 }
 ```
 
