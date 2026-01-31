@@ -119,6 +119,7 @@ npx @stevestomp/ohno-cli serve
 | `/pokayokay:review` | Analyze session patterns and skill effectiveness |
 | `/pokayokay:handoff` | Prepare session handoff with context preservation |
 | `/pokayokay:hooks` | View and manage hook configuration |
+| `/pokayokay:worktrees` | List, cleanup, switch, or remove worktrees |
 
 ### Ad-Hoc Work
 
@@ -250,6 +251,30 @@ Run multiple tasks simultaneously for faster throughput:
 - Higher token usage (N concurrent contexts)
 - Potential git conflicts (auto-resolved when possible)
 - No shared learning between parallel agents
+
+### Worktree Isolation
+
+Tasks automatically run in isolated git worktrees based on type:
+
+| Task Type | Behavior | Override |
+|-----------|----------|----------|
+| feature, bug, spike | Worktree | `--in-place` |
+| chore, docs | In-place | `--worktree` |
+
+```bash
+# Default: smart based on task type
+/pokayokay:work
+
+# Force worktree for a chore
+/pokayokay:work --worktree
+
+# Force in-place for a feature
+/pokayokay:work --in-place
+```
+
+**Story-based reuse:** Tasks in the same story share a worktree, keeping related changes together.
+
+**On completion:** Choose to merge, create PR, keep worktree, or discard work.
 
 ## Sub-Agents
 
