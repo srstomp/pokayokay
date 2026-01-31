@@ -10,26 +10,106 @@ Design clear, consistent, and developer-friendly REST APIs.
 ## Design Process
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     API DESIGN PROCESS                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. RESOURCES         2. OPERATIONS       3. CONTRACTS      │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐   │
-│  │ Identify    │  →  │ Define CRUD │  →  │ Request/    │   │
-│  │ entities    │     │ + actions   │     │ Response    │   │
-│  │ & relations │     │ + methods   │     │ schemas     │   │
-│  └─────────────┘     └─────────────┘     └─────────────┘   │
-│                                                             │
-│  4. ERRORS            5. DOCS             6. REVIEW         │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐   │
-│  │ Status codes│  →  │ OpenAPI     │  →  │ Consistency │   │
-│  │ Error format│     │ Examples    │     │ Usability   │   │
-│  │ Edge cases  │     │ Descriptions│     │ Security    │   │
-│  └─────────────┘     └─────────────┘     └─────────────┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      API DESIGN PROCESS                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  0. UX INTEGRATION (optional)                                    │
+│  ┌──────────────────────────┐                                    │
+│  │ Check for ux-spec.md     │                                    │
+│  │ Extract user flows       │                                    │
+│  │ Map actions → endpoints  │                                    │
+│  └──────────────────────────┘                                    │
+│           ↓                                                      │
+│  1. RESOURCES         2. OPERATIONS       3. CONTRACTS          │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐       │
+│  │ Identify    │  →  │ Define CRUD │  →  │ Request/    │       │
+│  │ entities    │     │ + actions   │     │ Response    │       │
+│  │ & relations │     │ + methods   │     │ schemas     │       │
+│  └─────────────┘     └─────────────┘     └─────────────┘       │
+│                                                                  │
+│  4. ERRORS            5. DOCS             6. REVIEW             │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐       │
+│  │ Status codes│  →  │ OpenAPI     │  →  │ Consistency │       │
+│  │ Error format│     │ Examples    │     │ Usability   │       │
+│  │ Edge cases  │     │ Descriptions│     │ Security    │       │
+│  └─────────────┘     └─────────────┘     └─────────────┘       │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+## UX Specification Integration
+
+When UX specifications exist from the design phase, use them to inform API endpoint design.
+
+**Check for design artifacts:**
+
+```bash
+# Look for UX specification in .claude/design directory
+find .claude/design -name "ux-spec.md" 2>/dev/null
+```
+
+**If `.claude/design/*/ux-spec.md` exists:**
+
+1. **Read the UX specification** — Focus on "User Flows" and "Interaction Patterns" sections
+2. **Extract endpoint requirements:**
+   - **User actions** → Map to HTTP methods and endpoints
+   - **Data displayed** → Identify GET endpoints and response schemas
+   - **State transitions** → Identify POST/PATCH/DELETE endpoints
+   - **Decision points** → May need filtering, conditional logic, or aggregations
+   - **Edge cases** → Map to error responses and status codes
+
+3. **Identify resources from UX:**
+   - **Nouns in flows** → Resources (cart, order, item, user, payment)
+   - **Collections** → Plural endpoints (items, orders, recommendations)
+   - **Relationships** → Nested resources (user's orders, cart items)
+
+4. **Map flows to endpoints:**
+
+```markdown
+UX Flow: "User views cart → selects shipping → enters payment → confirms order"
+
+Endpoints:
+- GET /cart → View cart items and total
+- GET /shipping-methods → List available shipping options
+- PATCH /cart/shipping → Update selected shipping method
+- POST /orders → Create order with payment
+- GET /orders/{id} → Display order confirmation
+
+UX Interaction: "User clicks +/- to update quantity"
+
+Endpoint:
+- PATCH /cart/items/{id} → Update item quantity
+  Request: { "quantity": 3 }
+  Response: 200 OK (updated cart)
+  Errors: 400 (invalid quantity), 404 (item not found)
+```
+
+5. **Document UX integration:**
+
+```markdown
+## Design Integration
+
+**UX Specification:** `.claude/design/checkout-flow/ux-spec.md`
+
+### User Flow Mapping
+
+| Flow Step | API Endpoint | Notes |
+|-----------|--------------|-------|
+| View cart | GET /cart | Returns items, quantities, subtotal |
+| Select shipping | GET /shipping-methods | Available options with costs |
+| Apply coupon | POST /cart/coupons | Validates and applies discount |
+| Confirm order | POST /orders | Creates order, processes payment |
+| View confirmation | GET /orders/{id} | Order details and tracking |
+```
+
+**Backward compatibility:**
+
+If no ux-spec.md exists, the skill works normally. The UX integration step is optional and enhances endpoint design when available.
+
+**Multiple projects:**
+
+If multiple `.claude/design/*/ux-spec.md` files exist, ask the user which project to use or automatically select based on context from the request.
 
 ## Core Principles
 
@@ -238,6 +318,12 @@ GET /orders/456
 
 ## Design Checklist
 
+### Preparation
+- [ ] **Check for `.claude/design/*/ux-spec.md` and extract endpoint requirements**
+- [ ] Map user flows to API endpoints
+- [ ] Identify resources from UX nouns and collections
+- [ ] Document edge cases from UX specification
+
 ### Resource Design
 - [ ] Resources are nouns, not verbs
 - [ ] Plural names for collections (`/users`, not `/user`)
@@ -331,3 +417,4 @@ GET /orders/456
 - [references/versioning.md](references/versioning.md) — API versioning strategies
 - [references/openapi.md](references/openapi.md) — OpenAPI specification, documentation
 - [references/security.md](references/security.md) — Authentication, authorization, rate limiting
+- [references/ux-spec-integration.md](references/ux-spec-integration.md) — Integrating UX specifications with API design
