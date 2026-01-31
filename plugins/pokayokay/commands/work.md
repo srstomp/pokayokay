@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous] [--parallel N]
+argument-hint: [supervised|semi-auto|autonomous] [--parallel N] [--worktree|--in-place]
 skill: project-harness
 ---
 
@@ -22,6 +22,17 @@ Example arguments:
 - `-p 2` → mode=supervised, parallel=2
 - `autonomous` → mode=autonomous, parallel=1
 
+## Worktree Argument Parsing
+
+Extract worktree flags from `$ARGUMENTS`:
+1. **--worktree**: Force worktree creation (even for chores)
+2. **--in-place**: Force in-place work (skip worktree)
+
+Example arguments:
+- `semi-auto --worktree` → mode=semi-auto, forceWorktree=true
+- `--in-place` → mode=supervised, forceInPlace=true
+- `autonomous -p 3` → mode=autonomous, parallel=3, useSmartDefault=true
+
 ## Session Start
 
 ### 1. Get Session Context
@@ -41,6 +52,104 @@ If `.claude/PROJECT.md` exists, read it for:
 npx @stevestomp/ohno-cli next
 ```
 Or use ohno MCP `get_next_task`.
+
+### 4. Worktree Decision
+
+After getting the next task, determine whether to use a worktree.
+
+#### Smart Defaults by Task Type
+
+| Task Type | Default Behavior |
+|-----------|------------------|
+| `feature` | Worktree |
+| `bug` | Worktree |
+| `spike` | Worktree |
+| `chore` | In-place |
+| `docs` | In-place |
+| `test` | Same as parent task |
+
+#### Decision Logic
+
+```javascript
+function shouldUseWorktree(task, flags) {
+  // Explicit flags override everything
+  if (flags.forceWorktree) return true;
+  if (flags.forceInPlace) return false;
+
+  // Smart defaults by task type
+  const worktreeTypes = ['feature', 'bug', 'spike'];
+  const inPlaceTypes = ['chore', 'docs'];
+
+  if (worktreeTypes.includes(task.task_type)) return true;
+  if (inPlaceTypes.includes(task.task_type)) return false;
+
+  // test type: inherit from parent task if exists
+  if (task.task_type === 'test' && task.story_id) {
+    // Check other tasks in same story
+    const storyTasks = await mcp.ohno.get_tasks({ story_id: task.story_id });
+    const parentType = storyTasks.find(t => t.id !== task.id)?.task_type;
+    if (parentType) {
+      return worktreeTypes.includes(parentType);
+    }
+  }
+
+  return true; // Default to worktree for unknown types
+}
+```
+
+#### Worktree Setup Flow
+
+If worktree is needed:
+
+1. **Check for story worktree reuse**
+   ```javascript
+   if (task.story_id) {
+     const existing = await findStoryWorktree(task.story_id);
+     if (existing) {
+       // Reuse existing story worktree
+       cd(existing.path);
+       return { reused: true, path: existing.path };
+     }
+   }
+   ```
+
+2. **Create new worktree**
+   ```javascript
+   const name = generateWorktreeName(task);
+   const baseBranch = await getDefaultBranch();
+   const result = await createWorktree(name, baseBranch);
+   ```
+
+3. **Install dependencies**
+   ```javascript
+   const setupResult = await setupWorktree(result.path);
+   console.log(formatSetupOutput(setupResult));
+   ```
+
+4. **Report and change directory**
+   ```markdown
+   Creating worktree for task-42-user-auth...
+     ✓ Branch created: task-42-user-auth
+     ✓ Worktree ready at .worktrees/task-42-user-auth
+
+   Installing dependencies...
+     Detected: bun (bun.lockb)
+     ✓ Dependencies installed (4.2s)
+
+   Ready to work on: Add user authentication
+   ```
+
+5. **Handle setup failures**
+   ```markdown
+   Installing dependencies...
+     Detected: npm (package-lock.json)
+     ✗ npm install failed: ERESOLVE peer dependency conflict
+
+   Options:
+     1. Retry with --legacy-peer-deps
+     2. Skip dependencies (manual install later)
+     3. Abort worktree creation
+   ```
 
 ## Parallel State Tracking
 
@@ -835,6 +944,104 @@ hooks:
 
 See `hooks/HOOKS.md` for full configuration.
 
+## Task Completion with Worktree
+
+After task is marked done in ohno, handle worktree lifecycle.
+
+### Single Task (no story)
+
+Always prompt on completion:
+
+```markdown
+Task 42 complete. What would you like to do?
+
+  1. Merge to [default-branch]
+  2. Create Pull Request
+  3. Keep worktree (continue later)
+  4. Discard work
+
+Which option?
+```
+
+**Option handling:**
+
+1. **Merge to default branch**
+   ```bash
+   git checkout [default-branch]
+   git merge --no-ff [worktree-branch]
+   git worktree remove .worktrees/[name]
+   git branch -d [worktree-branch]
+   ```
+
+2. **Create Pull Request**
+   ```bash
+   git push -u origin [worktree-branch]
+   gh pr create --title "[task-title]" --body "Closes task #[id]"
+   ```
+   Keep worktree for PR review/iteration.
+
+3. **Keep worktree**
+   Do nothing, worktree remains available.
+
+4. **Discard work**
+   ```bash
+   git worktree remove --force .worktrees/[name]
+   git branch -D [worktree-branch]
+   ```
+
+### Task Within Story
+
+Commit and continue, don't prompt:
+
+```markdown
+Task 42 complete (part of Story 12).
+
+  ✓ Committed to story-12-user-auth branch
+
+Story has 2 more tasks remaining.
+Continue with next task? [Y/n]
+```
+
+### Story Completion
+
+When all tasks in story are done, prompt:
+
+```markdown
+Story 12 complete (3/3 tasks done).
+
+  1. Merge to [default-branch]
+  2. Create Pull Request
+  3. Keep worktree
+  4. Discard work
+
+Which option?
+```
+
+### Integration with ohno Boundary Metadata
+
+When `update_task_status` returns boundary metadata:
+
+```javascript
+const result = await mcp.ohno.update_task_status(taskId, 'done');
+
+if (result.boundaries) {
+  if (result.boundaries.story_completed) {
+    // Story is complete, show story completion prompt
+    await handleStoryCompletion(result.boundaries.story);
+  } else if (result.boundaries.epic_completed) {
+    // Epic is complete (rare), show epic completion prompt
+    await handleEpicCompletion(result.boundaries.epic);
+  }
+}
+```
+
+### In-Place Work (no worktree)
+
+If working in-place (chore, docs, or --in-place flag):
+- No worktree prompts
+- Standard commit flow
+- No merge/PR prompts
+
 ## Session End
 
 ### 1. Update Session Notes
@@ -915,3 +1122,4 @@ If you discover a bug while working on a feature:
 - `/pokayokay:handoff` - End session with context preservation
 - `/pokayokay:audit` - Check feature completeness
 - `/pokayokay:review` - Analyze session patterns
+- `/pokayokay:worktrees` - Manage worktrees (list, cleanup, switch, remove)
