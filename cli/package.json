@@ -17,8 +17,19 @@
     "claude-code",
     "setup",
     "wizard",
-    "cli"
+    "cli",
+    "ai",
+    "development"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srstomp/pokayokay.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/srstomp/pokayokay#readme",
+  "bugs": {
+    "url": "https://github.com/srstomp/pokayokay/issues"
+  },
   "author": "Steve Stomp <https://github.com/srstomp>",
   "license": "MIT",
   "dependencies": {
