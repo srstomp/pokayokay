@@ -62,13 +62,29 @@ function detectMcpConfig(serverName) {
 
 /**
  * Check if kaizen CLI is installed and initialized
- * @returns {Promise<object>} { cliInstalled: boolean, initialized: boolean }
+ * Checks PATH, GOPATH/bin, and ~/go/bin
+ * @returns {Promise<object>} { cliInstalled: boolean, initialized: boolean, scope: 'global'|'local'|null }
  */
 async function detectKaizen() {
-  const cliInstalled = await commandExists('kaizen');
-  const initialized = existsSync('.kaizen');
+  let cliInstalled = await commandExists('kaizen');
 
-  return { cliInstalled, initialized };
+  // If not in PATH, check GOPATH/bin and ~/go/bin
+  if (!cliInstalled) {
+    const defaultGoPath = join(homedir(), 'go', 'bin', 'kaizen');
+    if (existsSync(defaultGoPath)) {
+      cliInstalled = true;
+    }
+  }
+
+  // Check for initialization - local (.kaizen) or global (~/.config/kaizen)
+  const localInit = existsSync('.kaizen');
+  const globalInit = existsSync(join(homedir(), '.config', 'kaizen'));
+
+  return {
+    cliInstalled,
+    initialized: localInit || globalInit,
+    scope: localInit ? 'local' : globalInit ? 'global' : null
+  };
 }
 
 /**
@@ -112,6 +128,7 @@ export async function detectEnvironment() {
     // kaizen status
     kaizenCliInstalled: kaizenStatus.cliInstalled,
     kaizenInitialized: kaizenStatus.initialized,
+    kaizenScope: kaizenStatus.scope,
 
     // Raw config for later use
     config
