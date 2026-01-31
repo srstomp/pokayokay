@@ -109,6 +109,16 @@ The most important output — shared context for all skills.
 - **Database**: [Database]
 - **Hosting**: [Platform]
 
+## Design Artifacts
+[Include this section only if design artifacts found]
+
+**Personas** (from `.claude/design/[project-name]/personas.md`):
+- [Persona Name 1]
+- [Persona Name 2]
+- [Persona Name 3]
+
+User stories validated against these personas.
+
 ## Feature Overview
 
 | ID | Feature | Priority | Skill | Status |
@@ -127,6 +137,9 @@ The most important output — shared context for all skills.
 
 ## Current Gaps
 [Updated by product-manager after audit]
+[Include persona validation warnings if any:]
+- User story references undefined persona: [Name] (Story: [ID])
+  → Add persona definition or update story to use generic role
 
 ## Next Actions
 1. [First recommended action]
@@ -136,6 +149,8 @@ The most important output — shared context for all skills.
 - PRD: [path or "uploaded"]
 - Tasks DB: `.claude/tasks.db`
 - Kanban: `.claude/kanban.html`
+[If personas used:]
+- Personas: `.claude/design/[project-name]/personas.md`
 
 ## Session Log
 | Date | Session | Completed | Notes |
@@ -193,6 +208,32 @@ Assign skills to features based on their nature.
 
 ## Analysis Framework
 
+### Design Artifact Discovery
+
+Before parsing the PRD, check for design artifacts:
+
+```
+1. Search for .claude/design/*/personas.md
+2. If found:
+   - Read file content
+   - Parse persona names from headers: "# Persona: [Name]"
+   - Store persona list for validation
+3. If not found:
+   - Proceed without persona validation
+   - Continue normally
+```
+
+**Persona Name Extraction Pattern:**
+
+```
+# Persona: Maria Santos    → Extract "Maria Santos"
+# Persona: Jamie Cooper    → Extract "Jamie Cooper"
+## Demographics            → Ignore (sub-header)
+### Goals                  → Ignore (sub-header)
+```
+
+Only extract from top-level persona headers (`# Persona:`).
+
 ### Document Parsing
 
 Extract these elements from any PRD/brief:
@@ -200,13 +241,20 @@ Extract these elements from any PRD/brief:
 | Element | What to Find | Output |
 |---------|--------------|--------|
 | **Vision** | Why build this? Problem solved? | 1-2 sentence summary |
-| **Users** | Who uses it? Personas? | User types list |
+| **Users** | Who uses it? Personas? | User types list (cross-reference with personas.md if available) |
 | **Features** | What does it do? | Feature list with priority |
 | **Scope** | What's included/excluded? | In/Out lists |
 | **Constraints** | Tech stack, timeline, budget? | Constraint list |
 | **Dependencies** | External systems, APIs, teams? | Dependency map |
 | **Success Metrics** | How measured? | KPI list |
 | **Risks** | What could go wrong? | Risk register |
+
+**User Element Enhancement:**
+
+If personas.md exists:
+- Cross-reference PRD user types with persona names
+- Suggest using specific personas instead of generic roles
+- Note any personas not mentioned in PRD (might be relevant)
 
 ### Scope Classification
 
@@ -419,6 +467,43 @@ Stories are user-facing capabilities (1-5 days):
 **Estimate**: 3 days
 ```
 
+**Persona-Based Stories:**
+
+When design personas are available, prefer persona-specific stories over generic roles:
+
+```markdown
+### Story: Offline Soil Sample Collection
+
+**ID**: story-003-01
+**Epic**: epic-003
+**Assigned Skill**: ux-design
+
+**As Maria Santos** (persona from design artifacts)
+**I want to** collect soil samples using my iPad without cell coverage
+**So that** I can work in remote field areas without losing data
+
+**Acceptance Criteria**:
+- [ ] Offline mode stores data locally
+- [ ] Auto-syncs when connection restored
+- [ ] Clear indicator of offline/online status
+- [ ] No data loss during connectivity transitions
+
+**Estimate**: 4 days
+
+**Persona Note:** This story addresses Maria's specific frustration with farm management apps that fail in areas without cell signal (see personas.md).
+```
+
+**Persona Validation:**
+
+- **Valid:** "As Maria Santos, I want to..." (references defined persona)
+- **Valid:** "As a farmer, I want to..." (generic role, no validation)
+- **Warning:** "As John Doe, I want to..." (persona not in personas.md)
+
+Generic roles are acceptable when:
+- No personas.md exists
+- Story applies to any user type
+- Persona-specific details not relevant to the story
+
 ### Task Definition
 
 Tasks are implementable units (1-8 hours):
@@ -452,29 +537,40 @@ Tasks are implementable units (1-8 hours):
    - Read full document
    - Ask clarifying questions if critical gaps
 
-2. **Create Analysis Summary**
+2. **Check for Design Artifacts** (optional)
+   - Search for `.claude/design/*/personas.md`
+   - If found, parse persona names
+   - Make available for user story validation
+   - If not found, proceed without persona validation
+
+3. **Create Analysis Summary**
    - Vision, users, features, constraints
    - Scope classification (P0-P3)
    - Flag ambiguities
    - Assign skills to features
 
-3. **Break Down Tasks**
+4. **Break Down Tasks**
    - Define epics from major features
    - Break epics into stories
    - Break stories into tasks (≤8h each)
    - Map dependencies
+   - **Validate user stories against personas** (if personas.md exists)
 
-4. **Generate Outputs to `.claude/`**
+5. **Generate Outputs to `.claude/`**
    - Create PROJECT.md (shared context)
+     - Include design artifacts section if personas used
+     - Document persona validation warnings in gaps section
    - Create SQLite database (tasks.db)
    - Generate features.json
    - Generate kanban HTML
    - Write implementation plan markdown
+     - Include persona validation summary
    - Create progress.md template
 
-5. **Deliver Files**
+6. **Deliver Files**
    - All files in `.claude/` folder
    - Present kanban.html for interactive use
+   - Report persona validation results (if applicable)
    - Explain next steps (which skill to run first)
 
 ---
@@ -536,7 +632,110 @@ Tasks are implementable units (1-8 hours):
 
 ---
 
-## Integration Points
+## Design Artifact Integration
+
+### Consuming Personas from Design Plugin
+
+The prd-analyzer can consume persona definitions from the design plugin to validate user stories against real user research.
+
+**Persona Discovery:**
+
+```
+1. Check for .claude/design/*/personas.md files
+2. If found:
+   - Parse persona names from "# Persona: [Name]" headers
+   - Make available for user story validation
+3. If not found:
+   - Proceed normally without persona validation
+   - No errors or warnings about missing file
+```
+
+**Persona Validation Process:**
+
+When creating user stories:
+
+```
+IF personas.md exists:
+  FOR EACH user story:
+    IF story format is "As [Persona Name], I want to..."
+      Check if [Persona Name] exists in personas.md
+      IF NOT found:
+        WARN: "User story references undefined persona: [Name]"
+        SUGGEST: "Add persona to .claude/design/[project]/personas.md or use generic role"
+    ELSE IF story format is "As a [role], I want to..."
+      # Generic role-based story, no validation needed
+      Continue normally
+```
+
+**Distinguishing Personas from Roles:**
+
+- **Persona reference:** "As Maria Santos, I want to..." (specific name, title case)
+- **Generic role:** "As a farmer, I want to..." (generic role, lowercase "a")
+
+Only validate persona references, not generic roles.
+
+**Multiple Design Projects:**
+
+If multiple `.claude/design/*/personas.md` files exist:
+
+```
+projects = find_all(".claude/design/*/personas.md")
+IF length(projects) == 1:
+  USE projects[0]
+ELSE IF length(projects) > 1:
+  ASK USER: "Multiple design projects found: [list]. Which personas should I use?"
+  USE selected_project
+```
+
+**PROJECT.md Documentation:**
+
+When personas are used, add section to PROJECT.md:
+
+```markdown
+## Design Artifacts
+
+**Personas** (from `.claude/design/[project-name]/personas.md`):
+- [Persona Name 1]
+- [Persona Name 2]
+- [Persona Name 3]
+
+User stories validated against these personas.
+
+## Current Gaps
+[If validation warnings exist]
+- User story references undefined persona: [Name] (Story: [ID])
+  → Add persona definition or update story to use generic role
+```
+
+**Validation Output:**
+
+Include validation summary in implementation-plan.md:
+
+```markdown
+## Design Artifacts Used
+
+**Personas:** `.claude/design/[project]/personas.md`
+- Maria Santos
+- Alex Kim
+- Jamie Cooper
+
+**Persona Validation:**
+✓ 12 stories reference defined personas
+⚠ 2 stories reference undefined personas:
+  - Story-005-02: References "John Doe" (not in personas.md)
+  - Story-008-01: References "Jane Smith" (not in personas.md)
+
+**Recommendation:** Add persona definitions for John Doe and Jane Smith, or revise stories to use generic roles ("As a [role]").
+```
+
+**Backward Compatibility:**
+
+- Skill works normally if no personas.md exists
+- No errors, warnings, or blocking behavior
+- User stories processed without persona validation
+- Optional note in output: "No design personas found (proceeding without validation)"
+
+### Integration Points
 
 ### With product-manager
 
@@ -563,6 +762,14 @@ Skills like `ux-design`, `api-design`:
 3. Filter by `assigned_skills` containing their name
 4. Update story status when complete
 
+### With Design Plugin
+
+Design plugin integration:
+1. Reads `.claude/design/*/personas.md` for user persona definitions
+2. Validates user stories reference defined personas
+3. Documents design artifacts used in PROJECT.md
+4. Reports validation warnings in implementation plan
+
 ---
 
 ## Anti-Patterns
@@ -576,6 +783,7 @@ Skills like `ux-design`, `api-design`:
 | Ignoring constraints | Infeasible plan | Check tech stack, timeline, budget |
 | Missing dependencies | Blocked work | Map all external dependencies |
 | No skill assignment | Work not routed | Assign skills to every feature |
+| Ignoring design artifacts | Misses user research insights | Check for .claude/design/*/personas.md, use when available |
 
 ### Task Breakdown Anti-Patterns
 
@@ -605,31 +813,38 @@ Skills like `ux-design`, `api-design`:
 - [ ] Clarifying questions asked (if needed)
 - [ ] Tech stack identified
 - [ ] `.claude/` folder created
+- [ ] Design artifacts checked (`.claude/design/*/personas.md`)
 
 ### During Analysis
 - [ ] All features extracted
 - [ ] Priorities assigned (P0-P3)
 - [ ] Skills assigned to features
 - [ ] Ambiguities documented
+- [ ] Personas loaded (if available)
 
 ### Task Breakdown
 - [ ] Epics created (1 per feature)
 - [ ] Stories created (achievable chunks)
 - [ ] Tasks created (≤8h each)
 - [ ] Dependencies mapped
+- [ ] User stories validated against personas (if available)
 
 ### Output Generation
 - [ ] PROJECT.md created
+  - [ ] Design artifacts section (if personas used)
+  - [ ] Persona validation warnings (if any)
 - [ ] tasks.db created with full schema
 - [ ] features.json created
 - [ ] kanban.html generated
 - [ ] progress.md template created
 - [ ] implementation-plan.md written
+  - [ ] Persona validation summary (if applicable)
 
 ### Handoff
 - [ ] Next steps explained
 - [ ] First skill to run identified
 - [ ] Files presented to user
+- [ ] Persona validation results reported (if applicable)
 
 ---
 
@@ -639,4 +854,5 @@ Skills like `ux-design`, `api-design`:
 - [references/task-breakdown.md](references/task-breakdown.md) — Detailed breakdown methodology
 - [references/kanban-setup.md](references/kanban-setup.md) — Database schema and HTML generation
 - [references/skill-routing.md](references/skill-routing.md) — Skill assignment logic
+- [references/design-artifact-integration.md](references/design-artifact-integration.md) — Consuming design plugin personas for story validation
 - [templates/kanban.html](templates/kanban.html) — Kanban board template
