@@ -336,6 +336,166 @@ Based on task type, determine relevant skill for domain knowledge:
 - Spike tasks → Load `spike` skill (enforce time-box)
 - Research tasks → Load `deep-research` skill
 
+### 2.5 Design Task Routing (Conditional)
+
+Before brainstorming or implementation, check if the task is design-related and should be routed to the design plugin.
+
+#### Design Task Detection
+
+A task is considered design-related if ANY of these conditions are met:
+
+**Task Type Check:**
+- `task_type` is one of: `design`, `ux`, `ui`, `persona`, `accessibility`, `a11y`
+
+**Keyword Check:**
+Check task title and description for design-related keywords:
+- Design work: `design`, `wireframe`, `mockup`, `prototype`
+- UX work: `ux`, `user experience`, `flow`, `journey`, `interaction`
+- UI work: `ui`, `visual`, `component`, `design system`, `tokens`
+- Persona work: `persona`, `user research`, `empathy map`
+- Accessibility work: `accessibility`, `a11y`, `wcag`, `screen reader`
+
+#### Detection Logic
+
+```python
+def is_design_task(task):
+    design_types = ['design', 'ux', 'ui', 'persona', 'accessibility', 'a11y']
+
+    # Check task_type
+    if task.task_type in design_types:
+        return True
+
+    # Check title/description for design keywords
+    design_keywords = ['design', 'ux', 'ui', 'user experience', 'persona',
+                       'accessibility', 'a11y', 'wireframe', 'mockup', 'prototype',
+                       'flow', 'journey', 'interaction', 'visual', 'component',
+                       'design system', 'tokens', 'user research', 'empathy map',
+                       'wcag', 'screen reader']
+    text = (task.title + ' ' + task.description).lower()
+    if any(kw in text for kw in design_keywords):
+        return True
+
+    return False
+```
+
+#### Design Plugin Availability Check
+
+Check if `/design:*` commands are available in the current environment:
+
+```python
+def is_design_plugin_available():
+    # Claude Code plugin system handles command availability
+    # Check for design plugin manifest or command registration
+    return has_command('/design:ux') or has_command('/design:ui')
+```
+
+#### Routing Logic
+
+If task is design-related, determine the appropriate design command:
+
+```python
+def get_design_command(task):
+    """Map task to appropriate /design:* command"""
+    type_map = {
+        'ux': '/design:ux',
+        'ui': '/design:ui',
+        'persona': '/design:persona',
+        'accessibility': '/design:a11y',
+        'a11y': '/design:a11y'
+    }
+
+    # Check task_type first
+    if task.task_type in type_map:
+        return type_map[task.task_type]
+
+    # Check keywords in title/description
+    text = (task.title + ' ' + task.description).lower()
+    if 'persona' in text or 'user research' in text or 'empathy map' in text:
+        return '/design:persona'
+    if 'accessibility' in text or 'a11y' in text or 'wcag' in text:
+        return '/design:a11y'
+    if 'ui' in text or 'visual' in text or 'component' in text or 'design system' in text:
+        return '/design:ui'
+    if 'ux' in text or 'flow' in text or 'journey' in text or 'interaction' in text:
+        return '/design:ux'
+
+    # Default for generic design tasks
+    return '/design:ux'
+```
+
+#### Design Routing Flow
+
+**When design plugin IS available:**
+
+1. Detect design task using `is_design_task()`
+2. Determine appropriate command using `get_design_command()`
+3. Route to the design command:
+   ```markdown
+   Design task detected: {task.title}
+
+   Routing to {design_command} for specialized design workflow.
+
+   The design plugin will handle:
+   - Design artifacts creation
+   - Design system integration
+   - Accessibility compliance
+   - Design review process
+
+   Executing: {design_command}
+   ```
+4. Stop processing in `/work` - design command takes over
+5. Log activity:
+   ```
+   add_task_activity(task_id, "note", "Routed to {design_command}")
+   ```
+
+**When design plugin is NOT available:**
+
+1. Detect design task using `is_design_task()`
+2. Show installation suggestion:
+   ```markdown
+   ⚠️ Design task detected but design plugin not available.
+
+   This task appears to require design work:
+   - Task: {task.title}
+   - Suggested command: {get_design_command(task)}
+
+   The design plugin provides specialized workflows for:
+   - UX flows and user journeys (/design:ux)
+   - Visual design and components (/design:ui)
+   - User personas and research (/design:persona)
+   - Accessibility audits (/design:a11y)
+   - Marketing pages (/design:marketing)
+
+   To enable design workflows, install the design plugin:
+     claude plugin install design
+
+   Alternatively, continue with standard implementation (may miss design artifacts).
+
+   Continue without design plugin? [y/n]
+   ```
+3. Handle user response:
+   - **y**: Log decision and continue to Brainstorm Gate (Step 3)
+   - **n**: Pause session, suggest plugin installation
+
+#### Design Command Mapping
+
+| Task Type/Keywords | Design Command | Purpose |
+|-------------------|----------------|---------|
+| `ux`, flow, journey, interaction | `/design:ux` | UX flows, IA, user journeys |
+| `ui`, visual, component, tokens | `/design:ui` | Visual system, components |
+| `persona`, user research | `/design:persona` | User personas, empathy maps |
+| `accessibility`, `a11y`, wcag | `/design:a11y` | Accessibility audits |
+| Generic `design` | `/design:ux` | Default to UX workflow |
+
+#### Logging
+
+Log all design routing decisions:
+```
+add_task_activity(task_id, "note", "Design task detected, routing to {command}")
+add_task_activity(task_id, "note", "Design plugin not available, user chose to continue")
+```
+
 ### 3. Brainstorm Gate (Conditional)
 
 Before dispatching the implementer, check if the task needs brainstorming.
