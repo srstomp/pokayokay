@@ -55,7 +55,7 @@ export async function doctor() {
 
   // kaizen (optional)
   if (env.kaizenCliInstalled && env.kaizenInitialized) {
-    console.log(chalk.green('  ✓ kaizen configured'));
+    console.log(chalk.green(`  ✓ kaizen configured (${env.kaizenScope})`));
   } else if (env.kaizenCliInstalled) {
     console.log(chalk.yellow('  ○ kaizen CLI installed but not initialized'));
     console.log(chalk.dim('    Run: kaizen init'));

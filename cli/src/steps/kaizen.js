@@ -1,6 +1,37 @@
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import prompts from 'prompts';
 import chalk from 'chalk';
 import { execute, commandExists } from '../utils/execute.js';
+
+/**
+ * Get the path to kaizen binary, checking GOPATH/bin and ~/go/bin
+ * @returns {Promise<string|null>} Path to kaizen or null if not found
+ */
+async function getKaizenPath() {
+  // Check if kaizen is in PATH
+  if (await commandExists('kaizen')) {
+    return 'kaizen';
+  }
+
+  // Check GOPATH/bin
+  const goPathResult = await execute('go', ['env', 'GOPATH']);
+  if (goPathResult.success && goPathResult.stdout.trim()) {
+    const goPathBin = join(goPathResult.stdout.trim(), 'bin', 'kaizen');
+    if (existsSync(goPathBin)) {
+      return goPathBin;
+    }
+  }
+
+  // Check ~/go/bin (default GOPATH)
+  const defaultGoPath = join(homedir(), 'go', 'bin', 'kaizen');
+  if (existsSync(defaultGoPath)) {
+    return defaultGoPath;
+  }
+
+  return null;
+}
 
 /**
  * Step 4: Configure kaizen integration (optional)
@@ -30,6 +61,9 @@ export async function configureKaizen(env) {
     return false;
   }
 
+  // Track the kaizen binary path
+  let kaizenBin = env.kaizenCliInstalled ? 'kaizen' : null;
+
   // Install kaizen if not present
   if (!env.kaizenCliInstalled) {
     const goInstalled = await commandExists('go');
@@ -50,12 +84,20 @@ export async function configureKaizen(env) {
     }
 
     console.log(chalk.green('  ✓ kaizen installed'));
+
+    // Find the installed binary path
+    kaizenBin = await getKaizenPath();
+    if (!kaizenBin) {
+      console.log(chalk.yellow('  ⚠ kaizen installed but not found in PATH'));
+      console.log('  Add ~/go/bin to your PATH, then run `kaizen init`');
+      return false;
+    }
   }
 
   // Initialize kaizen if not present
   if (!env.kaizenInitialized) {
     console.log('  Initializing kaizen...');
-    const initResult = await execute('kaizen', ['init']);
+    const initResult = await execute(kaizenBin, ['init']);
 
     if (!initResult.success) {
       console.log(chalk.red(`  ✗ Failed to initialize kaizen: ${initResult.stderr}`));
