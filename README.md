@@ -28,6 +28,25 @@
 
 ## Installation
 
+The easiest way to install is with the setup wizard:
+
+```bash
+npx pokayokay
+```
+
+This interactive wizard will:
+1. Install the pokayokay Claude Code plugin
+2. Configure the ohno MCP server
+3. Initialize ohno in your project
+4. Optionally set up kaizen integration
+
+Run `npx pokayokay doctor` anytime to verify your installation.
+
+### Manual Installation
+
+<details>
+<summary>Click to expand manual steps</summary>
+
 ```bash
 # 1. Add the marketplace (one-time setup)
 claude plugin marketplace add srstomp/pokayokay
@@ -43,9 +62,9 @@ Or from inside Claude Code REPL:
 /plugin install pokayokay@srstomp-pokayokay
 ```
 
-### Required: ohno MCP Server
+#### Required: ohno MCP Server
 
-Add to your MCP configuration:
+Add to your MCP configuration (`~/.claude/settings.json`):
 
 ```json
 {
@@ -58,22 +77,32 @@ Add to your MCP configuration:
 }
 ```
 
+#### Initialize ohno
+
+```bash
+npx @stevestomp/ohno-cli init
+```
+
+</details>
+
 ## Quick Start
 
 ```bash
-# 1. Initialize ohno in your project
-npx @stevestomp/ohno-cli init
+# 1. Run setup wizard (if not done already)
+npx pokayokay
 
-# 2. Plan from a PRD
+# 2. Restart Claude Code to activate MCP server
+
+# 3. Plan from a PRD
 /pokayokay:plan docs/prd.md
 
-# 3. View kanban board
+# 4. View kanban board
 npx @stevestomp/ohno-cli serve
 
-# 4. Start working
+# 5. Start working
 /pokayokay:work supervised
 
-# 5. Audit completeness
+# 6. Audit completeness
 /pokayokay:audit --full
 ```
 
@@ -199,10 +228,10 @@ Run multiple tasks simultaneously for faster throughput:
 
 ```bash
 # Run up to 3 tasks in parallel
-/work semi-auto --parallel 3
+/pokayokay:work semi-auto --parallel 3
 
 # Short form
-/work -p 3
+/pokayokay:work -p 3
 ```
 
 **How it works:**
