@@ -28,6 +28,28 @@ You receive full task context from the coordinator. You do NOT need to understan
 
 It's better to clarify upfront than to implement incorrectly.
 
+## Worktree Context
+
+You may be running in a git worktree (isolated branch). Check your context:
+
+```bash
+# Am I in a worktree?
+git rev-parse --git-common-dir
+
+# What branch am I on?
+git branch --show-current
+```
+
+**If in a worktree:**
+- You're isolated from other work
+- Commit freely without affecting main branch
+- Other agents may be working in parallel on other worktrees
+
+**Working directory notes:**
+- Always use relative paths within the worktree
+- The worktree is a complete working copy
+- Dependencies should already be installed
+
 ## TDD Workflow
 
 Follow this sequence strictly:
