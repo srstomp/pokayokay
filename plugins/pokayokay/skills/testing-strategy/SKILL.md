@@ -313,6 +313,97 @@ const fakeDb = new Map<string, User>();
 const userService = createUserService({ db: fakeDb });
 ```
 
+## Design Artifact Integration
+
+### Consuming Accessibility Audits
+
+When accessibility audits exist from the design phase, incorporate their findings into your test strategy.
+
+**Check for design artifacts:**
+
+```bash
+# Look for accessibility audit in .claude/design directory
+find .claude/design -name "a11y-audit.md" 2>/dev/null
+```
+
+**If `.claude/design/*/a11y-audit.md` exists:**
+
+1. **Read the audit findings** — Focus on the "Findings" section
+2. **Extract testable requirements** — Each finding with severity (Critical/Major) should have corresponding tests
+3. **Map findings to test types:**
+   - **WCAG compliance issues** → Component tests (RTL/Vitest) + E2E tests (Playwright)
+   - **Keyboard navigation issues** → E2E tests with keyboard-only simulation
+   - **Screen reader issues** → Component tests with accessibility tree assertions
+   - **Color contrast issues** → Visual regression tests or automated checks
+   - **ARIA issues** → Component tests checking roles, labels, states
+
+**Generate accessibility test cases from audit:**
+
+```typescript
+// Example: From finding "Form inputs missing labels"
+describe('LoginForm accessibility', () => {
+  it('all form fields have accessible labels', () => {
+    render(<LoginForm />);
+
+    const emailInput = screen.getByRole('textbox', { name: /email/i });
+    const passwordInput = screen.getByLabelText(/password/i);
+
+    expect(emailInput).toHaveAccessibleName();
+    expect(passwordInput).toHaveAccessibleName();
+  });
+});
+
+// Example: From finding "Checkout not keyboard accessible"
+test('complete checkout flow using keyboard only', async ({ page }) => {
+  await page.goto('/checkout');
+
+  // Tab navigation through form
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('John Doe');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('john@example.com');
+
+  // Submit with Enter
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('[role="alert"]')).toContainText('Order confirmed');
+});
+
+// Example: From finding "Low contrast on primary buttons"
+describe('Button contrast', () => {
+  it('meets WCAG AA contrast ratio', () => {
+    render(<PrimaryButton>Submit</PrimaryButton>);
+
+    const button = screen.getByRole('button', { name: /submit/i });
+    const styles = window.getComputedStyle(button);
+
+    // Can use jest-axe or manual color contrast calculation
+    expect(button).toHaveNoViolations(); // jest-axe
+  });
+});
+```
+
+**Mapping WCAG criteria to test approaches:**
+
+| WCAG Criterion | Test Type | Tool/Approach |
+|----------------|-----------|---------------|
+| **1.1.1 Non-text Content** | Component | Check `alt` attributes, `aria-label` |
+| **1.3.1 Info and Relationships** | Component | Validate semantic HTML, heading hierarchy |
+| **1.4.3 Contrast (Minimum)** | Visual/Component | jest-axe, color contrast library |
+| **2.1.1 Keyboard** | E2E | Playwright keyboard navigation |
+| **2.4.3 Focus Order** | E2E | Tab order verification |
+| **2.4.7 Focus Visible** | E2E | Assert focus indicator visibility |
+| **3.3.1 Error Identification** | Component + E2E | Check error messages are announced |
+| **4.1.2 Name, Role, Value** | Component | ARIA role and attribute validation |
+
+**Backward compatibility:**
+
+If no a11y-audit.md exists, the skill works normally. Accessibility testing is still important:
+
+- Add basic keyboard navigation tests for interactive elements
+- Validate semantic HTML and ARIA where used
+- Include accessibility in component test checklist (see below)
+
 ## Checklist: New Feature Testing
 
 ### Before Writing Tests
@@ -321,6 +412,7 @@ const userService = createUserService({ db: fakeDb });
 - [ ] List critical user paths that need E2E coverage
 - [ ] Identify external boundaries to mock (APIs, services)
 - [ ] Set up test data factories/fixtures
+- [ ] **Check for `.claude/design/*/a11y-audit.md` and extract testable requirements**
 
 ### Component Tests
 
@@ -328,6 +420,7 @@ const userService = createUserService({ db: fakeDb });
 - [ ] Renders all visual states (loading, error, empty, success)
 - [ ] Handles user interactions
 - [ ] Accessibility: keyboard navigation, ARIA labels
+- [ ] **If a11y-audit exists: Address specific findings (labels, roles, contrast)**
 
 ### Integration Tests
 
@@ -342,6 +435,7 @@ const userService = createUserService({ db: fakeDb });
 - [ ] Cross-browser if required
 - [ ] Mobile viewport if responsive
 - [ ] Test data cleanup after run
+- [ ] **If a11y-audit exists: Keyboard-only flows for critical paths**
 
 ---
 
