@@ -214,17 +214,35 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     # Extract task metadata from response if available
     task_data = tool_response.get("task", {})
     task_title = task_data.get("title", tool_input.get("title", ""))
-    task_type = task_data.get("type", tool_input.get("type", ""))
+    task_type = task_data.get("task_type", task_data.get("type", tool_input.get("type", "feature")))
+    story_id = task_data.get("story_id", "")
+
+    # Get worktree flags from environment (set by /work command)
+    force_worktree = os.environ.get("YOKAY_FORCE_WORKTREE", "false")
+    force_inplace = os.environ.get("YOKAY_FORCE_INPLACE", "false")
 
     env = {
         "TASK_ID": task_id,
         "TASK_TITLE": task_title,
         "TASK_TYPE": task_type,
+        "STORY_ID": story_id,
+        "FORCE_WORKTREE": force_worktree,
+        "FORCE_INPLACE": force_inplace,
     }
 
     results = []
     results.append(run_action("check-blockers", env=env))
     results.append(run_action("suggest-skills", env=env))
+    results.append(run_action("setup-worktree", env=env))
+
+    # Parse worktree result for context
+    worktree_info = {}
+    worktree_result = next((r for r in results if r["action"] == "setup-worktree"), None)
+    if worktree_result and worktree_result.get("status") == "success" and worktree_result.get("output"):
+        for line in worktree_result["output"].split("\n"):
+            if "=" in line:
+                key, value = line.split("=", 1)
+                worktree_info[key.strip()] = value.strip()
 
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")
@@ -232,6 +250,7 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     return {
         "hooks_run": ["pre-task"],
         "task_id": task_id,
+        "worktree": worktree_info,
         "results": results,
         "summary": f"{success_count} passed, {warning_count} warnings"
     }
@@ -506,6 +525,29 @@ def format_context(result: dict) -> str:
     if result.get("summary"):
         lines.append("")
         lines.append(f"**Summary:** {result['summary']}")
+
+    # Worktree info
+    worktree = result.get("worktree", {})
+    if worktree:
+        lines.append("")
+        mode = worktree.get("MODE", "")
+        if mode == "worktree":
+            if worktree.get("WORKTREE_CREATED") == "true":
+                lines.append("## Worktree Setup")
+                lines.append(f"  ✓ Branch created: {worktree.get('WORKTREE_BRANCH', 'unknown')}")
+                lines.append(f"  ✓ Path: {worktree.get('WORKTREE_PATH', 'unknown')}")
+                lines.append(f"  ✓ Based on: {worktree.get('BASE_BRANCH', 'main')}")
+                lines.append("")
+                lines.append(f"**IMPORTANT**: Work in `{worktree.get('WORKTREE_PATH')}` for this task.")
+            elif worktree.get("WORKTREE_REUSED") == "true":
+                lines.append("## Worktree Reused")
+                lines.append(f"  ✓ Using existing worktree: {worktree.get('WORKTREE_PATH', 'unknown')}")
+                lines.append("")
+                lines.append(f"**IMPORTANT**: Work in `{worktree.get('WORKTREE_PATH')}` for this task.")
+        elif mode == "in-place":
+            reason = worktree.get("REASON", "smart default")
+            lines.append("## Working In-Place")
+            lines.append(f"  Working directly on current branch ({reason}).")
 
     # Blocker info
     if result.get("blocker_reason"):

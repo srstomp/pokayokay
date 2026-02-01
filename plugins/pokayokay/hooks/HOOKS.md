@@ -41,7 +41,7 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | Hook | Trigger | Default Actions |
 |------|---------|-----------------|
 | pre-session | Session start | verify-clean |
-| pre-task | Task start | check-blockers, suggest-skills |
+| pre-task | Task start | check-blockers, suggest-skills, setup-worktree |
 | post-task | Task complete | sync, commit, detect-spike, capture-knowledge |
 | post-story | Story complete | test, mini-audit, audit-gate |
 | post-epic | Epic complete | full-audit, audit-gate |
@@ -145,6 +145,21 @@ fi
 ## Intelligent Hooks
 
 Beyond lifecycle automation, hooks now provide intelligent guidance:
+
+### Worktree Setup (pre-task)
+Automatically creates git worktrees for task isolation based on task type:
+
+| Task Type | Default Behavior |
+|-----------|------------------|
+| `feature`, `bug`, `spike` | Creates worktree in `.worktrees/` |
+| `chore`, `docs` | Works in-place (no worktree) |
+| Unknown | Creates worktree (safer default) |
+
+**Override flags** (set via environment):
+- `YOKAY_FORCE_WORKTREE=true` - Always create worktree
+- `YOKAY_FORCE_INPLACE=true` - Never create worktree
+
+**Story worktree reuse**: If a task belongs to a story and a worktree already exists for that story, it will be reused instead of creating a new one.
 
 ### Skill Suggestions (pre-task)
 Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to performance, security, accessibility, observability, and testing.
@@ -286,6 +301,7 @@ The bridge script uses this to determine which hooks to run:
 | `actions/verify-clean.sh` | Checks for uncommitted changes (pre-session) |
 | `actions/check-blockers.sh` | Checks for blocked tasks (pre-task) |
 | `actions/suggest-skills.sh` | Suggests relevant skills based on task content (pre-task) |
+| `actions/setup-worktree.sh` | Creates git worktree for task isolation (pre-task) |
 | `actions/sync.sh` | Syncs ohno kanban state |
 | `actions/commit.sh` | Smart git commit |
 | `actions/detect-spike.sh` | Detects uncertainty signals, suggests spike conversion (post-task) |
