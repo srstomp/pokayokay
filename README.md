@@ -17,7 +17,7 @@
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
 - **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, or autonomous
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
-- **25 Specialized Skills** - Route work to domain experts automatically
+- **23 Specialized Skills** - Route work to domain experts automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
 
 ## Prerequisites
@@ -130,16 +130,6 @@ npx @stevestomp/ohno-cli serve
 | `/pokayokay:spike <question>` | Time-boxed technical investigation |
 | `/pokayokay:hotfix <incident>` | Production incident response |
 
-### Design & UX
-
-| Command | Description |
-|---------|-------------|
-| `/pokayokay:ux <task>` | UX design - user flows, wireframes, interactions |
-| `/pokayokay:ui <task>` | Visual design - typography, color, motion |
-| `/pokayokay:persona <task>` | Create user personas and journey maps |
-| `/pokayokay:a11y <target>` | Accessibility audit (WCAG 2.2 AA) |
-| `/pokayokay:marketing <page>` | Marketing and landing pages |
-
 ### Development
 
 | Command | Description |
@@ -168,13 +158,7 @@ npx @stevestomp/ohno-cli serve
 
 ## Skills
 
-The plugin includes 26 specialized skills that are automatically loaded based on task type:
-
-### Design & UX
-- `ux-design` - User flows, wireframes, information architecture
-- `aesthetic-ui-designer` - Visual design, typography, color systems
-- `persona-creation` - User research and persona development
-- `accessibility-auditor` - WCAG 2.2 compliance
+The plugin includes 23 specialized skills that are automatically loaded based on task type:
 
 ### Backend & API
 - `api-design` - REST/GraphQL endpoint design
