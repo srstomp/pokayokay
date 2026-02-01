@@ -10,23 +10,42 @@ Analyze the PRD at `$ARGUMENTS` and create a structured implementation plan.
 
 ## Steps
 
-### 1. Read the PRD
+### 1. Check Design Plugin Availability
+
+Before analyzing the PRD, check if the design plugin is installed to enable design-first workflows for UI/UX heavy features.
+
+```python
+def is_design_plugin_available():
+    """Check if design plugin commands are available"""
+    design_commands = ['/design:ux', '/design:ui', '/design:persona', '/design:a11y', '/design:marketing']
+    return any(has_command(cmd) for cmd in design_commands)
+
+# Store result for later use
+design_plugin_available = is_design_plugin_available()
+```
+
+This check is non-blocking - it only detects availability. The result will be used later during task creation to:
+- Route design-related tasks to `/design:*` commands when available
+- Suggest design plugin installation for UI/UX heavy features when not available
+- Enable design-first workflows that create design artifacts before implementation
+
+### 2. Read the PRD
 Read and understand the document at the provided path. Extract:
 - Project name and description
 - Core features and requirements
 - Technical constraints
 - Success criteria
 
-### 2. Initialize ohno (if needed)
+### 3. Initialize ohno (if needed)
 ```bash
 npx @stevestomp/ohno-cli init
 ```
 
-### 3. Create Hierarchical Structure
+### 4. Create Hierarchical Structure
 
 Use the ohno MCP tools to create a proper epic → story → task hierarchy:
 
-#### 3.1 Create Epics (Major Features)
+#### 4.1 Create Epics (Major Features)
 For each major feature area, create an epic with priority:
 ```
 mcp__ohno__create_epic:
@@ -35,7 +54,7 @@ mcp__ohno__create_epic:
   priority: "P0"  # P0=critical, P1=high, P2=medium, P3=low
 ```
 
-#### 3.2 Create Stories (User-Facing Capabilities)
+#### 4.2 Create Stories (User-Facing Capabilities)
 For each epic, create stories representing user-facing chunks:
 ```
 mcp__ohno__create_story:
@@ -44,7 +63,7 @@ mcp__ohno__create_story:
   description: "Users can create accounts with email and password"
 ```
 
-#### 3.3 Create Tasks (Implementable Units)
+#### 4.3 Create Tasks (Implementable Units)
 For each story, create tasks (1-8 hours each):
 ```
 mcp__ohno__create_task:
@@ -54,7 +73,7 @@ mcp__ohno__create_task:
   estimate_hours: 4
 ```
 
-#### 3.4 Add Dependencies
+#### 4.4 Add Dependencies
 Link tasks that depend on each other:
 ```
 mcp__ohno__add_dependency:
@@ -64,7 +83,7 @@ mcp__ohno__add_dependency:
 
 **Important**: Always create in order: epics first, then stories (with epic_id), then tasks (with story_id). This ensures proper relationships.
 
-### 4. Assign Skill Hints
+### 5. Assign Skill Hints
 
 Tag tasks with recommended skills based on their content:
 
@@ -86,7 +105,7 @@ Tag tasks with recommended skills based on their content:
 - Time-boxed technical questions → spike (task_type: spike)
 - Multi-day technology evaluation → deep-research (task_type: research)
 
-### 4.1 Keyword Detection
+### 5.1 Keyword Detection
 
 When skill not explicitly specified, detect from task title/description:
 
@@ -100,7 +119,7 @@ When skill not explicitly specified, detect from task title/description:
 | spike, investigate, feasibility, can we, how hard | spike | spike |
 | research, evaluate, compare, vendor, assessment | deep-research | research |
 
-### 4.2 Detect Spike Opportunities
+### 5.2 Detect Spike Opportunities
 
 For features with high uncertainty, create spike tasks:
 - "Can we...?" or "Is it possible to...?" questions
@@ -117,7 +136,7 @@ mcp__ohno__create_task:
   estimate_hours: 3
 ```
 
-### 4.3 Design Plugin Integration
+### 5.3 Design Plugin Integration
 
 When planning UI/UX heavy features, check if design plugin is available to enable design-first workflows.
 
@@ -184,18 +203,21 @@ def is_uiux_heavy(prd_text):
 
 #### Design Plugin Availability Check
 
-Check if design plugin commands are available:
+The design plugin availability was checked at the start of the workflow (Step 1).
+
+Use the stored `design_plugin_available` variable to determine routing:
 
 ```python
-def is_design_plugin_available():
-    """Check if design plugin is installed"""
-    # Claude Code plugin system handles command availability
-    return has_command('/design:ux') or has_command('/design:ui')
+# Already available from Step 1
+if design_plugin_available:
+    # Enable design-first workflows
+else:
+    # Suggest installation or proceed without design plugin
 ```
 
 #### Design-First Workflow Suggestion
 
-**When design plugin IS available:**
+**When design plugin IS available (`design_plugin_available == True`):**
 
 After creating epics and stories, suggest design tasks BEFORE implementation:
 
@@ -332,14 +354,14 @@ Tasks created with design task types will automatically route to design plugin i
 
 See work.md Section 2.5 "Design Task Routing" for full routing logic.
 
-### 5. Create Project Context
+### 6. Create Project Context
 Create `.claude/PROJECT.md` with:
 - Project overview
 - Tech stack decisions
 - Feature summary with task IDs
 - Links to ohno kanban
 
-### 6. Sync and Report
+### 7. Sync and Report
 ```bash
 npx @stevestomp/ohno-cli sync
 ```
