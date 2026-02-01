@@ -312,12 +312,6 @@ Read task details via ohno MCP `get_task`.
 
 Based on task type, determine relevant skill for domain knowledge:
 
-**Design & UX**:
-- UI work → Load `aesthetic-ui-designer` skill
-- UX decisions → Load `ux-design` skill
-- User research → Load `persona-creation` skill
-- Accessibility → Load `accessibility-auditor` skill
-
 **Backend & API**:
 - API work → Load `api-design` skill
 - Database work → Load `database-design` skill

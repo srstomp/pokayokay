@@ -2,21 +2,18 @@
 
 Logic for assigning skills to features and managing the workflow between them.
 
+> **Note:** Design work routes to design plugin via `/design:*` commands
+
 ## Skill Catalog
 
 Available skills that can be assigned to features:
 
 | Skill | Purpose | Input | Output |
 |-------|---------|-------|--------|
-| `ux-design` | User flows, wireframes, patterns | Feature requirements | UX spec, wireframes |
 | `api-design` | REST/GraphQL API design | Feature requirements | OpenAPI spec, endpoints |
 | `api-testing` | API test suites | API spec | Test files |
-| `aesthetic-ui-designer` | UI implementation | UX spec | React/RN/Swift components |
 | `frontend-design` | Frontend architecture | Requirements | Component structure |
 | `sdk-development` | SDK/library creation | API spec | SDK package |
-| `accessibility-auditor` | A11y compliance | UI components | Audit report, fixes |
-| `persona-creation` | User personas | Research | Persona docs |
-| `marketing-website` | Landing pages | Brief | Marketing site |
 | `product-manager` | Completeness audit | Codebase | Gap report |
 
 ---
@@ -39,41 +36,16 @@ def assign_skills(feature: dict) -> list[str]:
         'authentication', 'authorization', 'webhook', 'sync'
     ]):
         skills.append('api-design')
-    
-    # UI/Frontend features
-    if any(word in title + description for word in [
-        'dashboard', 'page', 'screen', 'ui', 'interface', 'form',
-        'wizard', 'modal', 'component', 'widget'
-    ]):
-        skills.append('ux-design')
-        skills.append('aesthetic-ui-designer')
-    
-    # Mobile features
-    if any(word in title + description for word in [
-        'mobile', 'ios', 'android', 'app', 'native'
-    ]):
-        skills.append('ux-design')
-        skills.append('aesthetic-ui-designer')
-    
+
     # SDK/Library features
     if any(word in title + description for word in [
         'sdk', 'library', 'package', 'npm', 'client'
     ]):
         skills.append('sdk-development')
-    
-    # Data/Analytics features
-    if any(word in title + description for word in [
-        'analytics', 'dashboard', 'chart', 'report', 'visualization'
-    ]):
-        skills.append('ux-design')
-        skills.append('aesthetic-ui-designer')
-    
+
     # If no skills assigned, default based on priority
     if not skills:
-        if feature.get('priority') == 'P0':
-            skills = ['api-design', 'ux-design']
-        else:
-            skills = ['api-design']
+        skills = ['api-design']
     
     return skills
 ```
@@ -83,63 +55,38 @@ def assign_skills(feature: dict) -> list[str]:
 Skills should run in this order:
 
 ```
-1. Research/Planning
-   - persona-creation (if user research needed)
-
-2. Design
-   - ux-design (structure, flows, wireframes)
-
-3. API
+1. API
    - api-design (endpoints, contracts)
    - api-testing (after API implemented)
 
-4. Implementation
-   - aesthetic-ui-designer (UI components)
+2. Implementation
    - sdk-development (if SDK needed)
 
-5. Quality
-   - accessibility-auditor (after UI implemented)
+3. Quality
    - product-manager (final audit)
 ```
 
 ### Dependency Graph
 
 ```
-                    ┌─────────────────┐
-                    │ persona-creation │
-                    └────────┬────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │    ux-design    │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-      ┌──────────────┐ ┌──────────┐ ┌──────────────┐
-      │  api-design  │ │  (skip)  │ │ frontend-    │
-      └──────┬───────┘ └──────────┘ │   design     │
-             │                       └──────┬───────┘
-             ▼                              │
-      ┌──────────────┐                      │
-      │  api-testing │                      │
-      └──────────────┘                      │
-                                            ▼
-                                   ┌─────────────────────┐
-                                   │ aesthetic-ui-       │
-                                   │      designer       │
-                                   └──────────┬──────────┘
-                                              │
-                                              ▼
-                                   ┌─────────────────────┐
-                                   │ accessibility-      │
-                                   │       auditor       │
-                                   └──────────┬──────────┘
-                                              │
-                                              ▼
-                                   ┌─────────────────────┐
-                                   │  product-manager    │
-                                   └─────────────────────┘
+      ┌──────────────┐
+      │  api-design  │
+      └──────┬───────┘
+             │
+             ▼
+      ┌──────────────┐
+      │  api-testing │
+      └──────┬───────┘
+             │
+             ▼
+      ┌──────────────┐
+      │sdk-development│
+      └──────┬───────┘
+             │
+             ▼
+      ┌──────────────┐
+      │product-manager│
+      └──────────────┘
 ```
 
 ---
@@ -150,15 +97,8 @@ Skills should run in this order:
 
 | Feature Pattern | Primary | Secondary | Order |
 |-----------------|---------|-----------|-------|
-| "User Dashboard" | ux-design | aesthetic-ui-designer | ux → aesthetic |
 | "REST API for X" | api-design | api-testing | api → testing |
-| "Mobile App" | ux-design | aesthetic-ui-designer | ux → aesthetic |
-| "Admin Panel" | ux-design | aesthetic-ui-designer | ux → aesthetic |
 | "Slack Integration" | api-design | — | api |
-| "Search Feature" | api-design | ux-design, aesthetic | api → ux → aesthetic |
-| "Analytics Dashboard" | ux-design | aesthetic-ui-designer | ux → aesthetic |
-| "Export Feature" | api-design | ux-design | api → ux |
-| "Settings Page" | ux-design | aesthetic-ui-designer | ux → aesthetic |
 | "SDK/Client Library" | sdk-development | — | sdk |
 
 ### Example Assignments
@@ -167,14 +107,7 @@ Skills should run in this order:
 {
   "features": [
     {
-      "id": "F001",
-      "title": "Survey Studio",
-      "type_signals": ["ui", "wizard", "form"],
-      "assigned_skills": ["ux-design", "aesthetic-ui-designer"],
-      "skill_order": ["ux-design", "aesthetic-ui-designer"]
-    },
-    {
-      "id": "F002", 
+      "id": "F002",
       "title": "RAG Pipeline",
       "type_signals": ["api", "backend", "service"],
       "assigned_skills": ["api-design"],
@@ -182,10 +115,10 @@ Skills should run in this order:
     },
     {
       "id": "F003",
-      "title": "Chat Interface",
-      "type_signals": ["ui", "interface", "realtime"],
-      "assigned_skills": ["ux-design", "api-design", "aesthetic-ui-designer"],
-      "skill_order": ["api-design", "ux-design", "aesthetic-ui-designer"]
+      "title": "Chat API",
+      "type_signals": ["api", "realtime"],
+      "assigned_skills": ["api-design", "api-testing"],
+      "skill_order": ["api-design", "api-testing"]
     },
     {
       "id": "F026",
@@ -207,27 +140,27 @@ Skills should run in this order:
 ```sql
 -- Track skill assignment at epic level
 UPDATE epics SET
-    assigned_skills = '["ux-design", "aesthetic-ui-designer"]',
-    skill_order = '["ux-design", "aesthetic-ui-designer"]',
-    current_skill = 'ux-design'
+    assigned_skills = '["api-design", "api-testing"]',
+    skill_order = '["api-design", "api-testing"]',
+    current_skill = 'api-design'
 WHERE id = 'epic-001';
 
 -- Track skill assignment at story level
 UPDATE stories SET
-    assigned_skill = 'ux-design'
+    assigned_skill = 'api-design'
 WHERE id = 'story-001-01';
 
 -- Query features by skill
 SELECT e.id, e.title, e.priority
 FROM epics e
-WHERE e.assigned_skills LIKE '%ux-design%'
-  AND e.current_skill = 'ux-design'
-ORDER BY 
-    CASE e.priority 
-        WHEN 'P0' THEN 0 
-        WHEN 'P1' THEN 1 
-        WHEN 'P2' THEN 2 
-        ELSE 3 
+WHERE e.assigned_skills LIKE '%api-design%'
+  AND e.current_skill = 'api-design'
+ORDER BY
+    CASE e.priority
+        WHEN 'P0' THEN 0
+        WHEN 'P1' THEN 1
+        WHEN 'P2' THEN 2
+        ELSE 3
     END;
 ```
 
@@ -246,7 +179,7 @@ WHERE id = 'epic-001';
 
 -- Or explicitly
 UPDATE epics SET
-    current_skill = 'aesthetic-ui-designer',  -- was 'ux-design'
+    current_skill = 'api-testing',  -- was 'api-design'
     updated_at = datetime('now')
 WHERE id = 'epic-001';
 ```
@@ -337,34 +270,30 @@ def complete_skill_work(skill_name: str, epic_id: str, db_path: str):
 
 | Skill | Features | Priority | Status |
 |-------|----------|----------|--------|
-| ux-design | F001, F003, F011 | P0, P0, P1 | pending |
 | api-design | F002, F007, F008 | P0, P0, P0 | pending |
-| aesthetic-ui-designer | F001, F003, F011 | P0, P0, P1 | blocked |
-| accessibility-auditor | All UI features | — | not started |
+| api-testing | F002, F007 | P0, P0 | blocked |
+| sdk-development | F026 | P1 | not started |
 | product-manager | All features | — | not started |
 
 ### Skill Dependencies
 
 ```
-ux-design ──────────────────────┐
-                                ▼
-api-design ──────────────────► aesthetic-ui-designer
-                                        │
-                                        ▼
-                              accessibility-auditor
-                                        │
-                                        ▼
-                               product-manager
+api-design ──────────────────► api-testing
+                                     │
+                                     ▼
+                              sdk-development
+                                     │
+                                     ▼
+                              product-manager
 ```
 
 ### Next Skill to Run
 
 Based on dependencies and P0 priorities:
 1. **api-design** for F002 (RAG Pipeline) — no blockers
-2. **ux-design** for F001 (Survey Studio) — no blockers
 
 After those complete:
-3. **aesthetic-ui-designer** for F001, F003
+2. **api-testing** for F002, F007
 ```
 
 ---
@@ -443,15 +372,14 @@ LIMIT 1;
 ### Feature Needs Multiple Skills Simultaneously
 
 Some features may need parallel work:
-- API design + UX design can happen in parallel
-- Frontend + Backend can be parallel
+- API design + testing can happen after implementation
 
 Handle with:
 ```json
 {
   "skill_order": [
-    ["api-design", "ux-design"],  // parallel
-    "aesthetic-ui-designer"       // sequential
+    "api-design",      // sequential
+    "api-testing"      // sequential
   ]
 }
 ```
