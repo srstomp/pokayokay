@@ -9,7 +9,7 @@ PLAN_FILE="plugins/pokayokay/commands/plan.md"
 
 # Test 1: Design Plugin Integration section exists
 echo "Test 1: Design Plugin Integration section exists"
-if grep -q "### 4.3 Design Plugin Integration" "$PLAN_FILE"; then
+if grep -q "### 5.3 Design Plugin Integration" "$PLAN_FILE"; then
   echo "  PASS: Design Plugin Integration section exists"
 else
   echo "  FAIL: Design Plugin Integration section not found"
@@ -19,8 +19,8 @@ fi
 # Test 2: Section is positioned after Spike Opportunities
 echo "Test 2: Section positioned after Spike Opportunities"
 # Extract line numbers
-DESIGN_LINE=$(grep -n "### 4.3 Design Plugin Integration" "$PLAN_FILE" | cut -d: -f1)
-SPIKE_LINE=$(grep -n "### 4.2 Detect Spike Opportunities" "$PLAN_FILE" | cut -d: -f1)
+DESIGN_LINE=$(grep -n "### 5.3 Design Plugin Integration" "$PLAN_FILE" | cut -d: -f1)
+SPIKE_LINE=$(grep -n "### 5.2 Detect Spike Opportunities" "$PLAN_FILE" | cut -d: -f1)
 
 if [[ $DESIGN_LINE -gt $SPIKE_LINE ]]; then
   echo "  PASS: Design integration after Spike Opportunities"
@@ -103,9 +103,9 @@ fi
 
 # Test 10: Backward compatibility - existing sections unchanged
 echo "Test 10: Backward compatibility check"
-if grep -q "### 4. Assign Skill Hints" "$PLAN_FILE" && \
-   grep -q "### 4.1 Keyword Detection" "$PLAN_FILE" && \
-   grep -q "### 4.2 Detect Spike Opportunities" "$PLAN_FILE"; then
+if grep -q "### 5. Assign Skill Hints" "$PLAN_FILE" && \
+   grep -q "### 5.1 Keyword Detection" "$PLAN_FILE" && \
+   grep -q "### 5.2 Detect Spike Opportunities" "$PLAN_FILE"; then
   echo "  PASS: Existing sections preserved"
 else
   echo "  FAIL: Existing sections modified"
@@ -127,6 +127,34 @@ if grep -q "design task" "$PLAN_FILE" || grep -q "task_type.*ux" "$PLAN_FILE" ||
   echo "  PASS: Design task creation documented"
 else
   echo "  FAIL: Design task creation not documented"
+  exit 1
+fi
+
+# Test 13: Design plugin availability check at workflow start
+echo "Test 13: Design plugin availability check at workflow start"
+if grep -q "### 1. Check Design Plugin Availability" "$PLAN_FILE"; then
+  echo "  PASS: Design plugin availability check documented"
+else
+  echo "  FAIL: Design plugin availability check not found at workflow start"
+  exit 1
+fi
+
+# Test 14: has_command() function mentioned for availability check
+echo "Test 14: has_command() function mentioned"
+if grep -q "has_command" "$PLAN_FILE"; then
+  echo "  PASS: has_command() function documented"
+else
+  echo "  FAIL: has_command() function not mentioned"
+  exit 1
+fi
+
+# Test 15: Design availability check positioned before PRD analysis
+echo "Test 15: Design check positioned early in workflow"
+if grep -n "Check Design Plugin Availability" "$PLAN_FILE" | head -1 | cut -d: -f1 | \
+   awk -v prd_line="$(grep -n "### 2. Read the PRD" "$PLAN_FILE" | head -1 | cut -d: -f1)" '$1 < prd_line {exit 0} {exit 1}'; then
+  echo "  PASS: Design check is early in workflow"
+else
+  echo "  FAIL: Design check not positioned early enough"
   exit 1
 fi
 
