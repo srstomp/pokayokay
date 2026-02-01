@@ -123,7 +123,43 @@ Track spikes and research that span sessions:
 
 **IMPORTANT**: Incomplete spikes should be resumed and completed next session. Do not leave spikes unfinished for > 1 day.
 
-### 5. Update ohno
+### 5. Session Review Prompt
+
+Before finalizing handoff, offer to run session review for pattern capture.
+
+**Skip conditions** (no prompt shown):
+- Session duration < 30 minutes
+- Only 1 task completed this session
+- User passed `--quick` flag to handoff
+
+**Prompt** (when conditions not met):
+
+```
+───────────────────────────────────────────
+Session ending.
+
+Run /review to capture patterns from this session?
+This helps identify:
+- What went well / what went wrong
+- Recurring blockers
+- Skill gaps
+
+[y] Run review  [n] Skip  [Enter = skip]
+───────────────────────────────────────────
+```
+
+**If user selects y:**
+1. Invoke `/pokayokay:review`
+2. Include review findings in handoff notes
+3. Continue to step 6
+
+**If user selects n or Enter:**
+1. Skip review
+2. Continue to step 6
+
+**Quick handoff:** With `--quick` flag, skip this prompt entirely.
+
+### 6. Update ohno
 ```bash
 # If task is partially done, add notes
 npx @stevestomp/ohno-cli task <task-id>  # View current state
@@ -132,12 +168,12 @@ npx @stevestomp/ohno-cli task <task-id>  # View current state
 # (Use ohno MCP log_activity tool)
 ```
 
-### 6. Sync Final State
+### 7. Sync Final State
 ```bash
 npx @stevestomp/ohno-cli sync
 ```
 
-### 7. Report to User
+### 8. Report to User
 
 ```markdown
 ## Handoff Complete
