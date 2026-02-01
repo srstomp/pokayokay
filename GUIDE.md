@@ -13,8 +13,6 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:review` | Analyze session patterns | session-review |
 | `/pokayokay:handoff` | Prepare session handoff | session-review |
 | `/pokayokay:api` | Design REST/GraphQL APIs | api-design |
-| `/pokayokay:ux` | Design user flows | ux-design |
-| `/pokayokay:ui` | Create visual designs | aesthetic-ui-designer |
 | `/pokayokay:arch` | Review architecture | architecture-review |
 | `/pokayokay:quick` | Quick task + immediate work | - |
 | `/pokayokay:fix` | Bug diagnosis and fix | - |
@@ -27,10 +25,7 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:security` | Security audit | security-audit |
 | `/pokayokay:observe` | Observability | observability |
 | `/pokayokay:docs` | Documentation | documentation |
-| `/pokayokay:a11y` | Accessibility audit | accessibility-auditor |
 | `/pokayokay:sdk` | SDK development | sdk-development |
-| `/pokayokay:persona` | User personas | persona-creation |
-| `/pokayokay:marketing` | Marketing pages | marketing-website |
 | `/pokayokay:integrate` | API integration | api-integration |
 
 ## Command Relationships
@@ -51,15 +46,9 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
                     │                    │                    │          │
                     ▼                    ▼                    ▼          │
            ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   │
-           │   /api        │    │    /ux        │    │    /arch      │   │
-           │ (API Design)  │    │  (UX Design)  │    │ (Architecture)│   │
-           └───────┬───────┘    └───────┬───────┘    └───────────────┘   │
-                   │                    │                                │
-                   │                    ▼                                │
-                   │            ┌───────────────┐                        │
-                   │            │     /ui       │                        │
-                   │            │(Visual Design)│                        │
-                   │            └───────────────┘                        │
+           │   /api        │    │    /db        │    │    /arch      │   │
+           │ (API Design)  │    │  (Database)   │    │ (Architecture)│   │
+           └───────┬───────┘    └───────────────┘    └───────────────┘   │
                    │                                                     │
                    └─────────────────┬─────────────────────────────┐     │
                                      │                             │     │
@@ -163,8 +152,6 @@ The `/work` command routes to skills based on task type, or use direct commands:
 | Task Type | Skill | Direct Command |
 |-----------|-------|----------------|
 | API endpoints | api-design | `/pokayokay:api` |
-| UI components | aesthetic-ui-designer | `/pokayokay:ui` |
-| User flows | ux-design | `/pokayokay:ux` |
 | Database work | database-design | `/pokayokay:db` |
 | CI/CD | ci-cd-expert | `/pokayokay:cicd` |
 | Testing | testing-strategy | `/pokayokay:test` |
@@ -173,10 +160,7 @@ The `/work` command routes to skills based on task type, or use direct commands:
 | Investigation | spike | `/pokayokay:spike` |
 | Research | deep-research | `/pokayokay:research` |
 | Documentation | documentation | `/pokayokay:docs` |
-| Accessibility | accessibility-auditor | `/pokayokay:a11y` |
 | SDK/Packages | sdk-development | `/pokayokay:sdk` |
-| User personas | persona-creation | `/pokayokay:persona` |
-| Marketing pages | marketing-website | `/pokayokay:marketing` |
 | API integration | api-integration | `/pokayokay:integrate` |
 
 ## Keyword Detection
@@ -424,7 +408,6 @@ Audit commands automatically create ohno tasks for findings. Post-command hooks 
 | Command | Creates Tasks | Verification |
 |---------|---------------|--------------|
 | `/pokayokay:security` | Always (Critical/High/Medium findings) | Checks for `Security:` prefix |
-| `/pokayokay:a11y` | Always (WCAG A/AA violations) | Checks for `A11y:` prefix |
 | `/pokayokay:test --audit` | With `--audit` flag | Checks for `Test:` prefix |
 | `/pokayokay:observe --audit` | With `--audit` flag | Checks for `Observability:` prefix |
 | `/pokayokay:arch --audit` | With `--audit` flag | Checks for `Arch:` prefix |
@@ -565,9 +548,9 @@ Output:
 Created implementation plan:
 - Epic: User Dashboard (4 stories, 12 tasks)
   - Story: Dashboard API (3 tasks) → api-design
-  - Story: Dashboard UI (4 tasks) → ux-design, aesthetic-ui-designer
-  - Story: Activity Feed (3 tasks) → api-design, aesthetic-ui-designer
-  - Story: Quick Actions (2 tasks) → aesthetic-ui-designer
+  - Story: Dashboard UI (4 tasks) → testing-strategy
+  - Story: Activity Feed (3 tasks) → api-design
+  - Story: Quick Actions (2 tasks) → testing-strategy
 
 View kanban: npx @stevestomp/ohno-cli serve
 ```
@@ -818,11 +801,10 @@ The audit catches these gaps and creates remediation tasks automatically.
 3. Creates remediation tasks automatically
 4. Re-audit after fixes to confirm L5
 
-### Design-first workflow
-1. `/pokayokay:ux` to design user flows first
-2. `/pokayokay:ui` to create visual designs
-3. `/pokayokay:api` to design backend APIs
-4. `/pokayokay:work` to implement the designs
+### API-first workflow
+1. `/pokayokay:api` to design backend APIs
+2. `/pokayokay:db` to design database schema
+3. `/pokayokay:work` to implement the designs
 
 ---
 

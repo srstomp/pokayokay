@@ -32,14 +32,6 @@ npx @stevestomp/ohno-cli init
 | `/pokayokay:spike <question>` | Time-boxed investigation |
 | `/pokayokay:hotfix <issue>` | Production incident |
 
-## Design Commands
-| Command | Purpose |
-|---------|---------|
-| `/pokayokay:ux` | User flows, wireframes |
-| `/pokayokay:ui` | Visual design |
-| `/pokayokay:persona` | User personas |
-| `/pokayokay:a11y` | Accessibility audit |
-
 ## Development Commands
 | Command | Purpose |
 |---------|---------|
