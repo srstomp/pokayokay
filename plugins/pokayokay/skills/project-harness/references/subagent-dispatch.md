@@ -264,22 +264,22 @@ See [skill-routing.md](skill-routing.md) for complete routing rules.
 
 | task_type | Skill |
 |-----------|-------|
-| frontend | aesthetic-ui-designer |
 | backend | api-design |
 | qa | api-testing |
-| design | ux-design |
 | database | architecture-review |
+
+**Note**: Design work (frontend, design, UX) routes to `/design:*` commands
 
 ### Format for Template
 
 ```markdown
-**Recommended Skill**: aesthetic-ui-designer
+**Recommended Skill**: api-design
 
 This skill provides patterns for:
-- Component architecture
-- Responsive design
-- Accessibility considerations
-- Design system integration
+- API endpoint design
+- Request/response schemas
+- Error handling
+- Authentication patterns
 ```
 
 If no skill matches, use:
@@ -289,6 +289,8 @@ If no skill matches, use:
 
 No specialized skill applies to this task. Use Claude's built-in knowledge for implementation.
 ```
+
+**Note**: Design work routes to `/design:*` commands instead of skills
 
 ---
 
@@ -367,9 +369,9 @@ Previous session notes: Previous session set up the component structure. Tests a
 
 ### Recommended Skill
 
-aesthetic-ui-designer
+api-design
 
-This skill provides patterns for component architecture, responsive design, and design system integration.
+This skill provides patterns for API design, request/response schemas, and error handling.
 
 ---
 
@@ -407,7 +409,7 @@ Dispatch using the Task tool with `yokay-implementer` agent type:
 
 **Task**: task-abc123 - Create grid component
 **Agent**: yokay-implementer
-**Skill**: aesthetic-ui-designer
+**Skill**: api-design
 
 [Invoke Task tool with filled template]
 ```
@@ -534,7 +536,7 @@ The implementer will use built-in knowledge without specialized skill loading.
 ```markdown
 ## Skill Not Available
 
-Skill "aesthetic-ui-designer" not found at expected path.
+Skill "api-design" not found at expected path.
 
 **Recovery:**
 1. Check skill installation
@@ -594,9 +596,9 @@ Result:
 
 ### 2. Routing to Skill
 
-Task type: frontend
-Keyword match: "component", "grid"
-Selected skill: aesthetic-ui-designer
+Task type: backend
+Keyword match: "API", "endpoint"
+Selected skill: api-design
 
 ### 3. Building Context
 

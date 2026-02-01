@@ -2,6 +2,8 @@
 
 Complete mapping of task types, feature characteristics, and work patterns to appropriate skills.
 
+> **Note**: Design work routes to `/design:*` commands (requires design plugin)
+
 ## Routing Decision Tree
 
 ```
@@ -35,23 +37,16 @@ START
 | Feature Type | Primary Skill | Secondary Skills |
 |--------------|---------------|------------------|
 | API/Backend endpoints | api-design | api-testing |
-| User interface | aesthetic-ui-designer | ux-design |
-| User flows/journeys | ux-design | persona-creation |
-| User research | persona-creation | ux-design |
-| Accessibility audit | accessibility-auditor | ux-design |
 | Code architecture | architecture-review | sdk-development |
 | SDK/Library creation | sdk-development | api-design |
-| Marketing/Landing pages | marketing-website | aesthetic-ui-designer |
 | Figma plugins | figma-plugin | - |
 
 ### By Task Type (from tasks.db)
 
 | task_type | Skill | Notes |
 |-----------|-------|-------|
-| frontend | aesthetic-ui-designer | UI components, styling |
 | backend | api-design | Endpoints, business logic |
 | database | architecture-review | Schema design, migrations |
-| design | ux-design | Wireframes, flows |
 | devops | - | No specific skill (use Claude knowledge) |
 | qa | api-testing | Test suites |
 | documentation | - | No specific skill |
@@ -63,13 +58,8 @@ START
 |----------|-----------------|
 | "API", "endpoint", "REST", "GraphQL" | api-design |
 | "test", "testing", "spec", "coverage" | api-testing |
-| "UI", "component", "button", "form", "modal" | aesthetic-ui-designer |
-| "flow", "journey", "wireframe", "prototype" | ux-design |
-| "persona", "user research", "interview" | persona-creation |
-| "a11y", "accessibility", "WCAG", "screen reader" | accessibility-auditor |
 | "refactor", "architecture", "structure" | architecture-review |
 | "SDK", "library", "package", "npm" | sdk-development |
-| "landing", "marketing", "homepage", "conversion" | marketing-website |
 | "Figma", "plugin", "design tool" | figma-plugin |
 
 ## Skill Capabilities Matrix
@@ -80,18 +70,8 @@ START
 |-------|---------|----------|-------|-----------|
 | api-design | ✓ | ✓ | - | ✓ |
 | api-testing | - | ✓ | ✓ | ✓ |
-| aesthetic-ui-designer | ✓ | ✓ | - | - |
 | architecture-review | - | ✓ | - | ✓ |
 | sdk-development | ✓ | ✓ | ✓ | ✓ |
-
-### UX/Design Skills
-
-| Skill | Creates | Analyzes | Research | Audit |
-|-------|---------|----------|----------|-------|
-| ux-design | ✓ | ✓ | ✓ | - |
-| persona-creation | ✓ | - | ✓ | - |
-| accessibility-auditor | - | ✓ | - | ✓ |
-| marketing-website | ✓ | ✓ | - | - |
 
 ### Specialized Skills
 
@@ -109,24 +89,6 @@ Some features benefit from multiple skills in sequence:
 1. api-design      → Design endpoints, request/response
 2. architecture-review → Verify fits existing structure
 3. api-testing     → Create test suite
-```
-
-### New UI Feature
-
-```
-1. ux-design       → Define user flow
-2. aesthetic-ui-designer → Implement components
-3. accessibility-auditor → Verify accessibility
-```
-
-### New User-Facing Product
-
-```
-1. persona-creation → Define target users
-2. ux-design       → Design experience
-3. aesthetic-ui-designer → Build UI
-4. accessibility-auditor → Audit accessibility
-5. marketing-website → Create landing page
 ```
 
 ### SDK/Library Project
@@ -220,20 +182,7 @@ If skill not found, inform human and suggest alternatives.
 
 **Routing**: api-design → api-testing (in sequence)
 
-### Example 2: Dashboard UI Feature
-
-```json
-{
-  "id": "F005",
-  "title": "Analytics Dashboard",
-  "description": "Visual dashboard with charts and metrics",
-  "skill_hint": "ux-design, aesthetic-ui-designer"
-}
-```
-
-**Routing**: ux-design (for flow) → aesthetic-ui-designer (for implementation)
-
-### Example 3: No Hint Provided
+### Example 2: No Hint Provided
 
 ```json
 {
@@ -243,22 +192,9 @@ If skill not found, inform human and suggest alternatives.
 }
 ```
 
-**Analysis**: 
-- Keywords: "email", "notifications" 
+**Analysis**:
+- Keywords: "email", "notifications"
 - Task type: backend
 - No specific skill match
 
 **Routing**: Use general Claude capabilities (no skill)
-
-### Example 4: Accessibility Review
-
-```json
-{
-  "id": "F010",
-  "title": "WCAG Compliance Audit",
-  "description": "Ensure all UI meets WCAG 2.1 AA standards",
-  "skill_hint": "accessibility-auditor"
-}
-```
-
-**Routing**: accessibility-auditor (single skill)
