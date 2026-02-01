@@ -68,12 +68,6 @@ mcp__ohno__add_dependency:
 
 Tag tasks with recommended skills based on their content:
 
-**Design & UX**:
-- User flows, wireframes → ux-design
-- Visual components, styling → aesthetic-ui-designer
-- User research, personas → persona-creation
-- Accessibility requirements → accessibility-auditor
-
 **Backend & API**:
 - API endpoints, REST/GraphQL → api-design
 - Database schema, migrations → database-design
@@ -98,10 +92,6 @@ When skill not explicitly specified, detect from task title/description:
 
 | Keywords | Skill | Task Type |
 |----------|-------|-----------|
-| wireframe, mockup, user flow, journey, ia | ux-design | ux |
-| visual, component, design system, tokens | aesthetic-ui-designer | ui |
-| persona, user research, empathy map | persona-creation | persona |
-| accessibility, a11y, wcag, screen reader | accessibility-auditor | a11y |
 | database, schema, migration, model, prisma | database-design | feature |
 | test, coverage, e2e, playwright, cypress, jest | testing-strategy | test |
 | deploy, pipeline, ci/cd, github actions, release | ci-cd-expert | chore |
