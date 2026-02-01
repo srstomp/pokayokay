@@ -57,6 +57,9 @@ hooks:
         type: command
         command: "pokayokay:audit"
         args: ["--quick", "--story", "${STORY_ID}"]
+      - name: audit-summary
+        type: script
+        path: actions/audit-summary.sh
       - name: audit-gate
         type: script
         path: actions/audit-gate.sh
@@ -210,8 +213,15 @@ variables:
   TASK_TYPE: "feature|bug|chore|spike|test|research"
   TASK_NOTES: "Notes from task completion"
   STORY_ID: "Current story ID"
+  STORY_TITLE: "Current story title"
   EPIC_ID: "Current epic ID"
   BOUNDARY_TYPE: "story|epic (set by audit-gate)"
+  # Mini-audit result variables (set by mini-audit command)
+  AUDIT_L_LEVEL: "Accessibility level (L0-L5)"
+  AUDIT_T_LEVEL: "Testing level (T0-T4)"
+  AUDIT_L_GAP: "Description of accessibility gap (if any)"
+  AUDIT_T_GAP: "Description of testing gap (if any)"
+  REMEDIATION_COUNT: "Number of remediation tasks created"
   SESSION_MODE: "supervised|semi-auto|autonomous"
   SESSION_TASKS_COMPLETED: "Count of tasks completed this session"
   SESSION_DURATION: "Session duration"
