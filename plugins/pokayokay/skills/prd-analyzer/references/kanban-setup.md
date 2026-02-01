@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS epics (
     status TEXT CHECK(status IN ('planned', 'in_progress', 'completed', 'cancelled')) DEFAULT 'planned',
     
     -- Skill assignment (NEW)
-    assigned_skills TEXT,      -- JSON array: ["ux-design", "api-design"]
+    assigned_skills TEXT,      -- JSON array: ["database-design", "api-design"]
     skill_order TEXT,          -- JSON array: order to run skills
     current_skill TEXT,        -- Currently active skill
     
@@ -481,11 +481,11 @@ db.create_project(
 # Create epic with skill assignments
 db.create_epic(
     id="epic-001",
-    project_id="proj-001", 
-    title="Survey Studio",
+    project_id="proj-001",
+    title="Data Pipeline",
     priority="P0",
-    assigned_skills=["ux-design", "aesthetic-ui-designer"],
-    skill_order=["ux-design", "aesthetic-ui-designer"],
+    assigned_skills=["database-design", "api-design"],
+    skill_order=["database-design", "api-design"],
     color="#3B82F6"
 )
 
@@ -493,10 +493,10 @@ db.create_epic(
 db.create_story(
     id="story-001-01",
     epic_id="epic-001",
-    title="Goal Input Interface",
-    user_story="As a researcher, I want to describe my survey goals...",
+    title="Schema Design",
+    user_story="As a developer, I want efficient database schemas...",
     estimate_days=2,
-    assigned_skill="ux-design"
+    assigned_skill="database-design"
 )
 
 # Create tasks
@@ -532,12 +532,12 @@ db.close()
     {
       "id": "epic-001",
       "project_id": "proj-001",
-      "title": "Survey Studio",
+      "title": "Data Pipeline",
       "priority": "P0",
       "status": "in_progress",
-      "assigned_skills": "[\"ux-design\", \"aesthetic-ui-designer\"]",
-      "skill_order": "[\"ux-design\", \"aesthetic-ui-designer\"]",
-      "current_skill": "ux-design",
+      "assigned_skills": "[\"database-design\", \"api-design\"]",
+      "skill_order": "[\"database-design\", \"api-design\"]",
+      "current_skill": "database-design",
       "audit_level": 0,
       "audit_date": null,
       "audit_gaps": null
@@ -574,19 +574,19 @@ Separate from tasks.json, optimized for skill routing:
     {
       "id": "F001",
       "epic_id": "epic-001",
-      "title": "Survey Studio",
+      "title": "Data Pipeline",
       "priority": "P0",
-      "assigned_skills": ["ux-design", "aesthetic-ui-designer"],
-      "skill_order": ["ux-design", "aesthetic-ui-designer"],
-      "current_skill": "ux-design",
+      "assigned_skills": ["database-design", "api-design"],
+      "skill_order": ["database-design", "api-design"],
+      "current_skill": "database-design",
       "audit_level": 0,
       "stories": ["story-001-01", "story-001-02", "story-001-03"]
     }
   ],
   "skill_summary": {
-    "ux-design": ["F001", "F003", "F011"],
+    "database-design": ["F001", "F003", "F011"],
     "api-design": ["F002", "F007", "F008"],
-    "aesthetic-ui-designer": ["F001", "F003", "F011"]
+    "testing-strategy": ["F001", "F003", "F011"]
   }
 }
 ```
@@ -609,9 +609,9 @@ The kanban.html template should display:
     <span class="filter-label">Skill</span>
     <select class="filter-select" id="filterSkill">
         <option value="">All Skills</option>
-        <option value="ux-design">UX Design</option>
+        <option value="database-design">Database Design</option>
         <option value="api-design">API Design</option>
-        <option value="aesthetic-ui-designer">UI Designer</option>
+        <option value="testing-strategy">Testing Strategy</option>
         <!-- dynamically populated -->
     </select>
 </div>

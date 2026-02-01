@@ -10,7 +10,7 @@ Transform product requirements into actionable implementation plans with visual 
 **Integrates with:**
 - `product-manager` — Audits completeness, adds remediation tasks
 - `project-harness` — Reads PROJECT.md, manages work sessions
-- `ux-design`, `api-design`, etc. — Assigned to specific features
+- `api-design`, `database-design`, etc. — Assigned to specific features
 
 ## Process Overview
 
@@ -121,9 +121,9 @@ The most important output — shared context for all skills.
 
 | Skill | Features | Status |
 |-------|----------|--------|
-| ux-design | F001, F005, F012 | pending |
-| api-design | F002, F003, F007 | pending |
-| aesthetic-ui-designer | F001, F005 | blocked by ux-design |
+| api-design | F001, F002, F003 | pending |
+| database-design | F004, F005, F007 | pending |
+| testing-strategy | F008, F009 | blocked by api-design |
 
 ## Current Gaps
 [Updated by product-manager after audit]
@@ -153,22 +153,20 @@ Assign skills to features based on their nature.
 
 | Feature Type | Primary Skill | Secondary Skills |
 |--------------|---------------|------------------|
-| User flows, wireframes | `ux-design` | `persona-creation` |
 | REST/GraphQL APIs | `api-design` | `api-testing` |
-| UI implementation | `aesthetic-ui-designer` | `frontend-design` |
+| Database schemas | `database-design` | — |
 | SDK/library creation | `sdk-development` | — |
-| Data visualization | `ux-design` | `aesthetic-ui-designer` |
+| Data processing pipelines | `api-design` | `database-design` |
 | Authentication/Security | `api-design` | — |
-| Mobile screens | `ux-design` | `aesthetic-ui-designer` |
 | Integrations (Slack, etc.) | `api-design` | — |
-| Accessibility review | `accessibility-auditor` | — |
+| Testing infrastructure | `testing-strategy` | — |
 
 ### Assignment Rules
 
-1. **UX before UI**: Features needing design get `ux-design` first
-2. **API before Frontend**: Data-dependent features get `api-design` first
+1. **Database before API**: Data-dependent features get `database-design` first
+2. **API before Integration**: Service features get `api-design` first
 3. **Audit at end**: All features get `product-manager` audit
-4. **Accessibility check**: User-facing features get `accessibility-auditor`
+4. **Testing last**: Critical features get `testing-strategy` review
 
 ### In features.json
 
@@ -177,10 +175,10 @@ Assign skills to features based on their nature.
   "features": [
     {
       "id": "F001",
-      "title": "Survey Studio",
+      "title": "Data Pipeline",
       "priority": "P0",
-      "assigned_skills": ["ux-design", "aesthetic-ui-designer"],
-      "skill_order": ["ux-design", "aesthetic-ui-designer"],
+      "assigned_skills": ["database-design", "api-design"],
+      "skill_order": ["database-design", "api-design"],
       "current_skill": null,
       "audit_level": 0,
       "stories": ["story-001-01", "story-001-02", ...]
@@ -265,7 +263,7 @@ CREATE TABLE IF NOT EXISTS epics (
     status TEXT CHECK(status IN ('planned', 'in_progress', 'completed', 'cancelled')) DEFAULT 'planned',
     
     -- Skill assignment
-    assigned_skills TEXT,      -- JSON array: ["ux-design", "api-design"]
+    assigned_skills TEXT,      -- JSON array: ["database-design", "api-design"]
     skill_order TEXT,          -- JSON array: order to run skills
     current_skill TEXT,        -- Currently active skill
     
@@ -385,8 +383,8 @@ Epics are large feature areas (1-4 weeks of work):
 
 **ID**: epic-001 (or F001)
 **Priority**: P0
-**Assigned Skills**: ["api-design", "ux-design", "aesthetic-ui-designer"]
-**Skill Order**: api-design → ux-design → aesthetic-ui-designer
+**Assigned Skills**: ["database-design", "api-design", "testing-strategy"]
+**Skill Order**: database-design → api-design → testing-strategy
 
 **Goal**: Users can create accounts and log in securely
 **Scope**: Email/password, OAuth (Google, GitHub), password reset
@@ -503,11 +501,11 @@ Tasks are implementable units (1-8 hours):
     {
       "id": "F001",
       "epic_id": "epic-001",
-      "title": "Survey Studio",
-      "description": "Create and configure surveys with AI assistance",
+      "title": "Data Pipeline",
+      "description": "Process and store data with efficient schemas",
       "priority": "P0",
-      "assigned_skills": ["ux-design", "aesthetic-ui-designer"],
-      "skill_order": ["ux-design", "aesthetic-ui-designer"],
+      "assigned_skills": ["database-design", "api-design"],
+      "skill_order": ["database-design", "api-design"],
       "dependencies": [],
       "audit_level": 0,
       "stories": ["story-001-01", "story-001-02", "story-001-03", "story-001-04", "story-001-05"]
@@ -526,10 +524,10 @@ Tasks are implementable units (1-8 hours):
     }
   ],
   "skill_summary": {
-    "ux-design": ["F001", "F003", "F011"],
+    "database-design": ["F001", "F003", "F011"],
     "api-design": ["F002", "F007", "F008"],
-    "aesthetic-ui-designer": ["F001", "F003", "F011"],
-    "accessibility-auditor": ["F001", "F003"]
+    "testing-strategy": ["F001", "F003", "F011"],
+    "sdk-development": ["F005", "F006"]
   }
 }
 ```
@@ -557,7 +555,7 @@ Project-harness:
 
 ### With Implementation Skills
 
-Skills like `ux-design`, `api-design`:
+Skills like `api-design`, `database-design`:
 1. Read `PROJECT.md` for context
 2. Check `features.json` for assigned work
 3. Filter by `assigned_skills` containing their name
