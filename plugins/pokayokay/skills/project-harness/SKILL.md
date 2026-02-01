@@ -400,13 +400,10 @@ Based on task type, load relevant skill for domain knowledge:
 |-----------|-------|
 | API design | api-design |
 | API tests | api-testing |
-| UI components | aesthetic-ui-designer |
-| User flows | ux-design |
-| User research | persona-creation |
-| Accessibility | accessibility-auditor |
 | Architecture | architecture-review |
 | SDK/package | sdk-development |
-| Marketing | marketing-website |
+
+**Note**: Design work routes to `/design:*` commands
 
 ### Skill Invocation
 
