@@ -12,18 +12,36 @@ fi
 
 # Check for sensitive files before staging
 CHANGED_FILES=$(git status --porcelain | grep -E '^[AM? ]' | cut -c 4-)
+
+# Sensitive file patterns (case-insensitive for .env variations)
 # Pattern matches:
-# - .env (exact filename)
+# - .env (exact filename, case-insensitive)
 # - credentials or credentials.json (exact)
 # - secrets, secrets.json, secrets.yaml, secrets.yml (exact)
 # - id_rsa (exact, not id_rsa.pub)
 # Uses (^|/) to match start of path or after directory separator
 # Uses $ to ensure exact match (no suffixes allowed)
-if echo "$CHANGED_FILES" | grep -qE '(^|/)\.env$|(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'; then
+SENSITIVE_PATTERN='(^|/)\.env$|(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'
+
+# Check for sensitive files (case-insensitive for .env)
+if echo "$CHANGED_FILES" | grep -qiE '(^|/)\.env$' || \
+   echo "$CHANGED_FILES" | grep -qE '(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'; then
   echo "⚠️ Sensitive files detected. Review before committing."
-  echo "$CHANGED_FILES" | grep -E '(^|/)\.env$|(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$'
+  echo "$CHANGED_FILES" | grep -iE '(^|/)\.env$' || true
+  echo "$CHANGED_FILES" | grep -E '(^|/)credentials(\.json)?$|(^|/)secrets(\.json|\.ya?ml)?$|(^|/)id_rsa$' || true
   exit 1
 fi
+
+# Check for symbolic links pointing to sensitive files
+for file in $CHANGED_FILES; do
+  if [ -L "$file" ]; then
+    TARGET=$(readlink -f "$file" 2>/dev/null || readlink "$file")
+    if echo "$TARGET" | grep -qiE '\.env$|credentials|secrets|id_rsa$'; then
+      echo "⚠️ Symbolic link to sensitive file detected: $file -> $TARGET"
+      exit 1
+    fi
+  fi
+done
 
 # Stage only tracked files (prevents accidentally staging new sensitive files)
 git add -u
@@ -83,6 +101,6 @@ fi
 # Commit using file
 git commit -F "$COMMIT_FILE"
 
-# Read message for display
+# Read message for display (use printf for safety with special characters)
 MESSAGE=$(cat "$COMMIT_FILE")
-echo "✓ Committed: $MESSAGE"
+printf '%s\n' "✓ Committed: $MESSAGE"
