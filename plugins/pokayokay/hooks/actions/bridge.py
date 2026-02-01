@@ -13,31 +13,114 @@ import json
 import os
 import subprocess
 import sys
+import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
 
-def sanitize_env_value(value: str) -> str:
+class DangerousValueError(ValueError):
+    """Raised when an environment value contains dangerous shell characters."""
+    pass
+
+
+# Shell metacharacters that could enable command injection
+# Note: newlines are already stripped by the non-printable filter
+SHELL_METACHARACTERS = frozenset([';', '|', '&', '$', '`', '(', ')', '<', '>'])
+
+# Configurable timeouts per hook (in seconds)
+# Default is 30s, with longer timeouts for hooks that may take more time
+HOOK_TIMEOUTS: Dict[str, int] = {
+    "default": 30,
+    "test": 120,        # Tests may take longer
+    "audit-gate": 60,   # Audit checks may be extensive
+    "lint": 60,         # Linting large codebases
+    "sync": 30,
+    "commit": 30,
+    "verify-tasks": 15,
+    "verify-clean": 10,
+    "check-blockers": 10,
+    "suggest-skills": 10,
+    "detect-spike": 10,
+    "capture-knowledge": 15,
+    "session-summary": 15,
+}
+
+# Rate limiting configuration
+RATE_LIMIT_MAX_EXECUTIONS = 10  # Max executions per hook per minute
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+# Track hook executions for rate limiting (in-memory, resets on process restart)
+_hook_executions: Dict[str, List[float]] = defaultdict(list)
+
+
+def sanitize_env_value(value: str, field_name: str = "unknown") -> str:
     """
     Sanitize environment variable values to prevent command injection.
 
-    Removes non-printable characters (except newline) to prevent control
-    characters from affecting subprocess behavior.
+    Removes non-printable characters and rejects values containing shell
+    metacharacters that could enable command injection in shell scripts.
 
     Args:
         value: The environment variable value to sanitize
+        field_name: Name of the field for error messages
 
     Returns:
-        Sanitized string with only printable characters and newlines
+        Sanitized string with only safe printable characters
+
+    Raises:
+        DangerousValueError: If value contains shell metacharacters
     """
     if not isinstance(value, str):
         return str(value)
-    return ''.join(c for c in value if c.isprintable() or c == '\n')
+
+    # Remove non-printable characters (except common whitespace)
+    sanitized = ''.join(c for c in value if c.isprintable() or c in (' ', '\t'))
+
+    # Check for shell metacharacters
+    dangerous_found = [c for c in sanitized if c in SHELL_METACHARACTERS]
+    if dangerous_found:
+        # Log which characters were found (without exposing full value)
+        chars = ', '.join(repr(c) for c in set(dangerous_found))
+        raise DangerousValueError(
+            f"Field '{field_name}' contains dangerous shell characters: {chars}"
+        )
+
+    return sanitized
 
 
 def get_script_dir() -> Path:
     """Get the directory containing this script."""
     return Path(__file__).parent
+
+
+def check_rate_limit(hook_name: str) -> Optional[str]:
+    """
+    Check if a hook has exceeded its rate limit.
+
+    Args:
+        hook_name: Name of the hook to check
+
+    Returns:
+        None if within limits, error message if rate limited
+    """
+    now = time.time()
+    executions = _hook_executions[hook_name]
+
+    # Remove executions outside the time window
+    executions[:] = [t for t in executions if now - t < RATE_LIMIT_WINDOW_SECONDS]
+
+    if len(executions) >= RATE_LIMIT_MAX_EXECUTIONS:
+        return f"Rate limited: {hook_name} exceeded {RATE_LIMIT_MAX_EXECUTIONS} executions per minute"
+
+    # Record this execution
+    executions.append(now)
+    return None
+
+
+def get_timeout(hook_name: str) -> int:
+    """Get the timeout for a specific hook."""
+    return HOOK_TIMEOUTS.get(hook_name, HOOK_TIMEOUTS["default"])
 
 
 def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[str, str]] = None) -> Dict:
@@ -47,21 +130,32 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
     if not script_path.exists():
         return {"action": name, "status": "skipped", "reason": "script not found"}
 
+    # Check rate limit before executing
+    rate_limit_error = check_rate_limit(name)
+    if rate_limit_error:
+        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
+
+    # Get configurable timeout for this hook
+    timeout = get_timeout(name)
+
     try:
         # Merge environment
         run_env = os.environ.copy()
         if env:
             # Sanitize environment variables to prevent command injection
-            sanitized_env = {k: sanitize_env_value(v) for k, v in env.items()}
+            try:
+                sanitized_env = {k: sanitize_env_value(v, field_name=k) for k, v in env.items()}
+            except DangerousValueError as e:
+                return {"action": name, "status": "blocked", "reason": str(e)}
             run_env.update(sanitized_env)
 
-        # Run the script
+        # Run the script with configurable timeout
         cmd = [str(script_path)] + (args or [])
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=timeout,
             env=run_env,
             cwd=os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
         )
@@ -73,9 +167,9 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
             "error": result.stderr.strip() if result.stderr else None
         }
     except subprocess.TimeoutExpired:
-        return {"action": name, "status": "timeout", "reason": "exceeded 60s"}
+        return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
     except Exception as e:
-        return {"action": name, "status": "error", "reason": str(e)}
+        return {"action": name, "status": "error", "reason": "Script execution failed"}
 
 
 def handle_session_start(input_data: dict) -> dict:
@@ -396,7 +490,15 @@ def format_context(result: dict) -> str:
         lines.append("| Action | Status | Output |")
         lines.append("|--------|--------|--------|")
         for r in results:
-            status_icon = {"success": "✓", "warning": "⚠️", "error": "❌", "skipped": "⏭️"}.get(r["status"], "?")
+            status_icon = {
+                "success": "✓",
+                "warning": "⚠️",
+                "error": "❌",
+                "skipped": "⏭️",
+                "blocked": "🚫",
+                "rate_limited": "⏳",
+                "timeout": "⏰",
+            }.get(r["status"], "?")
             output = r.get("output", r.get("reason", ""))[:50]
             lines.append(f"| {r['action']} | {status_icon} | {output} |")
 

@@ -17,9 +17,10 @@ TASK_PREFIX="${TASK_PREFIX:-}"
 RECENT_TASKS=$(npx @stevestomp/ohno-cli tasks --limit 10 2>/dev/null || echo "")
 
 # Check if any tasks with the expected prefix were created
-if echo "$RECENT_TASKS" | grep -q "$TASK_PREFIX"; then
+# Use grep -F for fixed-string matching to prevent regex injection
+if echo "$RECENT_TASKS" | grep -qF "$TASK_PREFIX"; then
     # Count matching tasks
-    MATCH_COUNT=$(echo "$RECENT_TASKS" | grep -c "$TASK_PREFIX" || echo "0")
+    MATCH_COUNT=$(echo "$RECENT_TASKS" | grep -cF "$TASK_PREFIX" || echo "0")
     echo "Verified: $MATCH_COUNT task(s) created with prefix '$TASK_PREFIX'"
     exit 0
 else
