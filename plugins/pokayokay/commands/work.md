@@ -719,6 +719,16 @@ See `skills/browser-verification/SKILL.md` for full details.
 
 After implementer completes, run reviews in sequence:
 
+#### Environment Setup for Review Hooks
+
+Before dispatching any reviewer, set the current task context for hook integration:
+
+```bash
+export CURRENT_OHNO_TASK_ID="<current-task-id>"
+```
+
+This enables the post-review-fail hook to capture failures and integrate with kaizen automatically.
+
 #### Stage 1: Spec Compliance Review
 
 Verify implementation matches task specification.

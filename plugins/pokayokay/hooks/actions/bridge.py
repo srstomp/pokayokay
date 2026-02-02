@@ -44,6 +44,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "detect-spike": 10,
     "capture-knowledge": 15,
     "session-summary": 15,
+    "post-review-fail": 30,
 }
 
 # Rate limiting configuration
@@ -419,6 +420,132 @@ def handle_skill_complete(tool_input: dict, tool_response: dict) -> dict:
     }
 
 
+def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
+    """Handle Task tool PostToolUse for review agents (spec-reviewer, quality-reviewer).
+
+    Detects review failures and triggers post-review-fail hook for kaizen integration.
+    Gracefully handles missing kaizen installation.
+    """
+    description = tool_input.get("description", "").lower()
+    subagent_type = tool_input.get("subagent_type", "")
+
+    # Only handle spec-reviewer and quality-reviewer
+    is_spec_review = "spec-review" in subagent_type or "spec review" in description
+    is_quality_review = "quality-review" in subagent_type or "quality review" in description
+
+    if not (is_spec_review or is_quality_review):
+        return {"skip": True, "reason": "not a review task"}
+
+    # Get the agent output (tool_response contains the agent's result)
+    agent_output = str(tool_response.get("result", ""))
+
+    # Detect PASS/FAIL
+    if ": PASS" in agent_output:
+        return {"skip": True, "reason": "review passed"}
+
+    if ": FAIL" not in agent_output:
+        return {"skip": True, "reason": "could not determine review result"}
+
+    # Extract failure source
+    failure_source = "spec-review" if is_spec_review else "quality-review"
+
+    # Get task ID from environment (set by coordinator before dispatching reviewers)
+    task_id = os.environ.get("CURRENT_OHNO_TASK_ID", "unknown")
+
+    # Truncate failure details to prevent shell issues (2000 chars max)
+    # Also remove any shell metacharacters for safety
+    failure_details = agent_output[:2000]
+    # Replace problematic characters with safe alternatives
+    for char in SHELL_METACHARACTERS:
+        failure_details = failure_details.replace(char, ' ')
+
+    # Call post-review-fail hook (located in project root hooks/ directory)
+    # This hook integrates with kaizen if installed, otherwise logs gracefully
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    hook_path = Path(project_dir) / "hooks" / "post-review-fail.sh"
+
+    if not hook_path.exists():
+        return {
+            "hooks_run": ["post-review-fail"],
+            "review_type": failure_source,
+            "task_id": task_id,
+            "kaizen_action": "LOGGED",
+            "results": [{"action": "post-review-fail", "status": "skipped", "reason": "hook not found"}],
+            "summary": f"Review failed, hook not found at {hook_path}"
+        }
+
+    env = {
+        "TASK_ID": task_id,
+        "FAILURE_DETAILS": failure_details,
+        "FAILURE_SOURCE": failure_source,
+    }
+
+    # Run the hook
+    result = run_action_at_path(hook_path, env=env)
+
+    # Parse the hook output for Claude to act on
+    hook_output = result.get("output", "{}")
+    try:
+        action_data = json.loads(hook_output)
+    except json.JSONDecodeError:
+        action_data = {"action": "LOGGED", "message": "failed to parse hook output"}
+
+    return {
+        "hooks_run": ["post-review-fail"],
+        "review_type": failure_source,
+        "task_id": task_id,
+        "kaizen_action": action_data.get("action", "LOGGED"),
+        "fix_task": action_data.get("fix_task"),
+        "kaizen_message": action_data.get("message"),
+        "results": [result],
+        "summary": f"Review failed, kaizen action: {action_data.get('action', 'LOGGED')}"
+    }
+
+
+def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) -> Dict:
+    """Run a hook script at a specific path (not in the actions directory)."""
+    name = script_path.stem
+
+    if not script_path.exists():
+        return {"action": name, "status": "skipped", "reason": "script not found"}
+
+    # Check rate limit before executing
+    rate_limit_error = check_rate_limit(name)
+    if rate_limit_error:
+        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
+
+    # Get configurable timeout for this hook
+    timeout = get_timeout(name)
+
+    try:
+        # Merge environment
+        run_env = os.environ.copy()
+        if env:
+            run_env.update(env)
+
+        # Run the script with configurable timeout
+        cmd = [str(script_path)]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=run_env,
+            cwd=os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+        )
+
+        return {
+            "action": name,
+            "status": "success" if result.returncode == 0 else "warning",
+            "output": result.stdout.strip(),
+            "error": result.stderr.strip() if result.stderr else None
+        }
+    except subprocess.TimeoutExpired:
+        return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
+    except Exception as e:
+        return {"action": name, "status": "error", "reason": "Script execution failed"}
+
+
 def main():
     """Main entry point."""
     try:
@@ -461,6 +588,9 @@ def main():
 
     elif tool_name == "Skill" and hook_event == "PostToolUse":
         result = handle_skill_complete(tool_input, tool_response)
+
+    elif tool_name == "Task" and hook_event == "PostToolUse":
+        result = handle_review_complete(tool_input, tool_response)
 
     else:
         result = {"skip": True, "reason": f"unhandled event: {hook_event}/{tool_name}"}
@@ -556,6 +686,40 @@ def format_context(result: dict) -> str:
 
     if result.get("suggestion"):
         lines.append(f"**Suggestion:** {result['suggestion']}")
+
+    # Kaizen action info (for review failures)
+    kaizen_action = result.get("kaizen_action")
+    if kaizen_action:
+        lines.append("")
+        lines.append("## Kaizen Review Failure Analysis")
+        lines.append(f"**Action:** {kaizen_action}")
+
+        if kaizen_action == "AUTO":
+            fix_task = result.get("fix_task", {})
+            lines.append("")
+            lines.append("**Auto-creating fix task:**")
+            lines.append(f"- Title: {fix_task.get('title', 'Unknown')}")
+            lines.append(f"- Type: {fix_task.get('type', 'bug')}")
+            lines.append(f"- Estimate: {fix_task.get('estimate', 2)}h")
+            lines.append("")
+            lines.append("Create this task in ohno, block the current task, then continue with next task.")
+
+        elif kaizen_action == "SUGGEST":
+            fix_task = result.get("fix_task", {})
+            lines.append("")
+            lines.append("**Suggested fix task (needs confirmation):**")
+            lines.append(f"- Title: {fix_task.get('title', 'Unknown')}")
+            lines.append(f"- Type: {fix_task.get('type', 'bug')}")
+            lines.append(f"- Estimate: {fix_task.get('estimate', 2)}h")
+            lines.append("")
+            lines.append("Ask user: Create this fix task? (yes/no/customize)")
+
+        elif kaizen_action == "LOGGED":
+            message = result.get("kaizen_message", "")
+            if message:
+                lines.append(f"**Message:** {message}")
+            lines.append("")
+            lines.append("Failure logged. Continue with re-dispatch behavior (max 3 cycles).")
 
     return "\n".join(lines)
 
