@@ -37,8 +37,8 @@ Exit early.
 
 Use ohno MCP tools:
 ```
-get_tasks()           → All tasks
-get_project_status()  → Summary statistics
+get_tasks(fields: "standard")  → All tasks with descriptions
+get_project_status()           → Summary statistics
 ```
 
 Build mental model:

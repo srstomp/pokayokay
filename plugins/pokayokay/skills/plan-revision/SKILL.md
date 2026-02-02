@@ -52,7 +52,7 @@ Revise existing plans with full impact visibility.
 
 ## ohno MCP Tools Used
 
-- `get_tasks()` - Load plan
+- `get_tasks(fields: "standard")` - Load plan with descriptions
 - `get_project_status()` - Summary
 - `get_task_dependencies()` - Dependency map
 - `update_task()` - Modify tasks
