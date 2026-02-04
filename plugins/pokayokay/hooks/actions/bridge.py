@@ -54,6 +54,11 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 # Track hook executions for rate limiting (in-memory, resets on process restart)
 _hook_executions: Dict[str, List[float]] = defaultdict(list)
 
+# WIP tracking (in-memory, resets on process restart)
+_tracked_files: set = set()
+_last_wip_update: float = 0
+WIP_UPDATE_INTERVAL = 5  # seconds - don't update more than every 5 seconds
+
 
 def sanitize_env_value(value: str, field_name: str = "unknown") -> str:
     """
@@ -546,6 +551,183 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
         return {"action": name, "status": "error", "reason": "Script execution failed"}
 
 
+# ==========================================================================
+# WIP Auto-capture Functions
+# ==========================================================================
+
+def should_update_wip(force: bool = False) -> bool:
+    """Check if enough time has passed to update WIP (rate limiting)."""
+    global _last_wip_update
+    if force:
+        return True
+    now = time.time()
+    if now - _last_wip_update < WIP_UPDATE_INTERVAL:
+        return False
+    _last_wip_update = now
+    return True
+
+
+def extract_output_text(tool_response) -> str:
+    """Extract text output from tool response (handles various formats)."""
+    if isinstance(tool_response, str):
+        return tool_response
+    if isinstance(tool_response, dict):
+        content = tool_response.get("content", [])
+        if isinstance(content, list):
+            return "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
+        if isinstance(content, str):
+            return content
+        # Try direct text field
+        return tool_response.get("text", tool_response.get("output", ""))
+    return ""
+
+
+def extract_exit_code(tool_response) -> Optional[int]:
+    """Extract exit code from tool response."""
+    if isinstance(tool_response, dict):
+        return tool_response.get("exit_code", tool_response.get("returncode"))
+    return None
+
+
+def is_test_command(command: str) -> bool:
+    """Check if a bash command is running tests."""
+    test_patterns = ["npm test", "npx vitest", "npx jest", "pytest", "cargo test", "go test", "npm run test"]
+    return any(p in command for p in test_patterns)
+
+
+def is_git_commit(command: str) -> bool:
+    """Check if a bash command is a git commit."""
+    return "git commit" in command
+
+
+def extract_commit_hash(output: str) -> Optional[str]:
+    """Extract commit hash from git commit output."""
+    # Git commit output: "[branch abc1234] commit message"
+    import re
+    match = re.search(r'\[[\w/.-]+ ([a-f0-9]{7,})\]', output)
+    return match.group(1) if match else None
+
+
+def parse_test_output(output: str, exit_code: Optional[int]) -> dict:
+    """Parse test output into structured results."""
+    import re
+
+    result = {"ran": True, "passed": 0, "failed": 0}
+
+    # Try to parse common test output formats
+    # vitest/jest: "Tests: X passed, Y failed" or "X passing, Y failing"
+    # pytest: "X passed, Y failed"
+
+    passed = re.search(r'(\d+)\s+(?:passing|passed)', output)
+    failed = re.search(r'(\d+)\s+(?:failing|failed)', output)
+
+    if passed:
+        result["passed"] = int(passed.group(1))
+    if failed:
+        result["failed"] = int(failed.group(1))
+
+    if result["failed"] > 0:
+        # Try to extract first failing test name
+        fail_match = re.search(r'(?:FAIL|✗|×)\s+(.+)', output)
+        if fail_match:
+            result["failing_test"] = fail_match.group(1).strip()[:200]
+
+    return result
+
+
+def parse_error(command: str, output: str) -> Optional[dict]:
+    """Parse error from failed command."""
+    if not output.strip():
+        return None
+
+    # Truncate to prevent oversized WIP data
+    error_msg = output.strip()[:500]
+    return {
+        "type": "command_error",
+        "command": command[:200],
+        "message": error_msg
+    }
+
+
+def update_wip(task_id: str, wip_data: dict):
+    """Call ohno CLI to update WIP."""
+    try:
+        json_str = json.dumps(wip_data)
+        subprocess.run(
+            ["npx", "@stevestomp/ohno-cli", "update-wip", task_id, json_str],
+            capture_output=True,
+            timeout=10,
+            check=False
+        )
+    except Exception:
+        pass  # Silent failure - WIP updates are best-effort
+
+
+def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) -> dict:
+    """Capture file modifications to WIP."""
+    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    if not task_id or task_id == "unknown":
+        return {"skip": True, "reason": "no active task"}
+
+    file_path = tool_input.get("file_path", "")
+    if not file_path:
+        return {"skip": True, "reason": "no file path"}
+
+    # Track this file
+    _tracked_files.add(file_path)
+
+    # Rate limit WIP updates
+    if not should_update_wip():
+        return {"skip": True, "reason": "rate limited"}
+
+    wip_data = {
+        "files_modified": sorted(list(_tracked_files)),
+        "uncommitted_changes": True
+    }
+
+    update_wip(task_id, wip_data)
+    return {"skip": True, "reason": "wip updated silently"}
+
+
+def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
+    """Capture test results, git commits, and errors from Bash."""
+    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    if not task_id or task_id == "unknown":
+        return {"skip": True, "reason": "no active task"}
+
+    command = tool_input.get("command", "")
+    output = extract_output_text(tool_response)
+    exit_code = extract_exit_code(tool_response)
+
+    wip_data = {}
+    force_update = False
+
+    # Detect test commands
+    if is_test_command(command):
+        wip_data["test_results"] = parse_test_output(output, exit_code)
+
+    # Detect git commit
+    if is_git_commit(command):
+        commit_hash = extract_commit_hash(output)
+        if commit_hash:
+            wip_data["last_commit"] = commit_hash
+            wip_data["uncommitted_changes"] = False
+            # Clear tracked files after commit
+            _tracked_files.clear()
+            force_update = True  # Always update immediately for commits
+
+    # Detect errors (non-zero exit)
+    if exit_code and exit_code != 0 and not is_test_command(command):
+        error_info = parse_error(command, output)
+        if error_info:
+            wip_data["errors"] = [error_info]
+
+    if wip_data and should_update_wip(force=force_update):
+        update_wip(task_id, wip_data)
+
+    return {"skip": True, "reason": "wip updated silently"}
+
+
 def main():
     """Main entry point."""
     try:
@@ -591,6 +773,12 @@ def main():
 
     elif tool_name == "Task" and hook_event == "PostToolUse":
         result = handle_review_complete(tool_input, tool_response)
+
+    elif tool_name in ("Edit", "Write") and hook_event == "PostToolUse":
+        result = handle_file_change(tool_name, tool_input, tool_response)
+
+    elif tool_name == "Bash" and hook_event == "PostToolUse":
+        result = handle_bash_execution(tool_input, tool_response)
 
     else:
         result = {"skip": True, "reason": f"unhandled event: {hook_event}/{tool_name}"}
