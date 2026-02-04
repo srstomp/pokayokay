@@ -190,10 +190,11 @@ For each task:
 3. **Route to skill** (if needed): Based on task type
 4. **Brainstorm gate** (conditional): See Brainstorm Gate section
 5. **Dispatch implementer**: Single Task tool call
-6. **Browser verification** (conditional): See Browser Verification section
-7. **Two-stage review**: Spec review → Quality review
-8. **Complete task**: Mark done, trigger hooks
-9. **Checkpoint**: Based on mode
+6. **Auto-fix test failures** (conditional): See Auto-Fix section
+7. **Browser verification** (conditional): See Browser Verification section
+8. **Two-stage review**: Spec review → Quality review
+9. **Complete task**: Mark done, trigger hooks
+10. **Checkpoint**: Based on mode
 
 ### Parallel Mode (parallel > 1)
 
@@ -633,7 +634,7 @@ If brainstorm triggers:
 
 4. Process subagent result:
    - If questions: Answer and re-dispatch
-   - If complete: Proceed to Step 5 (Review)
+   - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
    - If blocked: Set blocker via ohno MCP
 
 **Why subagent?**
@@ -641,7 +642,153 @@ If brainstorm triggers:
 - Subagent can ask questions before/during work
 - Context discarded after task (token efficiency)
 
-### 4.5 Browser Verification (Conditional)
+### 4.5 Auto-Fix Test Failures (Conditional)
+
+After the implementer completes, run tests to verify the implementation. If tests fail, automatically attempt to fix them before proceeding to review.
+
+#### Configuration
+
+Auto-fix behavior is controlled by configuration and task type:
+
+```json
+{
+  "work": {
+    "max_test_retries": 3,
+    "auto_fix": true
+  }
+}
+```
+
+#### Task Type Defaults
+
+| Task Type | Auto-fix Enabled |
+|-----------|------------------|
+| `bug` | Yes |
+| `feature` | Yes |
+| `chore` | Yes |
+| `spike` | No (failures are data) |
+| `docs` | No (usually no tests) |
+
+#### Auto-Fix Flow
+
+After implementer completes:
+
+1. **Run tests**: Execute test suite for changed files
+   ```bash
+   # Detect test framework and run
+   npm test -- --testPathPattern="<changed-files>"
+   # or equivalent
+   ```
+
+2. **Evaluate result**:
+   - **PASS**: Skip to Browser Verification (Step 4.6)
+   - **FAIL + auto-fix enabled**: Proceed to Step 3
+   - **FAIL + auto-fix disabled**: Log failure, skip to Browser Verification
+   - **FAIL + spike task**: Log failure as finding, skip to Browser Verification
+
+3. **Dispatch fixer**: If test fails and auto-fix enabled:
+   ```
+   Task tool (yokay-fixer):
+     description: "Fix test failure: {task.title}"
+     prompt: [Include task details, test output, max 3 retries]
+   ```
+
+4. **Process fixer result**:
+   - **PASS**: Fixer fixed the issue → Continue to Browser Verification
+   - **FAIL**: Fixer couldn't fix after 3 attempts → Mark task blocked
+
+5. **Handle fixer failure**:
+   ```bash
+   # Mark task as blocked
+   npx @stevestomp/ohno-cli block <task-id> "Test failures could not be auto-fixed"
+
+   # Log activity
+   add_task_activity(task_id, "note", "Auto-fix failed after 3 attempts: [reason]")
+   ```
+
+6. **Continue queue**: Get next task and continue work loop (don't stop the session)
+
+#### Fixer Agent Behavior
+
+The yokay-fixer agent:
+- Parses test failure output
+- Identifies root cause (assertion failure, type error, missing await, etc.)
+- Makes targeted code edits (using Edit tool only)
+- Re-runs tests after each fix
+- Maximum 3 attempts
+- Reports PASS or FAIL with detailed handoff
+
+#### Flow Diagram
+
+```
+Implementer Completes
+        │
+        ▼
+    Run Tests
+        │
+   ┌────┴────┐
+   │         │
+  PASS      FAIL
+   │         │
+   │    ┌────┴────────────────┐
+   │    │                     │
+   │  Spike?            Auto-fix enabled?
+   │    │                     │
+   │   YES                   YES
+   │    │                     │
+   │    ▼                     ▼
+   │  Log as             Dispatch Fixer
+   │  finding            (max 3 attempts)
+   │    │                     │
+   │    │                ┌────┴────┐
+   │    │                │         │
+   │    │              PASS       FAIL
+   │    │                │         │
+   │    │                │         ▼
+   │    │                │    Block Task
+   │    │                │    Get Next Task
+   │    │                │         │
+   └────┴────────────────┴─────────┘
+        │
+        ▼
+  Browser Verification
+  (Section 4.6)
+```
+
+#### Logging
+
+Log all auto-fix activities:
+
+```bash
+# Test failure detected
+add_task_activity(task_id, "note", "Tests failed, spawning auto-fixer")
+
+# Fixer success
+add_task_activity(task_id, "note", "Auto-fix: PASS - Fixed [issue]")
+
+# Fixer failure
+add_task_activity(task_id, "note", "Auto-fix: FAIL - Unable to fix after 3 attempts")
+```
+
+#### Skip Auto-Fix
+
+To disable auto-fix for a specific session:
+
+```bash
+# Add flag to arguments
+/pokayokay:work semi-auto --skip-auto-fix
+```
+
+Or set in configuration:
+```json
+{
+  "work": {
+    "auto_fix": false
+  }
+}
+```
+
+### 4.6 Browser Verification (Conditional)
 
 After the implementer completes, check if browser verification should run.
 
@@ -653,7 +800,7 @@ All three conditions must pass:
 2. **Server running**: HTTP server on ports 3000-9999, or can be started via package.json
 3. **Renderable files changed**: Task modified `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/`
 
-If any check fails, silently skip to Step 5 (Review).
+If any check fails, silently skip to Step 6 (Review).
 
 #### Verification Flow
 
@@ -667,7 +814,7 @@ If all checks pass:
    ```
 
 2. Process verification result:
-   - **PASS**: Continue to Step 5 (Review)
+   - **PASS**: Continue to Step 6 (Review)
    - **ISSUE**: Re-dispatch implementer with visual/functional issues
    - **SKIP**: User provided reason, continue with warning flag
 
@@ -715,7 +862,7 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 5. Two-Stage Review
+### 6. Two-Stage Review
 
 After implementer completes, run reviews in sequence:
 
@@ -762,7 +909,7 @@ Only runs if spec review passes.
    ```
 
 2. Process quality review result:
-   - **PASS**: Proceed to task completion (Step 6)
+   - **PASS**: Proceed to task completion (Step 7)
    - **FAIL**: Re-dispatch implementer with quality issues
 
 **What quality reviewer checks:**
@@ -927,29 +1074,57 @@ Review FAIL
 └──────┬───────┘
        │
        ▼
-┌──────────────┐  NO   ┌──────────────┐
-│ UI changes?  │──────►│ Skip browser │
-│              │       │  verify      │
-└──────┬───────┘       └──────┬───────┘
-       │ YES                  │
-       ▼                      │
-┌──────────────┐  ISSUE  ┌────┴────────┐
-│   Browser    │────────►│ Re-dispatch │
-│   Verify     │         │ implementer │
-└──────┬───────┘         └─────────────┘
-       │ PASS/SKIP             ▲
-       ▼                       │
-┌──────────────┐     FAIL      │
-│ Spec Review  │───────────────┤
-└──────┬───────┘               │
-       │ PASS                  │
-       ▼                       │
-┌──────────────┐     FAIL      │
-│Quality Review│───────────────┤
-└──────┬───────┘               │
-       │ PASS                  │
+┌──────────────┐
+│  Run Tests   │
+└──────┬───────┘
+       │
+   ┌───┴───┐
+   │       │
+  PASS    FAIL
+   │       │
+   │   ┌───┴──────────────┐
+   │   │                  │
+   │  Spike?         Auto-fix?
+   │   │                  │
+   │  YES                YES
+   │   │                  │
+   │   ▼                  ▼
+   │  Log           Dispatch Fixer
+   │   │            (max 3 attempts)
+   │   │                  │
+   │   │             ┌────┴────┐
+   │   │             │         │
+   │   │           PASS       FAIL
+   │   │             │         │
+   │   │             │         ▼
+   │   │             │    Block Task
+   │   │             │    Get Next
+   └───┴─────────────┘         │
        │                       │
-       │ ┌─────────────────────┘
+       ▼                  ┌────┘
+┌──────────────┐          │
+│ UI changes?  │  NO      │
+│              │─────┐    │
+└──────┬───────┘     │    │
+       │ YES         │    │
+       ▼             │    │
+┌──────────────┐     │    │
+│   Browser    │ISSUE│    │
+│   Verify     │────►│    │
+└──────┬───────┘     │    │
+       │ PASS/SKIP   │    │
+       ▼             ▼    │
+┌──────────────┐  ┌──────┴────┐
+│ Spec Review  │  │Re-dispatch│
+└──────┬───────┘  │implementer│
+       │ PASS     └─────▲─────┘
+       ▼                │
+┌──────────────┐        │
+│Quality Review│  FAIL  │
+└──────┬───────┘────────┤
+       │ PASS           │
+       │                │
+       │ ┌──────────────┘
        │ │ Review FAIL
        │ ▼
        │ ┌─────────────────┐
@@ -1005,9 +1180,9 @@ Or for failures:
 add_task_activity(task_id, "note", "Spec review: FAIL - Missing requirement X")
 ```
 
-### 6. Complete Task
+### 7. Complete Task
 
-After reviews pass (Step 5), coordinator:
+After reviews pass (Step 6), coordinator:
 - Logs activity to ohno
 - Triggers post-task hooks
 
@@ -1015,7 +1190,7 @@ After reviews pass (Step 5), coordinator:
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
 
-### 7. Checkpoint (based on mode)
+### 8. Checkpoint (based on mode)
 
 #### Sequential Mode
 
@@ -1072,7 +1247,7 @@ Options:
 - **stop**: End session now
 ```
 
-### 8. Repeat
+### 9. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop
