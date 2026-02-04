@@ -682,7 +682,7 @@ After implementer completes:
 
 2. **Evaluate result**:
    - **PASS**: Skip to Browser Verification (Step 4.6)
-   - **FAIL + auto-fix enabled**: Proceed to Step 3
+   - **FAIL + auto-fix enabled**: Proceed to step 3 below (Dispatch fixer)
    - **FAIL + auto-fix disabled**: Log failure, skip to Browser Verification
    - **FAIL + spike task**: Log failure as finding, skip to Browser Verification
 
