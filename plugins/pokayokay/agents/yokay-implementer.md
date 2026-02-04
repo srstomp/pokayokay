@@ -153,11 +153,19 @@ git commit -m "feat/fix/refactor: [concise description]
 - `test:` for test-only changes
 - `docs:` for documentation
 
-## Report Format
+## Store Handoff
 
-After completing the task, report back with:
+After committing, store your full implementation report in ohno's handoff system:
 
-```markdown
+```bash
+# Get commit hash
+COMMIT_HASH=$(git rev-parse HEAD)
+
+# Build files array from git diff
+FILES_CHANGED=$(git diff HEAD~1 --name-only | jq -R -s -c 'split("\n")[:-1]')
+
+# Build full details report
+FULL_DETAILS="$(cat <<EOF
 ## Implementation Complete
 
 **Task**: [Task title/description]
@@ -170,10 +178,6 @@ After completing the task, report back with:
 - [List of test cases]
 - [Test file locations]
 
-### Files Changed
-- `path/to/file.ts` - [brief description]
-- `path/to/test.ts` - [test description]
-
 ### Self-Review Findings
 - [Any concerns or notes]
 - [Technical debt introduced]
@@ -184,8 +188,42 @@ After completing the task, report back with:
 - [How they were resolved]
 
 ### Commit
-- Hash: [commit hash]
+- Hash: ${COMMIT_HASH}
 - Message: [commit message]
+EOF
+)"
+
+# Store handoff (PASS | FAIL | BLOCKED)
+npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "PASS" \
+  "Implemented [2-3 sentence summary]" \
+  --files "$FILES_CHANGED" \
+  --details "$FULL_DETAILS"
+```
+
+## Report Format
+
+After storing the handoff, report back with minimal output:
+
+```markdown
+## Implementation Complete
+
+**Status**: PASS
+**Summary**: Implemented [2-3 sentence summary of what was done]
+**Commit**: [hash]
+
+Full details stored in ohno handoff.
+```
+
+Or if blocked or failed:
+
+```markdown
+## Implementation Status
+
+**Status**: FAIL | BLOCKED
+**Reason**: [Brief 1-2 sentence explanation]
+**Commit**: [hash if applicable]
+
+Full details stored in ohno handoff.
 ```
 
 ## Guidelines
