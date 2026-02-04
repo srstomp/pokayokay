@@ -155,9 +155,12 @@ git commit -m "feat/fix/refactor: [concise description]
 
 ## Store Handoff
 
-After committing, store your full implementation report in ohno's handoff system:
+After committing, store your full implementation report in ohno's handoff system. Use the task ID provided in your prompt.
 
 ```bash
+# Set from task ID in your assignment prompt
+TASK_ID="{TASK_ID}"
+
 # Get commit hash
 COMMIT_HASH=$(git rev-parse HEAD)
 

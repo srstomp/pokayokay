@@ -10,7 +10,7 @@ trap "rm -rf $TEST_DIR" EXIT
 echo "Testing WIP auto-capture..."
 
 # Script path
-BRIDGE="/Users/steve/Projects/stevestomp/pokayokay/.worktrees/context-efficiency/plugins/pokayokay/hooks/actions/bridge.py"
+BRIDGE="$(cd "$(dirname "$0")/.." && pwd)/hooks/actions/bridge.py"
 
 # Setup test environment
 cd "$TEST_DIR"

@@ -69,12 +69,20 @@ For each acceptance criterion:
 
 ## Store Review in Handoff
 
-After completing the review, store full details in ohno:
+After completing the review, store full details in ohno. Use the task ID provided in your prompt.
 
 ```bash
+# Set from task ID in your assignment prompt
+TASK_ID="{TASK_ID}"
+
+# Determine verdict
+STATUS="PASS"   # or "FAIL"
+SUMMARY="Spec review passed - all criteria met"
+# For FAIL: STATUS="FAIL"; SUMMARY="Spec review failed - [1-line description of issues]"
+
 # Build full review report
 FULL_REVIEW="$(cat <<EOF
-## Spec Review: [PASS/FAIL]
+## Spec Review: $STATUS
 
 **Task**: {task_title}
 **Verdict**: [detailed verdict]
@@ -93,8 +101,7 @@ EOF
 )"
 
 # Store handoff
-npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "PASS" \
-  "Spec review passed - all criteria met" \
+npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "$STATUS" "$SUMMARY" \
   --details "$FULL_REVIEW"
 ```
 
