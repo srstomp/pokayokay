@@ -309,12 +309,36 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
         story_env = {**env, "BOUNDARY_TYPE": "story"}
         results.append(run_action("audit-gate", env=story_env))
 
+        # Compact story handoffs (memory decay)
+        if story_id:
+            try:
+                subprocess.run(
+                    ["npx", "@stevestomp/ohno-cli", "compact-handoffs", story_id],
+                    capture_output=True,
+                    timeout=15,
+                    check=False
+                )
+            except Exception:
+                pass  # Best-effort
+
     # Run post-epic hooks if epic completed
     if epic_completed:
         hooks_run.append("post-epic")
         # Run audit-gate for epic boundary
         epic_env = {**env, "BOUNDARY_TYPE": "epic"}
         results.append(run_action("audit-gate", env=epic_env))
+
+        # Delete epic handoffs (memory decay)
+        if epic_id:
+            try:
+                subprocess.run(
+                    ["npx", "@stevestomp/ohno-cli", "delete-handoffs", epic_id],
+                    capture_output=True,
+                    timeout=15,
+                    check=False
+                )
+            except Exception:
+                pass  # Best-effort
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
