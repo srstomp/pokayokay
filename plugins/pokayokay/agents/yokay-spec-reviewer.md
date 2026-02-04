@@ -67,6 +67,37 @@ For each acceptance criterion:
 - [ ] Not met (specify issue)
 - [ ] Over-implemented (specify extra work)
 
+## Store Review in Handoff
+
+After completing the review, store full details in ohno:
+
+```bash
+# Build full review report
+FULL_REVIEW="$(cat <<EOF
+## Spec Review: [PASS/FAIL]
+
+**Task**: {task_title}
+**Verdict**: [detailed verdict]
+
+### Criteria Verification
+
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| [criterion 1] | ✅/❌ | [notes] |
+| [criterion 2] | ✅/❌ | [notes] |
+
+### [Issues Found section if FAIL]
+
+[Full detailed analysis]
+EOF
+)"
+
+# Store handoff
+npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "PASS" \
+  "Spec review passed - all criteria met" \
+  --details "$FULL_REVIEW"
+```
+
 ## Output Format
 
 ### PASS Response
@@ -74,23 +105,7 @@ For each acceptance criterion:
 ```markdown
 ## Spec Review: PASS
 
-**Task**: {task_title}
-**Verdict**: PASS - Implementation matches specification
-
-### Criteria Verification
-
-| Criterion | Status | Notes |
-|-----------|--------|-------|
-| [criterion 1] | ✅ Met | - |
-| [criterion 2] | ✅ Met | - |
-| [criterion 3] | ✅ Met | - |
-
-### Summary
-
-Implementation accurately fulfills all specified requirements.
-No scope creep detected.
-
-Ready for quality review.
+Full details stored in ohno handoff.
 ```
 
 ### FAIL Response
@@ -98,39 +113,9 @@ Ready for quality review.
 ```markdown
 ## Spec Review: FAIL
 
-**Task**: {task_title}
-**Verdict**: FAIL - Implementation does not match specification
+**Issues**: [1-line summary of main issues]
 
-### Issues Found
-
-#### Missing Requirements
-
-| Criterion | Gap |
-|-----------|-----|
-| [criterion X] | [what's missing] |
-
-#### Misunderstandings
-
-| Expected | Actual |
-|----------|--------|
-| [what spec says] | [what was implemented] |
-
-#### Scope Creep
-
-| Extra Work | Concern |
-|------------|---------|
-| [unrequested feature] | [why this is a problem] |
-
-### Required Fixes
-
-1. [Specific fix needed]
-2. [Specific fix needed]
-
-### Recommendation
-
-Re-dispatch implementer with these clarifications:
-- [clarification 1]
-- [clarification 2]
+Full details stored in ohno handoff.
 ```
 
 ## Guidelines
