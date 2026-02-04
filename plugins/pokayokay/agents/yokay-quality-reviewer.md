@@ -83,6 +83,45 @@ For each file:
 - Are naming conventions followed?
 - Is file structure appropriate?
 
+## Store Review in Handoff
+
+After completing the review, store full details in ohno:
+
+```bash
+# Build full review report
+FULL_REVIEW="$(cat <<EOF
+## Quality Review: [PASS/FAIL]
+
+**Task**: {task_title}
+**Verdict**: [detailed verdict]
+
+### Code Quality
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Readability | ✅/❌ | [notes] |
+| Structure | ✅/❌ | [notes] |
+| Patterns | ✅/❌ | [notes] |
+
+### Test Quality
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Coverage | ✅/❌ | [notes] |
+| Quality | ✅/❌ | [notes] |
+
+### [Issues section if FAIL]
+
+[Full detailed analysis with file locations and specific fixes]
+EOF
+)"
+
+# Store handoff
+npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "PASS" \
+  "Quality review passed - code meets standards" \
+  --details "$FULL_REVIEW"
+```
+
 ## Output Format
 
 ### PASS Response
@@ -90,29 +129,7 @@ For each file:
 ```markdown
 ## Quality Review: PASS
 
-**Task**: {task_title}
-**Verdict**: PASS - Implementation meets quality standards
-
-### Code Quality
-
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Readability | ✅ Good | Clear structure and naming |
-| Structure | ✅ Good | Appropriate abstractions |
-| Patterns | ✅ Good | Follows codebase conventions |
-
-### Test Quality
-
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Coverage | ✅ Good | Happy path and edge cases |
-| Quality | ✅ Good | Meaningful assertions |
-| Maintainability | ✅ Good | Clear test names |
-
-### Summary
-
-Code is well-written and properly tested.
-Ready for task completion.
+Full details stored in ohno handoff.
 ```
 
 ### FAIL Response
@@ -120,39 +137,9 @@ Ready for task completion.
 ```markdown
 ## Quality Review: FAIL
 
-**Task**: {task_title}
-**Verdict**: FAIL - Implementation has quality issues
+**Issues**: [1-line summary of critical issues]
 
-### Issues Found
-
-#### Code Quality Issues
-
-| Location | Issue | Severity |
-|----------|-------|----------|
-| file.ts:42 | [specific issue] | Warning/Critical |
-
-#### Test Gaps
-
-| Gap | Impact |
-|-----|--------|
-| [missing test case] | [what could break] |
-
-#### Convention Violations
-
-| Violation | Expected |
-|-----------|----------|
-| [what's wrong] | [what should be] |
-
-### Required Fixes
-
-1. [Specific fix needed with location]
-2. [Specific fix needed with location]
-
-### Recommendation
-
-Re-dispatch implementer with these quality requirements:
-- [requirement 1]
-- [requirement 2]
+Full details stored in ohno handoff.
 ```
 
 ## Severity Levels
