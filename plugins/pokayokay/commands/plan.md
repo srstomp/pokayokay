@@ -1,12 +1,29 @@
 ---
 description: Analyze PRD and create implementation plan with task breakdown
-argument-hint: <prd-path>
+argument-hint: [--headless] [--review] <prd-path>
 skill: prd-analyzer
 ---
 
 # PRD Analysis Workflow
 
 Analyze the PRD at `$ARGUMENTS` and create a structured implementation plan.
+
+## Argument Parsing
+
+Parse `$ARGUMENTS` to extract:
+1. **Mode**: `--headless` (autonomous, no prompts) or `--review` (review existing plan) or default (interactive)
+2. **PRD Path**: Remaining argument after flags
+
+Example arguments:
+- `docs/prd.md` → mode=interactive, path=docs/prd.md
+- `--headless docs/prd.md` → mode=headless, path=docs/prd.md
+- `--review` → mode=review, path=none (loads from ohno)
+
+### Mode Routing
+
+- If `--review`: skip to "## Plan Review Session" section below
+- If `--headless`: run Steps 1-7 with all prompts auto-decided (see Headless Behavior below)
+- Otherwise: run Steps 1-7 interactively (current behavior)
 
 ## Steps
 
