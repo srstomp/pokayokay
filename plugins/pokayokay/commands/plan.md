@@ -282,6 +282,18 @@ else:
     # Suggest installation or proceed without design plugin
 ```
 
+#### Headless vs Interactive
+
+**If `--headless` is active:**
+- If design plugin IS available AND PRD is UI/UX heavy: automatically create design tasks with dependencies (option a). Log decision:
+  ```
+  mcp__ohno__add_task_activity(epic_id, "decision", "DESIGN: Auto-created design-first tasks for [story names] — PRD matches [N] UI/UX keyword categories")
+  ```
+- If design plugin is NOT available: continue without it (no prompt, no decision logged — this is the obvious default).
+
+**If interactive (default, no flags):**
+- Show the existing prompts below as-is (current behavior, unchanged).
+
 #### Design-First Workflow Suggestion
 
 **When design plugin IS available (`design_plugin_available == True`):**
