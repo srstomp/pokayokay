@@ -630,9 +630,15 @@ Analyzes a PRD, concept brief, or feature spec and creates a structured implemen
 4. Assigns skills to features based on type
 5. Generates `.claude/PROJECT.md` for shared context
 
-**Example:**
+**Flags:**
+- `--headless` - Autonomous analysis without prompts. Auto-decides on spikes, design tasks, dependencies, and logs each as a "notable decision" for later review.
+- `--review` - Interactive review of existing plan. Walks through notable decisions, lets you adjust tasks, priorities, and dependencies.
+
+**Examples:**
 ```bash
-/pokayokay:plan docs/feature-spec.md
+/pokayokay:plan docs/feature-spec.md               # Interactive (default)
+/pokayokay:plan --headless docs/feature-spec.md     # Autonomous analysis
+/pokayokay:plan --review                            # Review existing plan
 ```
 
 ### /pokayokay:revise
