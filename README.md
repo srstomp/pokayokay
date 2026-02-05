@@ -112,7 +112,7 @@ npx @stevestomp/ohno-cli serve
 
 | Command | Description |
 |---------|-------------|
-| `/pokayokay:plan <path>` | Analyze PRD and create tasks with skill routing |
+| `/pokayokay:plan [--headless] [--review] <path>` | Analyze PRD and create tasks with skill routing |
 | `/pokayokay:revise [--direct]` | Revise existing plan with impact analysis |
 | `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/autonomous) |
 | `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
