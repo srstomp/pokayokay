@@ -20,6 +20,9 @@ npx @stevestomp/ohno-cli init
 | `/pokayokay:work` | Start supervised session |
 | `/pokayokay:work semi-auto` | Pause at story boundaries |
 | `/pokayokay:work autonomous` | Pause at epic boundaries |
+| `/pokayokay:work --continue` | Resume interrupted session |
+| `/pokayokay:work semi-auto -n 3` | Run 3 tasks in parallel |
+| `/pokayokay:work semi-auto -n auto` | Adaptive parallel sizing |
 | `/pokayokay:audit` | Check accessibility (L0-L5) |
 | `/pokayokay:audit --full` | Check all 5 dimensions |
 | `/pokayokay:handoff` | End session with context |
@@ -76,12 +79,18 @@ npx @stevestomp/ohno-cli init
 ## Sub-Agents
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| yokay-explorer | Haiku | Fast codebase search |
-| yokay-implementer | Sonnet | TDD implementation |
-| yokay-spec-reviewer | Haiku | Spec compliance |
-| yokay-quality-reviewer | Haiku | Code quality |
 | yokay-auditor | Sonnet | L0-L5 scanning |
+| yokay-brainstormer | Sonnet | Task refinement |
+| yokay-browser-verifier | Sonnet | UI verification |
+| yokay-explorer | Haiku | Fast codebase search |
+| yokay-fixer | Sonnet | Auto-retry test failures |
+| yokay-implementer | Sonnet | TDD implementation |
+| yokay-quality-reviewer | Haiku | Code quality |
+| yokay-reviewer | Sonnet | Code review |
 | yokay-security-scanner | Sonnet | OWASP scanning |
+| yokay-spec-reviewer | Haiku | Spec compliance |
+| yokay-spike-runner | Sonnet | Investigations |
+| yokay-test-runner | Haiku | Test execution |
 
 ## ohno CLI
 ```bash

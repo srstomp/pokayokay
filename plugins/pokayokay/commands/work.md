@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous] [--parallel N] [--worktree|--in-place]
+argument-hint: [supervised|semi-auto|autonomous] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
 skill: project-harness
 ---
 
@@ -9,18 +9,27 @@ skill: project-harness
 Start or continue a development session with configurable human control.
 
 **Mode**: `$ARGUMENTS` (default: supervised)
-**Parallel**: Extract `--parallel N` or `-p N` from arguments (default: 1, max: 5)
+**Parallel**: Extract `-n N` or `--parallel N` from arguments (default: 1, "auto" for adaptive)
 
 ## Argument Parsing
 
 Parse `$ARGUMENTS` to extract:
 1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
-2. **Parallel count**: Value after `--parallel` or `-p` flag, default 1, max 5
+2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
+3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
+4. **Continue**: `--continue` flag (resume from previous session's WIP)
 
 Example arguments:
-- `semi-auto --parallel 3` → mode=semi-auto, parallel=3
-- `-p 2` → mode=supervised, parallel=2
+- `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
+- `semi-auto -n auto` → mode=semi-auto, parallel=adaptive (starts at 2)
+- `--parallel 2` → mode=supervised, parallel=2 (fixed)
 - `autonomous` → mode=autonomous, parallel=1
+- `semi-auto --epic epic-abc123` → mode=semi-auto, scope=epic:epic-abc123
+- `autonomous --story story-def456 -n 3` → scope=story:story-def456, parallel=3
+- `--continue` → resume from WIP, inherit previous scope
+- `--all` → work on all available tasks (no scope filter)
+
+Note: `-p` is reserved for the claude CLI `--prompt` flag. Use `-n` for parallel count.
 
 ## Worktree Argument Parsing
 
@@ -33,27 +42,243 @@ Example arguments:
 - `--in-place` → mode=supervised, forceInPlace=true
 - `autonomous -p 3` → mode=autonomous, parallel=3, useSmartDefault=true
 
+## Headless Configuration
+
+Headless mode enables automatic session chaining when context fills up.
+
+### Configuration
+
+Read headless config from `.claude/pokayokay.json` (create if missing):
+
+```json
+{
+  "headless": {
+    "max_chains": 10,
+    "report": "on_complete",
+    "notify": "terminal"
+  }
+}
+```
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `max_chains` | 1-50 | 10 | Maximum sessions to chain before stopping |
+| `report` | `on_complete`, `on_failure`, `always`, `never` | `on_complete` | When to generate chain report |
+| `notify` | `terminal`, `none` | `terminal` | How to notify on chain completion |
+
+### Scope Requirement
+
+**Headless mode requires explicit scope to prevent runaway sessions.**
+
+When running headless (autonomous mode or `--continue` from chain):
+- `--epic <id>`: Only work on tasks within the specified epic
+- `--story <id>`: Only work on tasks within the specified story
+- `--all`: Explicitly allow working on all available tasks
+
+If no scope is provided in autonomous/headless mode, PAUSE and ask:
+```markdown
+Headless/autonomous mode requires a scope to prevent runaway sessions.
+
+Which tasks should this session work on?
+  1. --epic <id>  (work within a specific epic)
+  2. --story <id> (work within a specific story)
+  3. --all        (all available tasks)
+```
+
+### Scope Filtering
+
+When scope is set, filter `get_next_task` and `get_next_batch` results:
+
+```python
+def get_scoped_tasks(scope):
+    if scope.type == "epic":
+        return get_tasks(epic_id=scope.id, status="todo")
+    elif scope.type == "story":
+        return get_tasks(story_id=scope.id, status="todo")  # via story filter
+    else:  # "all"
+        return get_next_batch()
+```
+
+### Session Chaining
+
+When a session reaches context limits:
+
+1. Save current WIP to ohno (automatic via hooks)
+2. Generate chain report if configured
+3. Exit with chain metadata:
+   ```json
+   {
+     "chain_id": "chain-abc123",
+     "chain_index": 3,
+     "max_chains": 10,
+     "scope": {"type": "epic", "id": "epic-abc123"},
+     "tasks_completed": 5,
+     "tasks_remaining": 8
+   }
+   ```
+4. SessionEnd hook spawns next session:
+   ```bash
+   claude --headless --prompt="/work --continue --epic epic-abc123"
+   ```
+
+### Chain Reporting
+
+On chain completion (all tasks done or max_chains reached), generate report:
+
+```
+.ohno/reports/chain-{id}-report.md
+
+# Session Chain Report
+- Chain ID: chain-abc123
+- Sessions: 4
+- Scope: epic-4fcd1e3c (Context Efficiency Redesign)
+- Tasks completed: 12
+- Tasks failed: 1 (task-xyz: test failures)
+- Tasks remaining: 2
+- Total duration: ~45 minutes
+- Decisions made: [extracted from task handoffs]
+```
+
+Report is generated BEFORE memory decay compacts handoff details.
+
+## Adaptive Parallel Sizing
+
+When `-n auto` is specified, parallel count adjusts based on batch outcomes.
+
+### Rules
+
+| Event | Change | Rationale |
+|-------|--------|-----------|
+| Batch completes fully | +1 (max 4) | System handling load well |
+| Batch interrupted (context fill) | -1 (min 2) | Too many agents |
+| Task blocked mid-batch | No change | Not a sizing issue |
+| Task failed review (3x) | -1 (min 2) | Reduce concurrent load |
+| New session (fresh start) | Reset to 2 | Conservative start |
+| `--continue` session | Inherit last value | Maintain momentum |
+
+### Tracking
+
+The coordinator tracks adaptive state in-memory during the session:
+
+```python
+adaptive_state = {
+    "current_n": 2,        # Current parallel count
+    "mode": "auto",        # "auto" or "fixed"
+    "batches_completed": 0,
+    "batches_failed": 0,
+    "last_outcome": None,  # "completed", "interrupted", "failed"
+}
+
+def adjust_parallel(outcome):
+    if adaptive_state["mode"] != "auto":
+        return  # Fixed mode, no adjustment
+
+    if outcome == "completed":
+        adaptive_state["current_n"] = min(adaptive_state["current_n"] + 1, 4)
+        adaptive_state["batches_completed"] += 1
+    elif outcome in ("interrupted", "failed"):
+        adaptive_state["current_n"] = max(adaptive_state["current_n"] - 1, 2)
+        adaptive_state["batches_failed"] += 1
+
+    adaptive_state["last_outcome"] = outcome
+```
+
+### Display
+
+When adaptive sizing changes, log it:
+```markdown
+Parallel sizing: 2 → 3 (batch completed successfully)
+```
+
+Or:
+```markdown
+Parallel sizing: 3 → 2 (batch interrupted by context fill)
+```
+
 ## Session Start
 
-### 1. Get Session Context
+### 0. Load Configuration
+Read `.claude/pokayokay.json` for headless and work settings.
+
+### 1. Scope Validation (if autonomous or --continue)
+If mode is `autonomous` or `--continue` flag is set, verify scope:
+- If `--epic <id>` → filter tasks to this epic only
+- If `--story <id>` → filter tasks to this story only
+- If `--all` → no filter (explicit opt-in)
+- If none → PAUSE and require user to pick a scope
+
+### 2. Get Session Context
 Use ohno MCP `get_session_context` to understand:
 - Previous session notes
 - Current blockers
 - In-progress tasks
 
-### 2. Read Project Context
+### 3. Resume Check (if --continue)
+
+When `--continue` flag is set, resume from previous WIP instead of starting fresh:
+
+1. **Find resumable tasks**: Check `get_session_context()` for in_progress tasks with WIP data
+2. **Select task to resume**: Pick the task with most recent `wip_updated_at`
+3. **Load WIP**: Get full task via `get_task(task_id, fields="full")` to access `work_in_progress`
+4. **Display resume context**:
+
+```markdown
+## Resuming: {task.title} ({task.id})
+
+**Phase**: {wip.phase}
+**Last activity**: {task.wip_updated_at}
+**Files modified**: {wip.files_modified}
+**Last commit**: {wip.last_commit}
+**Uncommitted changes**: {wip.uncommitted_changes}
+
+**Next step**: {wip.next_step}
+
+**Decisions made**:
+{wip.decisions | formatted}
+
+**Test results**: {wip.test_results.passed} passed, {wip.test_results.failed} failed
+```
+
+5. **Skip brainstorming**: Task already has context, go directly to implementation
+6. **Dispatch implementer with WIP context**:
+
+```
+Task tool (yokay-implementer):
+  description: "Resume: {task.title}"
+  prompt: [Fill implementer template with ADDITIONAL section:]
+
+  ## Resuming from Previous Session
+  This task was partially completed. Here is the saved state:
+  - Phase: {wip.phase}
+  - Files already modified: {wip.files_modified}
+  - Last commit: {wip.last_commit}
+  - Uncommitted changes: {wip.uncommitted_changes}
+  - Decisions already made: {wip.decisions}
+  - Test results: {wip.test_results}
+  - Errors encountered: {wip.errors}
+  - Next step: {wip.next_step}
+
+  Pick up from where the previous session left off. Do NOT redo work
+  that was already committed. Start from the "next step" above.
+```
+
+If no in_progress tasks with WIP exist, fall through to normal task selection.
+
+### 4. Read Project Context
 If `.claude/PROJECT.md` exists, read it for:
 - Project overview
 - Tech stack
 - Conventions
 
-### 3. Get Next Task
+### 5. Get Next Task
 ```bash
 npx @stevestomp/ohno-cli next
 ```
 Or use ohno MCP `get_next_task`.
 
-### 4. Worktree Decision
+When scope is set, filter the result to only include tasks within scope.
+
+### 6. Worktree Decision
 
 After getting the next task, determine whether to use a worktree.
 
@@ -153,7 +378,7 @@ If worktree is needed:
 
 ## Parallel State Tracking
 
-When running with `--parallel N` where N > 1:
+When running with `-n N` where N > 1 (or `-n auto`):
 
 ### State Variables
 
@@ -162,6 +387,7 @@ Track these during the work loop:
 - **queued_tasks**: List of task IDs ready to dispatch
 - **completed_this_batch**: List of task IDs completed since last checkpoint
 - **failed_blocked**: List of task IDs that failed or got blocked
+- **adaptive_state**: Current parallel count, mode, batch outcomes (see Adaptive Parallel Sizing)
 
 ### Filling the Queue
 
@@ -174,7 +400,7 @@ Track these during the work loop:
 
 At any time: `len(active_agents) + len(queued_tasks) <= N`
 
-### 4. Start the Task
+### 7. Start the Task
 ```bash
 npx @stevestomp/ohno-cli start <task-id>
 ```
@@ -190,10 +416,11 @@ For each task:
 3. **Route to skill** (if needed): Based on task type
 4. **Brainstorm gate** (conditional): See Brainstorm Gate section
 5. **Dispatch implementer**: Single Task tool call
-6. **Browser verification** (conditional): See Browser Verification section
-7. **Two-stage review**: Spec review → Quality review
-8. **Complete task**: Mark done, trigger hooks
-9. **Checkpoint**: Based on mode
+6. **Auto-fix test failures** (conditional): See Auto-Fix section
+7. **Browser verification** (conditional): See Browser Verification section
+8. **Two-stage review**: Spec review → Quality review
+9. **Complete task**: Mark done, trigger hooks
+10. **Checkpoint**: Based on mode
 
 ### Parallel Mode (parallel > 1)
 
@@ -633,7 +860,7 @@ If brainstorm triggers:
 
 4. Process subagent result:
    - If questions: Answer and re-dispatch
-   - If complete: Proceed to Step 5 (Review)
+   - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
    - If blocked: Set blocker via ohno MCP
 
 **Why subagent?**
@@ -641,7 +868,153 @@ If brainstorm triggers:
 - Subagent can ask questions before/during work
 - Context discarded after task (token efficiency)
 
-### 4.5 Browser Verification (Conditional)
+### 4.5 Auto-Fix Test Failures (Conditional)
+
+After the implementer completes, run tests to verify the implementation. If tests fail, automatically attempt to fix them before proceeding to review.
+
+#### Configuration
+
+Auto-fix behavior is controlled by configuration and task type:
+
+```json
+{
+  "work": {
+    "max_test_retries": 3,
+    "auto_fix": true
+  }
+}
+```
+
+#### Task Type Defaults
+
+| Task Type | Auto-fix Enabled |
+|-----------|------------------|
+| `bug` | Yes |
+| `feature` | Yes |
+| `chore` | Yes |
+| `spike` | No (failures are data) |
+| `docs` | No (usually no tests) |
+
+#### Auto-Fix Flow
+
+After implementer completes:
+
+1. **Run tests**: Execute test suite for changed files
+   ```bash
+   # Detect test framework and run
+   npm test -- --testPathPattern="<changed-files>"
+   # or equivalent
+   ```
+
+2. **Evaluate result**:
+   - **PASS**: Skip to Browser Verification (Step 4.6)
+   - **FAIL + auto-fix enabled**: Proceed to step 3 below (Dispatch fixer)
+   - **FAIL + auto-fix disabled**: Log failure, skip to Browser Verification
+   - **FAIL + spike task**: Log failure as finding, skip to Browser Verification
+
+3. **Dispatch fixer**: If test fails and auto-fix enabled:
+   ```
+   Task tool (yokay-fixer):
+     description: "Fix test failure: {task.title}"
+     prompt: [Include task details, test output, max 3 retries]
+   ```
+
+4. **Process fixer result**:
+   - **PASS**: Fixer fixed the issue → Continue to Browser Verification
+   - **FAIL**: Fixer couldn't fix after 3 attempts → Mark task blocked
+
+5. **Handle fixer failure**:
+   ```bash
+   # Mark task as blocked
+   npx @stevestomp/ohno-cli block <task-id> "Test failures could not be auto-fixed"
+
+   # Log activity
+   add_task_activity(task_id, "note", "Auto-fix failed after 3 attempts: [reason]")
+   ```
+
+6. **Continue queue**: Get next task and continue work loop (don't stop the session)
+
+#### Fixer Agent Behavior
+
+The yokay-fixer agent:
+- Parses test failure output
+- Identifies root cause (assertion failure, type error, missing await, etc.)
+- Makes targeted code edits (using Edit tool only)
+- Re-runs tests after each fix
+- Maximum 3 attempts
+- Reports PASS or FAIL with detailed handoff
+
+#### Flow Diagram
+
+```
+Implementer Completes
+        │
+        ▼
+    Run Tests
+        │
+   ┌────┴────┐
+   │         │
+  PASS      FAIL
+   │         │
+   │    ┌────┴────────────────┐
+   │    │                     │
+   │  Spike?            Auto-fix enabled?
+   │    │                     │
+   │   YES                   YES
+   │    │                     │
+   │    ▼                     ▼
+   │  Log as             Dispatch Fixer
+   │  finding            (max 3 attempts)
+   │    │                     │
+   │    │                ┌────┴────┐
+   │    │                │         │
+   │    │              PASS       FAIL
+   │    │                │         │
+   │    │                │         ▼
+   │    │                │    Block Task
+   │    │                │    Get Next Task
+   │    │                │         │
+   └────┴────────────────┴─────────┘
+        │
+        ▼
+  Browser Verification
+  (Section 4.6)
+```
+
+#### Logging
+
+Log all auto-fix activities:
+
+```bash
+# Test failure detected
+add_task_activity(task_id, "note", "Tests failed, spawning auto-fixer")
+
+# Fixer success
+add_task_activity(task_id, "note", "Auto-fix: PASS - Fixed [issue]")
+
+# Fixer failure
+add_task_activity(task_id, "note", "Auto-fix: FAIL - Unable to fix after 3 attempts")
+```
+
+#### Skip Auto-Fix
+
+To disable auto-fix for a specific session:
+
+```bash
+# Add flag to arguments
+/pokayokay:work semi-auto --skip-auto-fix
+```
+
+Or set in configuration:
+```json
+{
+  "work": {
+    "auto_fix": false
+  }
+}
+```
+
+### 4.6 Browser Verification (Conditional)
 
 After the implementer completes, check if browser verification should run.
 
@@ -653,7 +1026,7 @@ All three conditions must pass:
 2. **Server running**: HTTP server on ports 3000-9999, or can be started via package.json
 3. **Renderable files changed**: Task modified `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/`
 
-If any check fails, silently skip to Step 5 (Review).
+If any check fails, silently skip to Step 6 (Review).
 
 #### Verification Flow
 
@@ -667,7 +1040,7 @@ If all checks pass:
    ```
 
 2. Process verification result:
-   - **PASS**: Continue to Step 5 (Review)
+   - **PASS**: Continue to Step 6 (Review)
    - **ISSUE**: Re-dispatch implementer with visual/functional issues
    - **SKIP**: User provided reason, continue with warning flag
 
@@ -715,7 +1088,7 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 5. Two-Stage Review
+### 6. Two-Stage Review
 
 After implementer completes, run reviews in sequence:
 
@@ -762,7 +1135,7 @@ Only runs if spec review passes.
    ```
 
 2. Process quality review result:
-   - **PASS**: Proceed to task completion (Step 6)
+   - **PASS**: Proceed to task completion (Step 7)
    - **FAIL**: Re-dispatch implementer with quality issues
 
 **What quality reviewer checks:**
@@ -927,29 +1300,57 @@ Review FAIL
 └──────┬───────┘
        │
        ▼
-┌──────────────┐  NO   ┌──────────────┐
-│ UI changes?  │──────►│ Skip browser │
-│              │       │  verify      │
-└──────┬───────┘       └──────┬───────┘
-       │ YES                  │
-       ▼                      │
-┌──────────────┐  ISSUE  ┌────┴────────┐
-│   Browser    │────────►│ Re-dispatch │
-│   Verify     │         │ implementer │
-└──────┬───────┘         └─────────────┘
-       │ PASS/SKIP             ▲
-       ▼                       │
-┌──────────────┐     FAIL      │
-│ Spec Review  │───────────────┤
-└──────┬───────┘               │
-       │ PASS                  │
-       ▼                       │
-┌──────────────┐     FAIL      │
-│Quality Review│───────────────┤
-└──────┬───────┘               │
-       │ PASS                  │
+┌──────────────┐
+│  Run Tests   │
+└──────┬───────┘
+       │
+   ┌───┴───┐
+   │       │
+  PASS    FAIL
+   │       │
+   │   ┌───┴──────────────┐
+   │   │                  │
+   │  Spike?         Auto-fix?
+   │   │                  │
+   │  YES                YES
+   │   │                  │
+   │   ▼                  ▼
+   │  Log           Dispatch Fixer
+   │   │            (max 3 attempts)
+   │   │                  │
+   │   │             ┌────┴────┐
+   │   │             │         │
+   │   │           PASS       FAIL
+   │   │             │         │
+   │   │             │         ▼
+   │   │             │    Block Task
+   │   │             │    Get Next
+   └───┴─────────────┘         │
        │                       │
-       │ ┌─────────────────────┘
+       ▼                  ┌────┘
+┌──────────────┐          │
+│ UI changes?  │  NO      │
+│              │─────┐    │
+└──────┬───────┘     │    │
+       │ YES         │    │
+       ▼             │    │
+┌──────────────┐     │    │
+│   Browser    │ISSUE│    │
+│   Verify     │────►│    │
+└──────┬───────┘     │    │
+       │ PASS/SKIP   │    │
+       ▼             ▼    │
+┌──────────────┐  ┌──────┴────┐
+│ Spec Review  │  │Re-dispatch│
+└──────┬───────┘  │implementer│
+       │ PASS     └─────▲─────┘
+       ▼                │
+┌──────────────┐        │
+│Quality Review│  FAIL  │
+└──────┬───────┘────────┤
+       │ PASS           │
+       │                │
+       │ ┌──────────────┘
        │ │ Review FAIL
        │ ▼
        │ ┌─────────────────┐
@@ -1005,9 +1406,9 @@ Or for failures:
 add_task_activity(task_id, "note", "Spec review: FAIL - Missing requirement X")
 ```
 
-### 6. Complete Task
+### 7. Complete Task
 
-After reviews pass (Step 5), coordinator:
+After reviews pass (Step 6), coordinator:
 - Logs activity to ohno
 - Triggers post-task hooks
 
@@ -1015,7 +1416,7 @@ After reviews pass (Step 5), coordinator:
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
 
-### 7. Checkpoint (based on mode)
+### 8. Checkpoint (based on mode)
 
 #### Sequential Mode
 
@@ -1072,7 +1473,7 @@ Options:
 - **stop**: End session now
 ```
 
-### 8. Repeat
+### 9. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop
@@ -1219,15 +1620,34 @@ Use ohno MCP to log:
 - Current project status
 - Next recommended task
 
-*Post-session hooks handle final sync and summary.*
+*Post-session hooks handle final sync, summary, and chain spawning.*
+
+### 3. Session Chaining (if headless)
+
+When session ends with remaining work in scope:
+
+1. SessionEnd hook calls `session-chain.sh`
+2. Script checks remaining ready tasks via ohno
+3. If tasks remain and chain limit not reached:
+   - Spawns: `claude --headless --prompt="/work --continue <scope-flag>"`
+4. If chain complete or limit reached:
+   - Generates report to `.ohno/reports/chain-{id}-report.md`
+   - Notifies via configured method
+
+Chain environment variables (set by coordinator, read by hooks):
+- `YOKAY_CHAIN_ID`: Unique chain identifier
+- `YOKAY_CHAIN_INDEX`: Current session number in chain
+- `YOKAY_SCOPE_TYPE`: "epic", "story", or "all"
+- `YOKAY_SCOPE_ID`: The epic/story ID
+- `YOKAY_TASKS_COMPLETED`: Running total of completed tasks
 
 ## Modes Reference
 
-| Mode | Task Complete | Story Complete | Epic Complete |
-|------|--------------|----------------|---------------|
-| supervised | PAUSE | PAUSE | PAUSE |
-| semi-auto | log | PAUSE | PAUSE |
-| autonomous | skip | log | PAUSE |
+| Mode | Task Complete | Story Complete | Epic Complete | Scope Required | Chaining |
+|------|--------------|----------------|---------------|----------------|----------|
+| supervised | PAUSE | PAUSE | PAUSE | No | No |
+| semi-auto | log | PAUSE | PAUSE | No | No |
+| autonomous | skip | log | PAUSE | Yes | Yes (headless) |
 
 ## Spike Task Protocol
 
@@ -1279,6 +1699,22 @@ If you discover a bug while working on a feature:
 1. Block current task: `npx @stevestomp/ohno-cli block <task-id> "Blocked by bug"`
 2. Create bug task with P0 priority
 3. Switch to bug fix immediately
+
+## Headless Examples
+
+```bash
+# Work through an entire epic autonomously
+/work autonomous --epic epic-4fcd1e3c
+
+# Work on one story, chaining if needed
+/work autonomous --story story-2f3c465d -p 2
+
+# Continue from a previous chained session
+/work --continue --epic epic-4fcd1e3c
+
+# Interactive with scope (no chaining, just filters tasks)
+/work semi-auto --epic epic-4fcd1e3c
+```
 
 ## Related Commands
 
