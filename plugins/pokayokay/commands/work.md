@@ -1707,7 +1707,7 @@ If you discover a bug while working on a feature:
 /work autonomous --epic epic-4fcd1e3c
 
 # Work on one story, chaining if needed
-/work autonomous --story story-2f3c465d -p 2
+/work autonomous --story story-2f3c465d -n 2
 
 # Continue from a previous chained session
 /work --continue --epic epic-4fcd1e3c
