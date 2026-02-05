@@ -210,7 +210,9 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 |-------|-------|------|---------|
 | `yokay-auditor` | Sonnet | Read-only | L0-L5 completeness scanning |
 | `yokay-brainstormer` | Sonnet | Read-only | Refine ambiguous tasks into clear requirements |
+| `yokay-browser-verifier` | Sonnet | Read-only | Browser verification for UI changes |
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
+| `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | Can write | TDD implementation with fresh context |
 | `yokay-quality-reviewer` | Haiku | Read-only | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
@@ -218,7 +220,6 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-spec-reviewer` | Haiku | Read-only | Verify implementation matches spec |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
-| `yokay-browser-verifier` | Sonnet | Read-only | Browser verification for UI changes |
 
 ### Agent vs Skill
 
@@ -240,6 +241,7 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:work` | yokay-brainstormer | Ambiguous tasks (before impl) |
 | `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
 | `/pokayokay:work` | yokay-browser-verifier | UI changes (after implementation) |
+| `/pokayokay:work` | yokay-fixer | When tests fail after implementation |
 | `/pokayokay:work` | yokay-spec-reviewer | After browser verification |
 | `/pokayokay:work` | yokay-quality-reviewer | After spec review passes |
 
@@ -667,9 +669,22 @@ Starts or continues an orchestrated work session with configurable human control
 - `semi-auto` - Pause at story/epic boundaries
 - `autonomous` - Pause only at epic boundaries
 
-**Example:**
+**Flags:**
+- `--continue` - Resume an interrupted session, picking up tasks with saved WIP data
+- `-n <count>` - Run N tasks in parallel (default: 1)
+- `-n auto` - Adaptive parallel sizing (starts at 2, adjusts based on outcomes)
+- `--headless` - Enable headless session chaining (requires `--scope`)
+- `--scope <story|epic|all>` - Scope for headless chaining
+
+> **Note:** `-p` is reserved for the Claude CLI `--prompt` flag. Use `-n` for parallel count.
+
+**Examples:**
 ```bash
-/pokayokay:work semi-auto
+/pokayokay:work semi-auto             # Standard semi-auto session
+/pokayokay:work --continue            # Resume interrupted session
+/pokayokay:work semi-auto -n 3        # 3 tasks in parallel
+/pokayokay:work semi-auto -n auto     # Adaptive parallel sizing
+/pokayokay:work autonomous --headless --scope story  # Headless chaining
 ```
 
 ### /pokayokay:audit
@@ -791,9 +806,15 @@ The audit catches these gaps and creates remediation tasks automatically.
 4. `/pokayokay:work` to continue with updated plan
 
 ### Resuming interrupted work
-1. Claude automatically reads session context from ohno
-2. `/pokayokay:work` continues where you left off
+1. Use `/pokayokay:work --continue` to resume with saved WIP data
+2. Tasks with in-progress work skip brainstorming and load previous context
 3. All previous decisions and progress are preserved
+
+### Headless session chaining
+1. `/pokayokay:work autonomous --headless --scope story` chains sessions
+2. Each session completes, then a new one starts automatically
+3. Chain reports are generated to `.ohno/reports/`
+4. Max chain limit prevents runaway execution (configurable in `.claude/pokayokay.json`)
 
 ### Verifying a feature is complete
 1. `/pokayokay:audit FeatureName` checks implementation

@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `plan-revision` skill for guided plan modifications
 - Two revision modes: explore (guided) and direct (fast path)
 - Impact analysis showing ticket diff, risk assessment, and dependency graphs
+- **Session Resume**: `/pokayokay:work --continue` resumes interrupted sessions with saved WIP data
+- **Headless Session Chaining**: `--headless --scope <story|epic|all>` for autonomous multi-session execution
+- **Adaptive Parallel Sizing**: `-n auto` starts at 2 and adjusts based on task outcomes (min 2, max 4)
+- **yokay-fixer agent**: Auto-retry on test failures with targeted fixes
+- **Skill Lazy Loading**: Skills restructured with compact SKILL.md and `references/` subdirectories for reduced context usage
+
+### Changed
+- Parallel flag renamed from `-p` to `-n` (`-p` reserved for Claude CLI `--prompt`)
+- All 23 skills reduced to <100 line core files with detailed content in `references/`
+- Sub-agent count increased from 10 to 12 (added yokay-fixer, yokay-browser-verifier)
 
 ## [0.4.0] - 2026-01-21
 
