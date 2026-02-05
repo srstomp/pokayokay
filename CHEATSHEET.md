@@ -15,6 +15,8 @@ npx @stevestomp/ohno-cli init
 | Command | Purpose |
 |---------|---------|
 | `/pokayokay:plan <prd>` | Create tasks from PRD |
+| `/pokayokay:plan --headless <prd>` | Autonomous PRD analysis |
+| `/pokayokay:plan --review` | Review plan decisions |
 | `/pokayokay:revise` | Revise plan (explore mode) |
 | `/pokayokay:revise --direct` | Revise plan (know what to change) |
 | `/pokayokay:work` | Start supervised session |

@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Adaptive Parallel Sizing**: `-n auto` starts at 2 and adjusts based on task outcomes (min 2, max 4)
 - **yokay-fixer agent**: Auto-retry on test failures with targeted fixes
 - **Skill Lazy Loading**: Skills restructured with compact SKILL.md and `references/` subdirectories for reduced context usage
+- **Headless Planning**: `/plan --headless` for autonomous PRD analysis with notable decision tracking
+- **Plan Review**: `/plan --review` for diff-style interactive review of planning decisions
 
 ### Changed
 - Parallel flag renamed from `-p` to `-n` (`-p` reserved for Claude CLI `--prompt`)
