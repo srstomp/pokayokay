@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous] [--parallel N] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
+argument-hint: [supervised|semi-auto|autonomous] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
 skill: project-harness
 ---
 
@@ -9,24 +9,27 @@ skill: project-harness
 Start or continue a development session with configurable human control.
 
 **Mode**: `$ARGUMENTS` (default: supervised)
-**Parallel**: Extract `--parallel N` or `-p N` from arguments (default: 1, max: 5)
+**Parallel**: Extract `-n N` or `--parallel N` from arguments (default: 1, "auto" for adaptive)
 
 ## Argument Parsing
 
 Parse `$ARGUMENTS` to extract:
 1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
-2. **Parallel count**: Value after `--parallel` or `-p` flag, default 1, max 5
+2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
 
 Example arguments:
-- `semi-auto --parallel 3` → mode=semi-auto, parallel=3
-- `-p 2` → mode=supervised, parallel=2
+- `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
+- `semi-auto -n auto` → mode=semi-auto, parallel=adaptive (starts at 2)
+- `--parallel 2` → mode=supervised, parallel=2 (fixed)
 - `autonomous` → mode=autonomous, parallel=1
 - `semi-auto --epic epic-abc123` → mode=semi-auto, scope=epic:epic-abc123
-- `autonomous --story story-def456 -p 3` → mode=autonomous, scope=story:story-def456, parallel=3
+- `autonomous --story story-def456 -n 3` → scope=story:story-def456, parallel=3
 - `--continue` → resume from WIP, inherit previous scope
 - `--all` → work on all available tasks (no scope filter)
+
+Note: `-p` is reserved for the claude CLI `--prompt` flag. Use `-n` for parallel count.
 
 ## Worktree Argument Parsing
 
@@ -137,6 +140,60 @@ On chain completion (all tasks done or max_chains reached), generate report:
 ```
 
 Report is generated BEFORE memory decay compacts handoff details.
+
+## Adaptive Parallel Sizing
+
+When `-n auto` is specified, parallel count adjusts based on batch outcomes.
+
+### Rules
+
+| Event | Change | Rationale |
+|-------|--------|-----------|
+| Batch completes fully | +1 (max 4) | System handling load well |
+| Batch interrupted (context fill) | -1 (min 2) | Too many agents |
+| Task blocked mid-batch | No change | Not a sizing issue |
+| Task failed review (3x) | -1 (min 2) | Reduce concurrent load |
+| New session (fresh start) | Reset to 2 | Conservative start |
+| `--continue` session | Inherit last value | Maintain momentum |
+
+### Tracking
+
+The coordinator tracks adaptive state in-memory during the session:
+
+```python
+adaptive_state = {
+    "current_n": 2,        # Current parallel count
+    "mode": "auto",        # "auto" or "fixed"
+    "batches_completed": 0,
+    "batches_failed": 0,
+    "last_outcome": None,  # "completed", "interrupted", "failed"
+}
+
+def adjust_parallel(outcome):
+    if adaptive_state["mode"] != "auto":
+        return  # Fixed mode, no adjustment
+
+    if outcome == "completed":
+        adaptive_state["current_n"] = min(adaptive_state["current_n"] + 1, 4)
+        adaptive_state["batches_completed"] += 1
+    elif outcome in ("interrupted", "failed"):
+        adaptive_state["current_n"] = max(adaptive_state["current_n"] - 1, 2)
+        adaptive_state["batches_failed"] += 1
+
+    adaptive_state["last_outcome"] = outcome
+```
+
+### Display
+
+When adaptive sizing changes, log it:
+```markdown
+Parallel sizing: 2 → 3 (batch completed successfully)
+```
+
+Or:
+```markdown
+Parallel sizing: 3 → 2 (batch interrupted by context fill)
+```
 
 ## Session Start
 
@@ -321,7 +378,7 @@ If worktree is needed:
 
 ## Parallel State Tracking
 
-When running with `--parallel N` where N > 1:
+When running with `-n N` where N > 1 (or `-n auto`):
 
 ### State Variables
 
@@ -330,6 +387,7 @@ Track these during the work loop:
 - **queued_tasks**: List of task IDs ready to dispatch
 - **completed_this_batch**: List of task IDs completed since last checkpoint
 - **failed_blocked**: List of task IDs that failed or got blocked
+- **adaptive_state**: Current parallel count, mode, batch outcomes (see Adaptive Parallel Sizing)
 
 ### Filling the Queue
 
