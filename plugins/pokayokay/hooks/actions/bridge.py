@@ -44,6 +44,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "detect-spike": 10,
     "capture-knowledge": 15,
     "session-summary": 15,
+    "session-chain": 30,
     "post-review-fail": 30,
 }
 
@@ -195,22 +196,70 @@ def handle_session_start(input_data: dict) -> dict:
     }
 
 
+def load_pokayokay_config() -> dict:
+    """Load pokayokay configuration from .claude/pokayokay.json."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    config_path = Path(project_dir) / ".claude" / "pokayokay.json"
+
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 def handle_session_end(input_data: dict) -> dict:
-    """Handle SessionEnd event - run post-session hooks."""
+    """Handle SessionEnd event - run post-session hooks and session chaining."""
     results = []
 
     # Run post-session hooks
     results.append(run_action("sync"))
     results.append(run_action("session-summary"))
 
+    # Check for session chaining
+    chain_id = os.environ.get("YOKAY_CHAIN_ID", "")
+    chain_result = None
+
+    if chain_id:
+        # We're in a chain - check if we should continue
+        config = load_pokayokay_config()
+        headless_config = config.get("headless", {})
+
+        chain_env = {
+            "CHAIN_ID": chain_id,
+            "CHAIN_INDEX": os.environ.get("YOKAY_CHAIN_INDEX", "0"),
+            "MAX_CHAINS": str(headless_config.get("max_chains", 10)),
+            "SCOPE_TYPE": os.environ.get("YOKAY_SCOPE_TYPE", ""),
+            "SCOPE_ID": os.environ.get("YOKAY_SCOPE_ID", ""),
+            "TASKS_COMPLETED": os.environ.get("YOKAY_TASKS_COMPLETED", "0"),
+            "REPORT_MODE": headless_config.get("report", "on_complete"),
+            "NOTIFY_MODE": headless_config.get("notify", "terminal"),
+        }
+
+        chain_result = run_action("session-chain", env=chain_env)
+        results.append(chain_result)
+
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")
 
-    return {
+    response = {
         "hooks_run": ["post-session"],
         "results": results,
         "summary": f"{success_count} passed, {warning_count} warnings"
     }
+
+    # Include chain info if available
+    if chain_result and chain_result.get("output"):
+        try:
+            chain_data = json.loads(chain_result["output"])
+            response["chain"] = chain_data
+        except json.JSONDecodeError:
+            pass
+
+    return response
 
 
 def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
@@ -898,6 +947,31 @@ def format_context(result: dict) -> str:
 
     if result.get("suggestion"):
         lines.append(f"**Suggestion:** {result['suggestion']}")
+
+    # Chain info (for session end with chaining)
+    chain = result.get("chain", {})
+    if chain:
+        lines.append("")
+        chain_action = chain.get("action", "")
+        if chain_action == "continue":
+            lines.append("## Session Chain: Continuing")
+            lines.append(f"Chain {chain.get('chain_id', '?')} session {chain.get('chain_index', '?')}/{chain.get('max_chains', '?')}")
+            lines.append(f"Tasks completed so far: {chain.get('tasks_completed', 0)}")
+            lines.append(f"Tasks remaining: {chain.get('tasks_remaining', 0)}")
+            lines.append(f"Next: `{chain.get('continue_command', '')}`")
+        elif chain_action == "complete":
+            lines.append("## Session Chain: Complete")
+            lines.append(f"All tasks in scope completed! ({chain.get('tasks_completed', 0)} total)")
+            report = chain.get("report_path", "")
+            if report:
+                lines.append(f"Report: {report}")
+        elif chain_action == "limit_reached":
+            lines.append("## Session Chain: Limit Reached")
+            lines.append(f"Max chains ({chain.get('max_chains', 10)}) reached.")
+            lines.append(f"Completed: {chain.get('tasks_completed', 0)}, Remaining: {chain.get('tasks_remaining', 0)}")
+            report = chain.get("report_path", "")
+            if report:
+                lines.append(f"Report: {report}")
 
     # Kaizen action info (for review failures)
     kaizen_action = result.get("kaizen_action")

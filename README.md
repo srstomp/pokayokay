@@ -114,7 +114,7 @@ npx @stevestomp/ohno-cli serve
 |---------|-------------|
 | `/pokayokay:plan <path>` | Analyze PRD and create tasks with skill routing |
 | `/pokayokay:revise [--direct]` | Revise existing plan with impact analysis |
-| `/pokayokay:work [mode]` | Start/continue work session (supervised/semi-auto/autonomous) |
+| `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/autonomous) |
 | `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
 | `/pokayokay:review` | Analyze session patterns and skill effectiveness |
 | `/pokayokay:handoff` | Prepare session handoff with context preservation |
@@ -213,11 +213,13 @@ Run multiple tasks simultaneously for faster throughput:
 
 ```bash
 # Run up to 3 tasks in parallel
-/pokayokay:work semi-auto --parallel 3
+/pokayokay:work semi-auto -n 3
 
-# Short form
-/pokayokay:work -p 3
+# Adaptive sizing (starts at 2, adjusts based on outcomes)
+/pokayokay:work semi-auto -n auto
 ```
+
+> **Note:** `-p` is reserved for the Claude CLI `--prompt` flag. Use `-n` for parallel count.
 
 **How it works:**
 - Coordinator dispatches N implementer agents in a single message
@@ -225,16 +227,47 @@ Run multiple tasks simultaneously for faster throughput:
 - Results processed as they complete
 - Dependency graph prevents unsafe parallelization
 
+**Adaptive mode (`-n auto`):**
+- Starts at 2 parallel tasks
+- Scales up (max 4) when tasks succeed consecutively
+- Scales down (min 2) when failures occur
+- Displays batch size changes during session
+
 **Recommended settings:**
 - Default: 1 (sequential, safest)
 - Independent tasks: 2-3
-- Large backlog: 3-4
+- Adaptive: `auto` (recommended for most sessions)
 - Maximum: 5
 
 **Tradeoffs:**
 - Higher token usage (N concurrent contexts)
 - Potential git conflicts (auto-resolved when possible)
 - No shared learning between parallel agents
+
+### Session Resume
+
+Resume interrupted work sessions without losing context:
+
+```bash
+# Resume the last session, picking up where you left off
+/pokayokay:work --continue
+```
+
+Loads tasks with saved WIP data from ohno, skips brainstorming for resumed tasks, and dispatches the implementer with previous context.
+
+### Headless Session Chaining
+
+Run multiple autonomous sessions back-to-back without human interaction:
+
+```bash
+# Chain sessions for the current story
+/pokayokay:work autonomous --headless --scope story
+
+# Chain across the entire epic
+/pokayokay:work autonomous --headless --scope epic
+```
+
+Headless chaining is configured in `.claude/pokayokay.json` and generates chain reports to `.ohno/reports/`. A max chains limit prevents runaway sessions.
 
 ### Worktree Isolation
 
@@ -262,13 +295,15 @@ Tasks automatically run in isolated git worktrees based on type:
 
 ## Sub-Agents
 
-pokayokay includes **10 specialized sub-agents** that run in isolated context windows for verbose operations:
+pokayokay includes **12 specialized sub-agents** that run in isolated context windows for verbose operations:
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | `yokay-auditor` | Sonnet | L0-L5 completeness scanning (read-only) |
 | `yokay-brainstormer` | Sonnet | Refines ambiguous tasks into clear requirements |
+| `yokay-browser-verifier` | Sonnet | Browser verification for UI changes (read-only) |
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
+| `yokay-fixer` | Sonnet | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | TDD implementation with fresh context |
 | `yokay-quality-reviewer` | Haiku | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
