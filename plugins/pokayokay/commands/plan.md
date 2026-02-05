@@ -25,6 +25,56 @@ Example arguments:
 - If `--headless`: run Steps 1-7 with all prompts auto-decided (see Headless Behavior below)
 - Otherwise: run Steps 1-7 interactively (current behavior)
 
+## Headless Behavior
+
+When `--headless` is active, suppress ALL user-facing prompts and auto-decide:
+
+### Decision Logging
+
+Every auto-decision MUST be logged via ohno:
+
+```
+mcp__ohno__add_task_activity:
+  task_id: <relevant_task_or_epic_id>
+  type: "decision"
+  description: "CATEGORY: rationale"
+```
+
+Categories: SPIKE, DESIGN, SPLIT, MERGE, DEPENDENCY, PRIORITY, SCOPE
+
+Examples:
+- `"SPIKE: Created spike for Redis session storage — PRD says 'fast sessions' but doesn't specify technology"`
+- `"DESIGN: Added 3 design-first tasks — PRD mentions wireframes, user flows, responsive layout (2+ UI/UX categories detected)"`
+- `"DEPENDENCY: Made payment integration depend on auth spike — need session approach first"`
+
+Cross-cutting decisions (SPLIT, SCOPE, MERGE) go on the epic. Task-specific decisions go on the task.
+
+### Auto-Decisions
+
+| Interactive Prompt | Headless Auto-Decision | Decision Category |
+|-------------------|----------------------|-------------------|
+| Design plugin: "Create design tasks now?" | Yes (create design tasks + dependencies) | DESIGN |
+| Design plugin: "Continue without design plugin?" | Yes (continue without) | — (no decision needed) |
+| Spike opportunity detected | Create the spike task | SPIKE |
+| Feature split into multiple stories | Split and log rationale | SPLIT |
+| Non-obvious dependency added | Add dependency and log | DEPENDENCY |
+| Priority differs from PRD ordering | Assign and log rationale | PRIORITY |
+| PRD item excluded as out-of-scope | Exclude and log rationale | SCOPE |
+
+### Post-Completion Summary
+
+After Step 7 (Sync and Report), display:
+
+```
+Planning complete: [N] epics, [N] stories, [N] tasks
+[N] notable decisions to review
+
+Review now? (or run `/plan --review` later)
+```
+
+If user says yes, proceed to "## Plan Review Session" below.
+If user says no or doesn't respond, end the session.
+
 ## Steps
 
 ### 1. Check Design Plugin Availability
