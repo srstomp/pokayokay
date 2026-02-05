@@ -695,7 +695,11 @@ def get_design_command(task):
 
    Continue without design plugin? [y/n]
    ```
-3. Handle user response:
+3. Handle response:
+   - **autonomous mode**: Auto-resolve as **y**. Log decision and continue.
+     ```
+     add_task_activity(task_id, "decision", "Auto-resolved: continuing without design plugin (autonomous mode)")
+     ```
    - **y**: Log decision and continue to Brainstorm Gate (Step 3)
    - **n**: Pause session, suggest plugin installation
 
@@ -790,7 +794,12 @@ If brainstorm triggers:
        acceptance_criteria: proposed_criteria
      })
      ```
-   - If open questions: PAUSE for human input
+   - If open questions:
+     - **autonomous mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
+       ```
+       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (autonomous mode): {questions}")
+       ```
+     - **other modes**: PAUSE for human input
    - If refined: Proceed to Step 4
 
 3. Log activity:
