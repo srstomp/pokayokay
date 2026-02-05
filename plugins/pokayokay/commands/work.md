@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous] [--parallel N] [--worktree|--in-place]
+argument-hint: [supervised|semi-auto|autonomous] [--parallel N] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
 skill: project-harness
 ---
 
@@ -16,11 +16,17 @@ Start or continue a development session with configurable human control.
 Parse `$ARGUMENTS` to extract:
 1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
 2. **Parallel count**: Value after `--parallel` or `-p` flag, default 1, max 5
+3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
+4. **Continue**: `--continue` flag (resume from previous session's WIP)
 
 Example arguments:
 - `semi-auto --parallel 3` → mode=semi-auto, parallel=3
 - `-p 2` → mode=supervised, parallel=2
 - `autonomous` → mode=autonomous, parallel=1
+- `semi-auto --epic epic-abc123` → mode=semi-auto, scope=epic:epic-abc123
+- `autonomous --story story-def456 -p 3` → mode=autonomous, scope=story:story-def456, parallel=3
+- `--continue` → resume from WIP, inherit previous scope
+- `--all` → work on all available tasks (no scope filter)
 
 ## Worktree Argument Parsing
 
@@ -33,25 +39,138 @@ Example arguments:
 - `--in-place` → mode=supervised, forceInPlace=true
 - `autonomous -p 3` → mode=autonomous, parallel=3, useSmartDefault=true
 
+## Headless Configuration
+
+Headless mode enables automatic session chaining when context fills up.
+
+### Configuration
+
+Read headless config from `.claude/pokayokay.json` (create if missing):
+
+```json
+{
+  "headless": {
+    "max_chains": 10,
+    "report": "on_complete",
+    "notify": "terminal"
+  }
+}
+```
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `max_chains` | 1-50 | 10 | Maximum sessions to chain before stopping |
+| `report` | `on_complete`, `on_failure`, `always`, `never` | `on_complete` | When to generate chain report |
+| `notify` | `terminal`, `none` | `terminal` | How to notify on chain completion |
+
+### Scope Requirement
+
+**Headless mode requires explicit scope to prevent runaway sessions.**
+
+When running headless (autonomous mode or `--continue` from chain):
+- `--epic <id>`: Only work on tasks within the specified epic
+- `--story <id>`: Only work on tasks within the specified story
+- `--all`: Explicitly allow working on all available tasks
+
+If no scope is provided in autonomous/headless mode, PAUSE and ask:
+```markdown
+Headless/autonomous mode requires a scope to prevent runaway sessions.
+
+Which tasks should this session work on?
+  1. --epic <id>  (work within a specific epic)
+  2. --story <id> (work within a specific story)
+  3. --all        (all available tasks)
+```
+
+### Scope Filtering
+
+When scope is set, filter `get_next_task` and `get_next_batch` results:
+
+```python
+def get_scoped_tasks(scope):
+    if scope.type == "epic":
+        return get_tasks(epic_id=scope.id, status="todo")
+    elif scope.type == "story":
+        return get_tasks(story_id=scope.id, status="todo")  # via story filter
+    else:  # "all"
+        return get_next_batch()
+```
+
+### Session Chaining
+
+When a session reaches context limits:
+
+1. Save current WIP to ohno (automatic via hooks)
+2. Generate chain report if configured
+3. Exit with chain metadata:
+   ```json
+   {
+     "chain_id": "chain-abc123",
+     "chain_index": 3,
+     "max_chains": 10,
+     "scope": {"type": "epic", "id": "epic-abc123"},
+     "tasks_completed": 5,
+     "tasks_remaining": 8
+   }
+   ```
+4. SessionEnd hook spawns next session:
+   ```bash
+   claude --headless --prompt="/work --continue --epic epic-abc123"
+   ```
+
+### Chain Reporting
+
+On chain completion (all tasks done or max_chains reached), generate report:
+
+```
+.ohno/reports/chain-{id}-report.md
+
+# Session Chain Report
+- Chain ID: chain-abc123
+- Sessions: 4
+- Scope: epic-4fcd1e3c (Context Efficiency Redesign)
+- Tasks completed: 12
+- Tasks failed: 1 (task-xyz: test failures)
+- Tasks remaining: 2
+- Total duration: ~45 minutes
+- Decisions made: [extracted from task handoffs]
+```
+
+Report is generated BEFORE memory decay compacts handoff details.
+
 ## Session Start
 
-### 1. Get Session Context
+### 0. Load Configuration
+Read `.claude/pokayokay.json` for headless and work settings.
+
+### 1. Scope Validation (if autonomous or --continue)
+If mode is `autonomous` or `--continue` flag is set, verify scope:
+- If `--epic <id>` → filter tasks to this epic only
+- If `--story <id>` → filter tasks to this story only
+- If `--all` → no filter (explicit opt-in)
+- If none → PAUSE and require user to pick a scope
+
+### 2. Get Session Context
 Use ohno MCP `get_session_context` to understand:
 - Previous session notes
 - Current blockers
 - In-progress tasks
 
-### 2. Read Project Context
+If `--continue`: Check for tasks with WIP data and resume from there.
+
+### 3. Read Project Context
 If `.claude/PROJECT.md` exists, read it for:
 - Project overview
 - Tech stack
 - Conventions
 
-### 3. Get Next Task
+### 4. Get Next Task
 ```bash
 npx @stevestomp/ohno-cli next
 ```
 Or use ohno MCP `get_next_task`.
+
+When scope is set, filter the result to only include tasks within scope.
 
 ### 4. Worktree Decision
 
@@ -1394,15 +1513,34 @@ Use ohno MCP to log:
 - Current project status
 - Next recommended task
 
-*Post-session hooks handle final sync and summary.*
+*Post-session hooks handle final sync, summary, and chain spawning.*
+
+### 3. Session Chaining (if headless)
+
+When session ends with remaining work in scope:
+
+1. SessionEnd hook calls `session-chain.sh`
+2. Script checks remaining ready tasks via ohno
+3. If tasks remain and chain limit not reached:
+   - Spawns: `claude --headless --prompt="/work --continue <scope-flag>"`
+4. If chain complete or limit reached:
+   - Generates report to `.ohno/reports/chain-{id}-report.md`
+   - Notifies via configured method
+
+Chain environment variables (set by coordinator, read by hooks):
+- `YOKAY_CHAIN_ID`: Unique chain identifier
+- `YOKAY_CHAIN_INDEX`: Current session number in chain
+- `YOKAY_SCOPE_TYPE`: "epic", "story", or "all"
+- `YOKAY_SCOPE_ID`: The epic/story ID
+- `YOKAY_TASKS_COMPLETED`: Running total of completed tasks
 
 ## Modes Reference
 
-| Mode | Task Complete | Story Complete | Epic Complete |
-|------|--------------|----------------|---------------|
-| supervised | PAUSE | PAUSE | PAUSE |
-| semi-auto | log | PAUSE | PAUSE |
-| autonomous | skip | log | PAUSE |
+| Mode | Task Complete | Story Complete | Epic Complete | Scope Required | Chaining |
+|------|--------------|----------------|---------------|----------------|----------|
+| supervised | PAUSE | PAUSE | PAUSE | No | No |
+| semi-auto | log | PAUSE | PAUSE | No | No |
+| autonomous | skip | log | PAUSE | Yes | Yes (headless) |
 
 ## Spike Task Protocol
 
@@ -1454,6 +1592,22 @@ If you discover a bug while working on a feature:
 1. Block current task: `npx @stevestomp/ohno-cli block <task-id> "Blocked by bug"`
 2. Create bug task with P0 priority
 3. Switch to bug fix immediately
+
+## Headless Examples
+
+```bash
+# Work through an entire epic autonomously
+/work autonomous --epic epic-4fcd1e3c
+
+# Work on one story, chaining if needed
+/work autonomous --story story-2f3c465d -p 2
+
+# Continue from a previous chained session
+/work --continue --epic epic-4fcd1e3c
+
+# Interactive with scope (no chaining, just filters tasks)
+/work semi-auto --epic epic-4fcd1e3c
+```
 
 ## Related Commands
 
