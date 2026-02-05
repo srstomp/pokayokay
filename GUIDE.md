@@ -673,10 +673,10 @@ Starts or continues an orchestrated work session with configurable human control
 - `--continue` - Resume an interrupted session, picking up tasks with saved WIP data
 - `-n <count>` - Run N tasks in parallel (default: 1)
 - `-n auto` - Adaptive parallel sizing (starts at 2, adjusts based on outcomes)
-- `--headless` - Enable headless session chaining (requires `--scope`)
-- `--scope <story|epic|all>` - Scope for headless chaining
+- `--epic <id>` / `--story <id>` / `--all` - Scope which tasks to work on
 
 > **Note:** `-p` is reserved for the Claude CLI `--prompt` flag. Use `-n` for parallel count.
+> Headless session chaining is configured in `.claude/pokayokay.json`, not via a flag. See README for details.
 
 **Examples:**
 ```bash
@@ -684,7 +684,7 @@ Starts or continues an orchestrated work session with configurable human control
 /pokayokay:work --continue            # Resume interrupted session
 /pokayokay:work semi-auto -n 3        # 3 tasks in parallel
 /pokayokay:work semi-auto -n auto     # Adaptive parallel sizing
-/pokayokay:work autonomous --headless --scope story  # Headless chaining
+/pokayokay:work autonomous --story story-abc123  # Scoped to a story
 ```
 
 ### /pokayokay:audit
@@ -811,10 +811,11 @@ The audit catches these gaps and creates remediation tasks automatically.
 3. All previous decisions and progress are preserved
 
 ### Headless session chaining
-1. `/pokayokay:work autonomous --headless --scope story` chains sessions
-2. Each session completes, then a new one starts automatically
-3. Chain reports are generated to `.ohno/reports/`
-4. Max chain limit prevents runaway execution (configurable in `.claude/pokayokay.json`)
+1. Configure chaining in `.claude/pokayokay.json` (see README)
+2. Run `/pokayokay:work autonomous --story story-abc123` with a scope
+3. When context fills, session exits gracefully and a new one spawns automatically
+4. Chain reports are generated to `.ohno/reports/`
+5. Max chain limit (default 10) prevents runaway execution
 
 ### Verifying a feature is complete
 1. `/pokayokay:audit FeatureName` checks implementation

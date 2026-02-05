@@ -257,17 +257,29 @@ Loads tasks with saved WIP data from ohno, skips brainstorming for resumed tasks
 
 ### Headless Session Chaining
 
-Run multiple autonomous sessions back-to-back without human interaction:
+When context fills during autonomous work, sessions can automatically chain — finishing gracefully and spawning a new session that resumes from WIP. This is configured in `.claude/pokayokay.json`, not via a command flag:
 
-```bash
-# Chain sessions for the current story
-/pokayokay:work autonomous --headless --scope story
-
-# Chain across the entire epic
-/pokayokay:work autonomous --headless --scope epic
+```json
+{
+  "headless": {
+    "max_chains": 10,
+    "report": "on_complete",
+    "notify": "terminal"
+  }
+}
 ```
 
-Headless chaining is configured in `.claude/pokayokay.json` and generates chain reports to `.ohno/reports/`. A max chains limit prevents runaway sessions.
+Chaining requires an explicit scope to prevent runaway sessions:
+
+```bash
+# Scope to a story — chains will continue until story tasks are done
+/pokayokay:work autonomous --story story-abc123
+
+# Scope to an epic
+/pokayokay:work autonomous --epic epic-def456
+```
+
+Chain reports are generated to `.ohno/reports/`. The max chains limit (default 10) prevents runaway execution.
 
 ### Worktree Isolation
 

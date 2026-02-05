@@ -40,7 +40,7 @@ Extract worktree flags from `$ARGUMENTS`:
 Example arguments:
 - `semi-auto --worktree` → mode=semi-auto, forceWorktree=true
 - `--in-place` → mode=supervised, forceInPlace=true
-- `autonomous -p 3` → mode=autonomous, parallel=3, useSmartDefault=true
+- `autonomous -n 3` → mode=autonomous, parallel=3, useSmartDefault=true
 
 ## Headless Configuration
 
