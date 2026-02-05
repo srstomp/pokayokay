@@ -39,6 +39,8 @@ You are being dispatched by the coordinator to implement a specific task. Read t
 
 All file paths should be relative to this directory unless specified otherwise.
 
+{RESUME_CONTEXT}
+
 ---
 
 ## Your Instructions
@@ -107,3 +109,26 @@ When you complete implementation, report back using this format:
 - **SELF-REVIEW**: Check your work before reporting complete
 
 Begin when ready. If you have questions, ask them now.
+
+---
+
+<!-- Template Notes for Coordinator:
+
+{RESUME_CONTEXT} is empty for fresh tasks. For --continue resumption, fill with:
+
+## Resuming from Previous Session
+
+This task was partially completed in a previous session. Here is the saved state:
+
+- **Phase**: {wip.phase}
+- **Files already modified**: {wip.files_modified}
+- **Last commit**: {wip.last_commit}
+- **Uncommitted changes**: {wip.uncommitted_changes}
+- **Decisions already made**: {wip.decisions}
+- **Test results**: {wip.test_results}
+- **Errors encountered**: {wip.errors}
+- **Next step**: {wip.next_step}
+
+Pick up from where the previous session left off. Do NOT redo work that was
+already committed. Start from the "next step" above.
+-->

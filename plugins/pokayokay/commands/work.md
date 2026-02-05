@@ -156,15 +156,64 @@ Use ohno MCP `get_session_context` to understand:
 - Current blockers
 - In-progress tasks
 
-If `--continue`: Check for tasks with WIP data and resume from there.
+### 3. Resume Check (if --continue)
 
-### 3. Read Project Context
+When `--continue` flag is set, resume from previous WIP instead of starting fresh:
+
+1. **Find resumable tasks**: Check `get_session_context()` for in_progress tasks with WIP data
+2. **Select task to resume**: Pick the task with most recent `wip_updated_at`
+3. **Load WIP**: Get full task via `get_task(task_id, fields="full")` to access `work_in_progress`
+4. **Display resume context**:
+
+```markdown
+## Resuming: {task.title} ({task.id})
+
+**Phase**: {wip.phase}
+**Last activity**: {task.wip_updated_at}
+**Files modified**: {wip.files_modified}
+**Last commit**: {wip.last_commit}
+**Uncommitted changes**: {wip.uncommitted_changes}
+
+**Next step**: {wip.next_step}
+
+**Decisions made**:
+{wip.decisions | formatted}
+
+**Test results**: {wip.test_results.passed} passed, {wip.test_results.failed} failed
+```
+
+5. **Skip brainstorming**: Task already has context, go directly to implementation
+6. **Dispatch implementer with WIP context**:
+
+```
+Task tool (yokay-implementer):
+  description: "Resume: {task.title}"
+  prompt: [Fill implementer template with ADDITIONAL section:]
+
+  ## Resuming from Previous Session
+  This task was partially completed. Here is the saved state:
+  - Phase: {wip.phase}
+  - Files already modified: {wip.files_modified}
+  - Last commit: {wip.last_commit}
+  - Uncommitted changes: {wip.uncommitted_changes}
+  - Decisions already made: {wip.decisions}
+  - Test results: {wip.test_results}
+  - Errors encountered: {wip.errors}
+  - Next step: {wip.next_step}
+
+  Pick up from where the previous session left off. Do NOT redo work
+  that was already committed. Start from the "next step" above.
+```
+
+If no in_progress tasks with WIP exist, fall through to normal task selection.
+
+### 4. Read Project Context
 If `.claude/PROJECT.md` exists, read it for:
 - Project overview
 - Tech stack
 - Conventions
 
-### 4. Get Next Task
+### 5. Get Next Task
 ```bash
 npx @stevestomp/ohno-cli next
 ```
@@ -172,7 +221,7 @@ Or use ohno MCP `get_next_task`.
 
 When scope is set, filter the result to only include tasks within scope.
 
-### 4. Worktree Decision
+### 6. Worktree Decision
 
 After getting the next task, determine whether to use a worktree.
 
@@ -293,7 +342,7 @@ Track these during the work loop:
 
 At any time: `len(active_agents) + len(queued_tasks) <= N`
 
-### 4. Start the Task
+### 7. Start the Task
 ```bash
 npx @stevestomp/ohno-cli start <task-id>
 ```
