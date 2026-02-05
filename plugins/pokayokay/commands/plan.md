@@ -451,6 +451,102 @@ Report to user:
 - Recommended starting point
 - Link to kanban board
 
+## Plan Review Session
+
+Entered via `--review` flag or after headless completion when user says "yes" to review prompt.
+
+### Phase 1: Load Plan Data
+
+Fetch current plan state from ohno:
+
+```
+epics = mcp__ohno__get_epics(status="active")
+```
+
+For each epic, fetch stories and tasks:
+```
+stories = mcp__ohno__list_stories(epic_id=epic.id)
+tasks = mcp__ohno__get_tasks(status="todo", fields="minimal")
+```
+
+Fetch notable decisions (activities with type "decision"):
+```
+For each epic and task, check:
+  mcp__ohno__summarize_task_activity(task_id)
+  → Filter for type="decision" entries
+```
+
+### Phase 2: Overview
+
+Display a summary:
+
+```
+Plan: [project name from PROJECT.md or first epic title]
+  [N] epics ([list with priorities])
+  [N] stories, [N] tasks
+  [N] spikes, [N] design tasks
+  [N] notable decisions
+```
+
+If no notable decisions found, skip to Phase 4.
+
+### Phase 3: Walk Through Notable Decisions
+
+Present each decision one at a time. For each:
+
+```
+Decision [i]/[total] [CATEGORY]:
+  Context: [what was created/changed]
+  Reason: [rationale from the decision description]
+
+  Options:
+  1. Keep as-is (recommended)
+  2. [Category-specific alternative — see table below]
+  3. [Category-specific alternative]
+  4. Something else (describe)
+```
+
+Category-specific options:
+
+| Category | Option 2 | Option 3 |
+|----------|----------|----------|
+| SPIKE | Remove spike, make assumption instead | Change spike question |
+| DESIGN | Remove design tasks, implement directly | Keep some, remove others |
+| SPLIT | Merge back into single story | Different split |
+| MERGE | Split back into separate items | Keep merge, adjust scope |
+| DEPENDENCY | Remove dependency | Change dependency direction |
+| PRIORITY | Change to [higher/lower] priority | Match PRD ordering |
+| SCOPE | Include it back in scope | Keep excluded, create future task |
+
+Apply changes immediately via ohno MCP tools:
+- Remove task: `mcp__ohno__archive_task(task_id, "Removed during plan review")`
+- Change priority: `mcp__ohno__update_epic(epic_id, priority=...)`
+- Remove dependency: `mcp__ohno__remove_dependency(task_id, depends_on_task_id)`
+- Create task: `mcp__ohno__create_task(...)`
+- Update task: `mcp__ohno__update_task(task_id, ...)`
+
+### Phase 4: Open Floor
+
+After all decisions reviewed (or if there were none):
+
+```
+All decisions reviewed. Anything else you'd like to adjust?
+  1. Done — plan looks good
+  2. Show me a specific epic/story in detail
+  3. Add/remove/modify tasks
+  4. Re-prioritize epics
+```
+
+**Option 2**: Ask which epic/story to show. Display full task list with descriptions, estimates, dependencies, and skill hints. Allow inline edits.
+
+**Option 3**: Free-form — user describes what to add/remove/change. Apply via ohno MCP tools.
+
+**Option 4**: Show current epic priorities, let user reorder. Apply via `update_epic`.
+
+**Option 1**: Exit review. Print final counts and link to kanban.
+
+Loop on options 2-4 until user picks option 1.
+
 ## Output
 
 After completion:
