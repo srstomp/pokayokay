@@ -1,200 +1,103 @@
 # Skill Routing Reference
 
-Complete mapping of task types, feature characteristics, and work patterns to appropriate skills.
+Complete mapping of task types, keywords, and work patterns to appropriate skills.
 
-> **Note**: Design work routes to `/design:*` commands (requires design plugin)
+## Routing Priority
 
-## Routing Decision Tree
+Check these in order:
 
-```
-START
-  │
-  ▼
-┌─────────────────────────────┐
-│ Does feature have           │
-│ skill_hint in features.json?│
-└─────────────┬───────────────┘
-              │
-     ┌────────┴────────┐
-     │ YES             │ NO
-     ▼                 ▼
-┌─────────────┐  ┌─────────────────┐
-│ Use hinted  │  │ Analyze feature │
-│ skill(s)    │  │ characteristics │
-└─────────────┘  └────────┬────────┘
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │ Match to skill  │
-                 │ by type below   │
-                 └─────────────────┘
-```
+1. **Explicit skill hint** — Task or story may specify a skill in metadata
+2. **Task type mapping** — Use `task_type` field from ohno
+3. **Keyword analysis** — Parse title/description for domain-specific terms
+4. **No match** — Use Claude's general capabilities
 
-## Primary Skill Mapping
+## By Task Type
 
-### By Feature Type
+| task_type | Primary Skill | Secondary Skills |
+|-----------|---------------|------------------|
+| feature | *(use keywords)* | testing-strategy |
+| bug | error-handling | testing-strategy |
+| spike | spike | deep-research |
+| chore | *(use keywords)* | — |
+| docs | documentation | — |
+| test | testing-strategy | api-testing |
+| security | security-audit | — |
+| performance | performance-optimization | — |
+| backend | api-design | api-integration, error-handling |
+| database | database-design | — |
+| devops | ci-cd-expert | — |
+| qa | api-testing | testing-strategy |
 
-| Feature Type | Primary Skill | Secondary Skills |
-|--------------|---------------|------------------|
-| API/Backend endpoints | api-design | api-testing |
-| Code architecture | architecture-review | sdk-development |
-| SDK/Library creation | sdk-development | api-design |
-| Figma plugins | figma-plugin | - |
-
-### By Task Type (from tasks.db)
-
-| task_type | Skill | Notes |
-|-----------|-------|-------|
-| backend | api-design | Endpoints, business logic |
-| database | architecture-review | Schema design, migrations |
-| devops | - | No specific skill (use Claude knowledge) |
-| qa | api-testing | Test suites |
-| documentation | - | No specific skill |
-| other | - | Analyze context |
-
-### By Keywords in Feature/Task Title
+## By Keywords in Title/Description
 
 | Keywords | Suggested Skill |
 |----------|-----------------|
-| "API", "endpoint", "REST", "GraphQL" | api-design |
-| "test", "testing", "spec", "coverage" | api-testing |
-| "refactor", "architecture", "structure" | architecture-review |
-| "SDK", "library", "package", "npm" | sdk-development |
+| "API", "endpoint", "REST", "GraphQL", "route" | api-design |
+| "integrate", "third-party", "external API", "client", "SDK consume" | api-integration |
+| "test", "testing", "spec", "coverage", "TDD" | testing-strategy |
+| "API test", "contract test", "integration test", "mock" | api-testing |
+| "refactor", "architecture", "structure", "module", "boundary" | architecture-review |
+| "SDK", "library", "package", "npm publish", "extract" | sdk-development |
 | "Figma", "plugin", "design tool" | figma-plugin |
-
-## Skill Capabilities Matrix
-
-### Core Development Skills
-
-| Skill | Creates | Analyzes | Tests | Documents |
-|-------|---------|----------|-------|-----------|
-| api-design | ✓ | ✓ | - | ✓ |
-| api-testing | - | ✓ | ✓ | ✓ |
-| architecture-review | - | ✓ | - | ✓ |
-| sdk-development | ✓ | ✓ | ✓ | ✓ |
-
-### Specialized Skills
-
-| Skill | Domain | Primary Use |
-|-------|--------|-------------|
-| figma-plugin | Design tools | Figma plugin development |
+| "security", "audit", "vulnerability", "CVE", "OWASP", "injection" | security-audit |
+| "performance", "slow", "optimize", "bundle", "cache", "latency" | performance-optimization |
+| "database", "schema", "migration", "query", "index" | database-design |
+| "error", "exception", "error handling", "retry", "fallback" | error-handling |
+| "logging", "metrics", "tracing", "monitoring", "alerting" | observability |
+| "CI", "CD", "pipeline", "deploy", "GitHub Actions", "workflow" | ci-cd-expert |
+| "README", "docs", "ADR", "documentation", "user guide" | documentation |
+| "PRD", "requirements", "feature spec", "implementation plan" | prd-analyzer |
+| "completeness", "gap analysis", "feature audit" | product-manager |
+| "worktree", "branch", "isolation" | worktrees |
+| "session", "retrospective", "review session" | session-review |
 
 ## Multi-Skill Workflows
 
-Some features benefit from multiple skills in sequence:
+Some tasks benefit from multiple skills in sequence:
 
 ### New API Feature
-
 ```
-1. api-design      → Design endpoints, request/response
-2. architecture-review → Verify fits existing structure
-3. api-testing     → Create test suite
+1. api-design         → Design endpoints, schemas
+2. api-integration    → If consuming external APIs
+3. error-handling     → Error responses and recovery
+4. api-testing        → Test suite
 ```
 
-### SDK/Library Project
-
+### Security Review
 ```
-1. architecture-review → Plan structure
-2. api-design      → Design public API
-3. sdk-development → Implement package
-4. api-testing     → Test suite
+1. security-audit     → Scan and classify findings
+2. error-handling     → Fix error-related vulnerabilities
+3. api-testing        → Security regression tests
+```
+
+### New Project/Epic Setup
+```
+1. prd-analyzer       → Create implementation plan
+2. architecture-review → Verify structure
+3. testing-strategy   → Plan test approach
 ```
 
 ## Skill Invocation Protocol
 
-When routing to a skill:
+### 1. Load Skill SKILL.md
 
-### 1. Announce Skill Switch
+Read the skill's SKILL.md to get:
+- Key principles and quick start checklist
+- Reference table listing available detailed guides
 
-```markdown
-## Skill Invocation: api-design
+### 2. Load References On-Demand
 
-**Reason**: Feature F003 requires REST API endpoint design
-**Task**: T012 - Design user CRUD endpoints
-**Context**: Part of Authentication epic
-
-Switching to api-design skill...
-```
-
-### 2. Load Skill Documentation
-
-Read the skill's SKILL.md file to understand:
-- Required inputs
-- Expected outputs
-- Workflow steps
-- Anti-patterns to avoid
+SKILL.md files are intentionally concise (~50 lines). When you need deeper guidance:
+- Read specific reference files from the skill's `references/` directory
+- Only load what's needed for the current task
+- The reference table in SKILL.md describes what each file contains
 
 ### 3. Execute Within Skill Context
 
 Follow the skill's prescribed workflow until task complete.
 
-### 4. Return to Harness
-
-```markdown
-## Skill Complete: api-design
-
-**Output**: 
-- Endpoint specifications in /docs/api/users.md
-- OpenAPI schema updated
-
-**Returning to project-harness...**
-**Syncing kanban...** ✓
-```
-
 ## When No Skill Matches
 
-If no skill matches the task:
-
-1. **Check if task is well-defined**
-   - Vague tasks may need breakdown first
-   
-2. **Use Claude's general capabilities**
-   - Many tasks don't need specialized skills
-   
-3. **Ask human for guidance**
-   - "This task doesn't match any skill. Should I proceed with general approach or do you have specific guidance?"
-
-## Skill Availability Check
-
-Before routing, verify skill is available:
-
-```bash
-# Skills should be in one of:
-ls /mnt/skills/user/       # User-added skills
-ls /mnt/skills/public/     # Anthropic public skills
-ls /mnt/skills/examples/   # Example skills
-```
-
-If skill not found, inform human and suggest alternatives.
-
-## Routing Examples
-
-### Example 1: API Endpoint Feature
-
-```json
-{
-  "id": "F003",
-  "title": "User API Endpoints",
-  "description": "CRUD operations for user management",
-  "skill_hint": "api-design, api-testing"
-}
-```
-
-**Routing**: api-design → api-testing (in sequence)
-
-### Example 2: No Hint Provided
-
-```json
-{
-  "id": "F007",
-  "title": "Email Notifications",
-  "description": "Send transactional emails to users"
-}
-```
-
-**Analysis**:
-- Keywords: "email", "notifications"
-- Task type: backend
-- No specific skill match
-
-**Routing**: Use general Claude capabilities (no skill)
+1. Check if task is well-defined (vague tasks may need breakdown)
+2. Use Claude's general capabilities
+3. Ask human for guidance if uncertain

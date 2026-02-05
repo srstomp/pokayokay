@@ -29,6 +29,8 @@ You are being dispatched by the coordinator to implement a specific task. Read t
 
 {RELEVANT_SKILL}
 
+> **On-demand references**: The skill above is a concise summary. If you need deeper guidance, read specific files from the skill's `references/` directory — the reference table lists what's available.
+
 ---
 
 ## Working Environment

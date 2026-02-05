@@ -262,24 +262,31 @@ See [skill-routing.md](skill-routing.md) for complete routing rules.
 
 ### Quick Reference
 
-| task_type | Skill |
-|-----------|-------|
-| backend | api-design |
-| qa | api-testing |
-| database | architecture-review |
+| task_type | Primary Skill | Secondary |
+|-----------|---------------|-----------|
+| feature | *(use keywords)* | testing-strategy |
+| bug | error-handling | testing-strategy |
+| spike | spike | deep-research |
+| docs | documentation | — |
+| test | testing-strategy | api-testing |
+| security | security-audit | — |
+| performance | performance-optimization | — |
+| backend | api-design | api-integration |
+| database | database-design | — |
+| devops | ci-cd-expert | — |
+| qa | api-testing | testing-strategy |
 
-**Note**: Design work (frontend, design, UX) routes to `/design:*` commands
+See [skill-routing.md](skill-routing.md) for keyword-based routing and multi-skill workflows
 
 ### Format for Template
+
+Include the SKILL.md content (now ~50 lines) in the `{RELEVANT_SKILL}` template variable. The agent will see the reference table and can load specific references on-demand.
 
 ```markdown
 **Recommended Skill**: api-design
 
-This skill provides patterns for:
-- API endpoint design
-- Request/response schemas
-- Error handling
-- Authentication patterns
+Read `plugins/pokayokay/skills/api-design/SKILL.md` for key principles, checklist, and reference index.
+Load reference files from `references/` only when you need deeper guidance.
 ```
 
 If no skill matches, use:
@@ -289,8 +296,6 @@ If no skill matches, use:
 
 No specialized skill applies to this task. Use Claude's built-in knowledge for implementation.
 ```
-
-**Note**: Design work routes to `/design:*` commands instead of skills
 
 ---
 
