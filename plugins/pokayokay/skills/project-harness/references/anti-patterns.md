@@ -8,4 +8,4 @@
 | Giant tasks | Lose progress on failure | Keep tasks ≤8 hours |
 | Ignoring checkpoints | Lose human control | Respect mode settings |
 | No session context | Next session confused | Use `ohno context` |
-| Autonomous on new project | Bad patterns amplified | Start supervised |
+| Auto on new project | Bad patterns amplified | Start supervised |

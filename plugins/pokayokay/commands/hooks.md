@@ -84,7 +84,7 @@ Note: Toggle changes are session-scoped unless saved to config.
 
 ### Mode-Specific Behavior
 
-| Hook | Supervised | Semi-Auto | Autonomous |
+| Hook | Supervised | Semi-Auto | Auto |
 |------|-----------|-----------|-----------|
 | post-task | sync only | sync, commit | sync, commit, quick-test |
 | post-story | — | test, audit | test, audit |
@@ -128,7 +128,7 @@ hooks:
 | STORY_ID | Current story ID |
 | EPIC_ID | Current epic ID |
 | BOUNDARY_TYPE | story\|epic (for audit-gate) |
-| SESSION_MODE | supervised\|semi-auto\|autonomous |
+| SESSION_MODE | supervised\|semi-auto\|auto |
 
 ## Troubleshooting
 

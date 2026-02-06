@@ -5,7 +5,7 @@ description: Automatic action execution at session lifecycle points. Hooks guara
 
 # Hook System
 
-Guaranteed action execution for reliable autonomous sessions.
+Guaranteed action execution for reliable automated sessions.
 
 ## Architecture
 
@@ -136,7 +136,7 @@ fi
 
 ## Mode Behavior
 
-| Hook | supervised | semi-auto | autonomous |
+| Hook | supervised | semi-auto | auto |
 |------|------------|-----------|------------|
 | post-task | sync | sync, commit | sync, commit, test |
 | post-story | — | test, audit | test, audit |

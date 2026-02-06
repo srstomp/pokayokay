@@ -68,7 +68,7 @@ checkpoints:
   scope_change: review
 ```
 
-**Autonomous** (minimal interruption):
+**Auto** (minimal interruption):
 ```yaml
 checkpoints:
   task_complete: skip
@@ -383,10 +383,10 @@ What would you like to do?
 |---------------|------------------|
 | First epic | supervised |
 | Established patterns | semi-auto |
-| Routine implementation | autonomous |
+| Routine implementation | auto |
 | Critical features | supervised |
 | Bug fixes | semi-auto |
-| Documentation | autonomous |
+| Documentation | auto |
 
 ### When to Use Each Behavior
 

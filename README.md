@@ -15,7 +15,7 @@
 
 - **PRD to Tasks** - Automatically break down requirements into epics, stories, and tasks
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
-- **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, or autonomous
+- **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, or auto
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
 - **23 Specialized Skills** - Route work to domain experts automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
@@ -114,7 +114,7 @@ npx @stevestomp/ohno-cli serve
 |---------|-------------|
 | `/pokayokay:plan [--headless] [--review] <path>` | Analyze PRD and create tasks with skill routing |
 | `/pokayokay:revise [--direct]` | Revise existing plan with impact analysis |
-| `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/autonomous) |
+| `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/auto) |
 | `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
 | `/pokayokay:review` | Analyze session patterns and skill effectiveness |
 | `/pokayokay:handoff` | Prepare session handoff with context preservation |
@@ -205,7 +205,7 @@ The `/pokayokay:audit` command checks 5 dimensions:
 |------|------|-------|------|
 | `supervised` | PAUSE | PAUSE | PAUSE |
 | `semi-auto` | log | PAUSE | PAUSE |
-| `autonomous` | skip | log | PAUSE |
+| `auto` | skip | log | PAUSE |
 
 ### Parallel Execution
 
@@ -257,7 +257,7 @@ Loads tasks with saved WIP data from ohno, skips brainstorming for resumed tasks
 
 ### Headless Session Chaining
 
-When context fills during autonomous work, sessions can automatically chain — finishing gracefully and spawning a new session that resumes from WIP. This is configured in `.claude/pokayokay.json`, not via a command flag:
+When context fills during auto-mode work, sessions can automatically chain — finishing gracefully and spawning a new session that resumes from WIP. This is configured in `.claude/pokayokay.json`, not via a command flag:
 
 ```json
 {
@@ -273,10 +273,10 @@ Chaining requires an explicit scope to prevent runaway sessions:
 
 ```bash
 # Scope to a story — chains will continue until story tasks are done
-/pokayokay:work autonomous --story story-abc123
+/pokayokay:work auto --story story-abc123
 
 # Scope to an epic
-/pokayokay:work autonomous --epic epic-def456
+/pokayokay:work auto --epic epic-def456
 ```
 
 Chain reports are generated to `.ohno/reports/`. The max chains limit (default 10) prevents runaway execution.

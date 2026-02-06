@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|autonomous] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
+argument-hint: [supervised|semi-auto|auto] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
 skill: project-harness
 ---
 
@@ -14,7 +14,7 @@ Start or continue a development session with configurable human control.
 ## Argument Parsing
 
 Parse `$ARGUMENTS` to extract:
-1. **Mode**: First word if it matches supervised|semi-auto|autonomous, else "supervised"
+1. **Mode**: First word if it matches supervised|semi-auto|auto, else "supervised"
 2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
@@ -23,9 +23,9 @@ Example arguments:
 - `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
 - `semi-auto -n auto` → mode=semi-auto, parallel=adaptive (starts at 2)
 - `--parallel 2` → mode=supervised, parallel=2 (fixed)
-- `autonomous` → mode=autonomous, parallel=1
+- `auto` → mode=auto, parallel=1
 - `semi-auto --epic epic-abc123` → mode=semi-auto, scope=epic:epic-abc123
-- `autonomous --story story-def456 -n 3` → scope=story:story-def456, parallel=3
+- `auto --story story-def456 -n 3` → scope=story:story-def456, parallel=3
 - `--continue` → resume from WIP, inherit previous scope
 - `--all` → work on all available tasks (no scope filter)
 
@@ -40,7 +40,7 @@ Extract worktree flags from `$ARGUMENTS`:
 Example arguments:
 - `semi-auto --worktree` → mode=semi-auto, forceWorktree=true
 - `--in-place` → mode=supervised, forceInPlace=true
-- `autonomous -n 3` → mode=autonomous, parallel=3, useSmartDefault=true
+- `auto -n 3` → mode=auto, parallel=3, useSmartDefault=true
 
 ## Headless Configuration
 
@@ -70,14 +70,14 @@ Read headless config from `.claude/pokayokay.json` (create if missing):
 
 **Headless mode requires explicit scope to prevent runaway sessions.**
 
-When running headless (autonomous mode or `--continue` from chain):
+When running headless (auto mode or `--continue` from chain):
 - `--epic <id>`: Only work on tasks within the specified epic
 - `--story <id>`: Only work on tasks within the specified story
 - `--all`: Explicitly allow working on all available tasks
 
-If no scope is provided in autonomous/headless mode, PAUSE and ask:
+If no scope is provided in auto/headless mode, PAUSE and ask:
 ```markdown
-Headless/autonomous mode requires a scope to prevent runaway sessions.
+Headless/auto mode requires a scope to prevent runaway sessions.
 
 Which tasks should this session work on?
   1. --epic <id>  (work within a specific epic)
@@ -150,7 +150,7 @@ When `-n auto` is specified, parallel count adjusts based on batch outcomes.
 | Event | Change | Rationale |
 |-------|--------|-----------|
 | Batch completes fully | +1 (max 4) | System handling load well |
-| Batch interrupted (context fill) | -1 (min 2) | Too many agents |
+| Context pressure detected | End session (chain) | See Proactive Context Shutdown |
 | Task blocked mid-batch | No change | Not a sizing issue |
 | Task failed review (3x) | -1 (min 2) | Reduce concurrent load |
 | New session (fresh start) | Reset to 2 | Conservative start |
@@ -195,17 +195,89 @@ Or:
 Parallel sizing: 3 → 2 (batch interrupted by context fill)
 ```
 
+## Proactive Context Shutdown
+
+When session chaining is active (chain state file exists), the coordinator MUST
+proactively end the session when context pressure is detected — **before** quality
+degrades from repeated compaction.
+
+### Detection
+
+Context pressure is detected when **any** of these occur:
+1. Claude Code compacts the conversation (you'll see "Compacting conversation..." in output)
+2. A system reminder mentions context limits
+3. You notice repeated information loss from prior context
+
+### Behavior
+
+When context pressure is detected during a chained session:
+
+1. **Stop dispatching new tasks** — do not start another batch
+2. **Wait for in-flight agents** — let current implementers finish (they have their own context)
+3. **Save WIP** for any incomplete work:
+   ```
+   For each in-progress task with uncommitted changes:
+     update_task_wip(task_id, { files_modified, last_commit, uncommitted_changes, next_step })
+   ```
+4. **Log session summary**:
+   ```
+   add_task_activity(task_id, "note", "Session ending: context pressure detected, chaining to next session")
+   ```
+5. **End the session** — output a brief summary and stop. This triggers:
+   - SessionEnd hook → bridge.py reads chain state → session-chain.sh spawns next session
+
+### Why Proactive?
+
+Without proactive shutdown:
+- Context fills → Claude Code compacts → quality degrades → compacts again → eventually dies
+- Each compaction loses coordinator context (task state, batch tracking, decisions)
+- Subagents returning to a degraded coordinator get confused
+
+With proactive shutdown:
+- First compaction detected → graceful exit → fresh session chains with full context
+- No quality degradation
+- WIP preserved for seamless resume
+
+### Non-Chained Sessions
+
+In supervised or semi-auto sessions (no chain state file), compaction is handled
+normally by Claude Code. The coordinator does NOT need to proactively end — the user
+is present and can decide.
+
 ## Session Start
 
 ### 0. Load Configuration
 Read `.claude/pokayokay.json` for headless and work settings.
 
-### 1. Scope Validation (if autonomous or --continue)
-If mode is `autonomous` or `--continue` flag is set, verify scope:
+### 1. Scope Validation (if auto or --continue)
+If mode is `auto` or `--continue` flag is set, verify scope:
 - If `--epic <id>` → filter tasks to this epic only
 - If `--story <id>` → filter tasks to this story only
 - If `--all` → no filter (explicit opt-in)
 - If none → PAUSE and require user to pick a scope
+
+### 1.5 Initialize Chain State (if auto + scope, NOT --continue)
+
+When starting a NEW auto session with scope (not `--continue`), write the chain state file
+so that SessionEnd hooks can spawn continuation sessions:
+
+```
+Write .claude/pokayokay-chain-state.json:
+{
+  "chain_id": "chain-<current-unix-timestamp>",
+  "chain_index": 0,
+  "scope_type": "<epic|story|all>",
+  "scope_id": "<id or empty string>",
+  "tasks_completed": 0
+}
+```
+
+Use the Write tool. Generate chain_id from current unix timestamp.
+
+**Skip this step** if:
+- Mode is NOT auto (supervised/semi-auto don't chain)
+- No scope is set (chaining requires scope)
+- `--continue` flag is set (state file already exists from previous session)
 
 ### 2. Get Session Context
 Use ohno MCP `get_session_context` to understand:
@@ -475,7 +547,7 @@ Each task commits independently when its review passes:
 |------|------------|----------|
 | supervised | After each task | After each task completes |
 | semi-auto | Log & continue | Log & continue |
-| autonomous | Skip | Skip |
+| auto | Skip | Skip |
 
 Story/epic boundaries still trigger pauses per mode settings.
 
@@ -696,9 +768,9 @@ def get_design_command(task):
    Continue without design plugin? [y/n]
    ```
 3. Handle response:
-   - **autonomous mode**: Auto-resolve as **y**. Log decision and continue.
+   - **auto mode**: Auto-resolve as **y**. Log decision and continue.
      ```
-     add_task_activity(task_id, "decision", "Auto-resolved: continuing without design plugin (autonomous mode)")
+     add_task_activity(task_id, "decision", "Auto-resolved: continuing without design plugin (auto mode)")
      ```
    - **y**: Log decision and continue to Brainstorm Gate (Step 3)
    - **n**: Pause session, suggest plugin installation
@@ -795,9 +867,9 @@ If brainstorm triggers:
      })
      ```
    - If open questions:
-     - **autonomous mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
+     - **auto mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
        ```
-       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (autonomous mode): {questions}")
+       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto mode): {questions}")
        ```
      - **other modes**: PAUSE for human input
    - If refined: Proceed to Step 4
@@ -1437,7 +1509,7 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - Log task completion, continue
 - PAUSE at story/epic boundaries
 
-**Autonomous**:
+**Auto**:
 - Log and continue
 - Only PAUSE at epic boundaries
 
@@ -1453,7 +1525,7 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - PAUSE at story/epic boundaries
 - Show batch status at pause
 
-**Autonomous**:
+**Auto**:
 - Log and continue
 - PAUSE at epic boundaries
 - Show summary at pause
@@ -1642,13 +1714,42 @@ When session ends with remaining work in scope:
 4. If chain complete or limit reached:
    - Generates report to `.ohno/reports/chain-{id}-report.md`
    - Notifies via configured method
+   - Deletes chain state file
 
-Chain environment variables (set by coordinator, read by hooks):
-- `YOKAY_CHAIN_ID`: Unique chain identifier
-- `YOKAY_CHAIN_INDEX`: Current session number in chain
-- `YOKAY_SCOPE_TYPE`: "epic", "story", or "all"
-- `YOKAY_SCOPE_ID`: The epic/story ID
-- `YOKAY_TASKS_COMPLETED`: Running total of completed tasks
+#### Chain State File
+
+Chain state is communicated between the coordinator and hooks via `.claude/pokayokay-chain-state.json`.
+
+**The coordinator MUST write this file at session start** when running auto mode with scope.
+Use the Write tool to create it:
+
+```json
+{
+  "chain_id": "chain-<unix-timestamp>",
+  "chain_index": 0,
+  "scope_type": "all",
+  "scope_id": "",
+  "tasks_completed": 0
+}
+```
+
+- `chain_id`: Generate as `chain-<unix-timestamp>` (e.g., `chain-1738764000`)
+- `chain_index`: Start at 0, auto-incremented by bridge.py on each chain
+- `scope_type`: "epic", "story", or "all" (from `--epic`, `--story`, or `--all` flag)
+- `scope_id`: The epic/story ID (empty string for "all")
+- `tasks_completed`: Starts at 0, auto-incremented by bridge.py on each task completion
+
+**When `--continue`**: Read the existing state file. Do NOT overwrite it — bridge.py
+already incremented `chain_index` and tracks `tasks_completed`.
+
+**When NOT auto or no scope**: Do NOT write the state file. Non-chaining sessions
+should not have a state file.
+
+Bridge.py handles:
+- Reading the state file on SessionEnd to pass to session-chain.sh
+- Incrementing `tasks_completed` on each task completion
+- Incrementing `chain_index` when spawning the next session
+- Deleting the state file when the chain completes or hits the limit
 
 ## Modes Reference
 
@@ -1656,7 +1757,7 @@ Chain environment variables (set by coordinator, read by hooks):
 |------|--------------|----------------|---------------|----------------|----------|
 | supervised | PAUSE | PAUSE | PAUSE | No | No |
 | semi-auto | log | PAUSE | PAUSE | No | No |
-| autonomous | skip | log | PAUSE | Yes | Yes (headless) |
+| auto | skip | log | PAUSE | Yes | Yes (headless) |
 
 ## Spike Task Protocol
 
@@ -1713,10 +1814,10 @@ If you discover a bug while working on a feature:
 
 ```bash
 # Work through an entire epic autonomously
-/work autonomous --epic epic-4fcd1e3c
+/work auto --epic epic-4fcd1e3c
 
 # Work on one story, chaining if needed
-/work autonomous --story story-2f3c465d -n 2
+/work auto --story story-2f3c465d -n 2
 
 # Continue from a previous chained session
 /work --continue --epic epic-4fcd1e3c

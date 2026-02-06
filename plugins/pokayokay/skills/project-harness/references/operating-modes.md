@@ -22,7 +22,7 @@ Human reviews at story/epic boundaries. Good balance.
 
 **Use when**: Established patterns, routine implementation.
 
-## AUTONOMOUS Mode
+## AUTO Mode
 
 Human reviews at epic boundaries only. Maximum speed.
 

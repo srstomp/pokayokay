@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run tests safely (don't fail if no tests)
-# Called by: post-story, autonomous post-task hooks
+# Called by: post-story, auto-mode post-task hooks
 
 # Parse arguments
 BAIL=""
