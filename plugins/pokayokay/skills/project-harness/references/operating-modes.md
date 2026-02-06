@@ -32,3 +32,19 @@ Human reviews at epic boundaries only. Maximum speed.
 - Epic complete → PAUSE
 
 **Use when**: Well-defined specs, trusted patterns, time pressure.
+
+## UNATTENDED Mode
+
+No human checkpoints at all. For overnight/headless runs.
+
+**Checkpoint behavior:**
+- Task complete → Skip
+- Story complete → Skip
+- Epic complete → Skip
+
+**Use when**: Overnight batch runs, CI/CD pipelines, trusted epics.
+
+**Requirements:**
+- Must specify scope (`--epic`, `--story`, or `--all`)
+- For true unattended: `claude --headless --dangerously-skip-permissions`
+- Session chains automatically on context pressure

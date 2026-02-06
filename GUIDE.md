@@ -122,6 +122,7 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 /pokayokay:work supervised   # Pause after every task
 /pokayokay:work semi-auto    # Pause at story boundaries
 /pokayokay:work auto         # Pause at epic boundaries
+/pokayokay:work unattended   # Never pause (for overnight runs)
 ```
 - Routes to appropriate skills based on task type
 - Handles spike tasks with time-boxing
@@ -674,6 +675,7 @@ Starts or continues an orchestrated work session with configurable human control
 - `supervised` (default) - Pause after every task
 - `semi-auto` - Pause at story/epic boundaries
 - `auto` - Pause only at epic boundaries
+- `unattended` - Never pause (for overnight/headless runs)
 
 **Flags:**
 - `--continue` - Resume an interrupted session, picking up tasks with saved WIP data
@@ -793,6 +795,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 | supervised | PAUSE | PAUSE | PAUSE |
 | semi-auto | log | PAUSE | PAUSE |
 | auto | log | log | PAUSE |
+| unattended | skip | skip | skip |
 
 ---
 

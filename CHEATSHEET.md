@@ -22,6 +22,7 @@ npx @stevestomp/ohno-cli init
 | `/pokayokay:work` | Start supervised session |
 | `/pokayokay:work semi-auto` | Pause at story boundaries |
 | `/pokayokay:work auto` | Pause at epic boundaries |
+| `/pokayokay:work unattended` | Never pause (overnight) |
 | `/pokayokay:work --continue` | Resume interrupted session |
 | `/pokayokay:work semi-auto -n 3` | Run 3 tasks in parallel |
 | `/pokayokay:work semi-auto -n auto` | Adaptive parallel sizing |
@@ -59,6 +60,7 @@ npx @stevestomp/ohno-cli init
 | supervised | PAUSE | PAUSE | PAUSE |
 | semi-auto | log | PAUSE | PAUSE |
 | auto | log | log | PAUSE |
+| unattended | skip | skip | skip |
 
 ## Completeness Levels (L0-L5)
 | Level | Meaning |
