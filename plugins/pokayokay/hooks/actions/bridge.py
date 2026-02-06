@@ -941,20 +941,24 @@ def main():
 
     # Output result
     if result and not result.get("skip"):
-        # Format for Claude Code hook output
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": hook_event,
-                "additionalContext": format_context(result)
+        if hook_event == "SessionEnd":
+            # SessionEnd doesn't support hookSpecificOutput - just output empty
+            print(json.dumps({}))
+        else:
+            # Format for Claude Code hook output
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "additionalContext": format_context(result)
+                }
             }
-        }
 
-        # Block if requested (for pre-commit failures)
-        if result.get("block"):
-            output["decision"] = "block"
-            output["reason"] = result.get("reason", "Hook check failed")
+            # Block if requested (for pre-commit failures)
+            if result.get("block"):
+                output["decision"] = "block"
+                output["reason"] = result.get("reason", "Hook check failed")
 
-        print(json.dumps(output))
+            print(json.dumps(output))
     else:
         # No action needed
         print(json.dumps({}))
