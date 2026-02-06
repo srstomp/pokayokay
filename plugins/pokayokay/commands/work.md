@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|auto] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
+argument-hint: [supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
 skill: project-harness
 ---
 
@@ -14,7 +14,7 @@ Start or continue a development session with configurable human control.
 ## Argument Parsing
 
 Parse `$ARGUMENTS` to extract:
-1. **Mode**: First word if it matches supervised|semi-auto|auto, else "supervised"
+1. **Mode**: First word if it matches supervised|semi-auto|auto|unattended, else "supervised"
 2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
@@ -24,6 +24,7 @@ Example arguments:
 - `semi-auto -n auto` → mode=semi-auto, parallel=adaptive (starts at 2)
 - `--parallel 2` → mode=supervised, parallel=2 (fixed)
 - `auto` → mode=auto, parallel=1
+- `unattended` → mode=unattended, parallel=1 (never pauses, for overnight runs)
 - `semi-auto --epic epic-abc123` → mode=semi-auto, scope=epic:epic-abc123
 - `auto --story story-def456 -n 3` → scope=story:story-def456, parallel=3
 - `--continue` → resume from WIP, inherit previous scope
@@ -70,14 +71,14 @@ Read headless config from `.claude/pokayokay.json` (create if missing):
 
 **Headless mode requires explicit scope to prevent runaway sessions.**
 
-When running headless (auto mode or `--continue` from chain):
+When running headless (auto/unattended mode or `--continue` from chain):
 - `--epic <id>`: Only work on tasks within the specified epic
 - `--story <id>`: Only work on tasks within the specified story
 - `--all`: Explicitly allow working on all available tasks
 
-If no scope is provided in auto/headless mode, PAUSE and ask:
+If no scope is provided in auto/unattended/headless mode, PAUSE and ask:
 ```markdown
-Headless/auto mode requires a scope to prevent runaway sessions.
+Headless/auto/unattended mode requires a scope to prevent runaway sessions.
 
 Which tasks should this session work on?
   1. --epic <id>  (work within a specific epic)
@@ -249,16 +250,16 @@ is present and can decide.
 ### 0. Load Configuration
 Read `.claude/pokayokay.json` for headless and work settings.
 
-### 1. Scope Validation (if auto or --continue)
-If mode is `auto` or `--continue` flag is set, verify scope:
+### 1. Scope Validation (if auto/unattended or --continue)
+If mode is `auto` or `unattended` or `--continue` flag is set, verify scope:
 - If `--epic <id>` → filter tasks to this epic only
 - If `--story <id>` → filter tasks to this story only
 - If `--all` → no filter (explicit opt-in)
 - If none → PAUSE and require user to pick a scope
 
-### 1.5 Initialize Chain State (if auto + scope, NOT --continue)
+### 1.5 Initialize Chain State (if auto/unattended + scope, NOT --continue)
 
-When starting a NEW auto session with scope (not `--continue`), write the chain state file
+When starting a NEW auto or unattended session with scope (not `--continue`), write the chain state file
 so that SessionEnd hooks can spawn continuation sessions:
 
 ```
@@ -275,7 +276,7 @@ Write .claude/pokayokay-chain-state.json:
 Use the Write tool. Generate chain_id from current unix timestamp.
 
 **Skip this step** if:
-- Mode is NOT auto (supervised/semi-auto don't chain)
+- Mode is NOT auto/unattended (supervised/semi-auto don't chain)
 - No scope is set (chaining requires scope)
 - `--continue` flag is set (state file already exists from previous session)
 
@@ -548,8 +549,9 @@ Each task commits independently when its review passes:
 | supervised | After each task | After each task completes |
 | semi-auto | Log & continue | Log & continue |
 | auto | Skip | Skip |
+| unattended | Skip | Skip |
 
-Story/epic boundaries still trigger pauses per mode settings.
+Story/epic boundaries trigger pauses per mode settings (except unattended, which never pauses).
 
 ## Git Conflict Handling (Parallel Mode)
 
@@ -1513,6 +1515,12 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - Log and continue
 - Only PAUSE at epic boundaries
 
+**Unattended**:
+- Log and continue
+- NEVER pause (not even at epic boundaries)
+- For overnight/headless runs only
+- Requires `--dangerously-skip-permissions` for true unattended execution
+
 #### Parallel Mode
 
 **Supervised** (default):
@@ -1529,6 +1537,11 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 - Log and continue
 - PAUSE at epic boundaries
 - Show summary at pause
+
+**Unattended**:
+- Log and continue
+- NEVER pause
+- Chain to next session on context pressure
 
 #### Batch Status Table
 
@@ -1758,6 +1771,7 @@ Bridge.py handles:
 | supervised | PAUSE | PAUSE | PAUSE | No | No |
 | semi-auto | log | PAUSE | PAUSE | No | No |
 | auto | skip | log | PAUSE | Yes | Yes (headless) |
+| unattended | skip | skip | skip | Yes | Yes (headless) |
 
 ## Spike Task Protocol
 
@@ -1813,7 +1827,7 @@ If you discover a bug while working on a feature:
 ## Headless Examples
 
 ```bash
-# Work through an entire epic autonomously
+# Work through an entire epic autonomously (pauses at epic boundary)
 /work auto --epic epic-4fcd1e3c
 
 # Work on one story, chaining if needed
@@ -1824,6 +1838,10 @@ If you discover a bug while working on a feature:
 
 # Interactive with scope (no chaining, just filters tasks)
 /work semi-auto --epic epic-4fcd1e3c
+
+# Overnight unattended run (NEVER pauses, for headless CLI use)
+# Run with: claude --headless --dangerously-skip-permissions --prompt="..."
+/work unattended -n auto --all
 ```
 
 ## Related Commands

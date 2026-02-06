@@ -108,6 +108,22 @@ When you complete implementation, report back using this format:
 - **ASK QUESTIONS**: Clarify before implementing
 - **SELF-REVIEW**: Check your work before reporting complete
 
+## Tool Preferences
+
+**IMPORTANT: Use MCP tools instead of CLI commands where available.**
+
+For ohno task management, prefer these MCP tools over `npx @stevestomp/ohno-cli`:
+
+| Instead of CLI | Use MCP Tool |
+|----------------|--------------|
+| `npx @stevestomp/ohno-cli done <id>` | `mcp__ohno__update_task_status(task_id, "done")` |
+| `npx @stevestomp/ohno-cli set-handoff <id> ...` | `mcp__ohno__set_task_handoff(task_id, ...)` |
+| `npx @stevestomp/ohno-cli update-wip <id> ...` | `mcp__ohno__update_task_wip(task_id, ...)` |
+| `npx @stevestomp/ohno-cli block <id> <reason>` | `mcp__ohno__set_blocker(task_id, reason)` |
+| `npx @stevestomp/ohno-cli activity <id> ...` | `mcp__ohno__add_task_activity(task_id, ...)` |
+
+**Why**: MCP tools don't require Bash permission approval, making unattended sessions smoother.
+
 Begin when ready. If you have questions, ask them now.
 
 ---
