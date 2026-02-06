@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-02-06
+
+### Added
+- **Unattended Mode**: New `/work unattended` mode that never pauses (not even at epic boundaries) for overnight/headless runs
+- **Proactive Context Shutdown**: Coordinator detects compaction and gracefully exits to chain rather than degrading quality
+
+### Changed
+- Mode parameter renamed from `autonomous` to `auto` (shorter, clearer)
+- Session chaining now uses state file (`.claude/pokayokay-chain-state.json`) instead of environment variables
+- Implementer template now instructs agents to prefer MCP tools over CLI commands (avoids Bash permission prompts)
+
+### Fixed
+- Session chaining was broken due to env vars not propagating to hook subprocess
+
 ## [0.9.0] - 2026-02-05
 
 ### Added
