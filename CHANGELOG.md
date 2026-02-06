@@ -98,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 - `/pokayokay:plan` - PRD analysis and task creation
-- `/pokayokay:work` - Orchestrated work sessions (supervised/semi-auto/autonomous)
+- `/pokayokay:work` - Orchestrated work sessions (supervised/semi-auto/auto)
 - `/pokayokay:audit` - Feature completeness checking
 - Integration with ohno MCP for task management
 - Basic skill routing for common task types

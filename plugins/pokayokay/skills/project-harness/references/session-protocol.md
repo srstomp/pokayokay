@@ -28,7 +28,7 @@ Detailed guide for managing AI development sessions with the project harness.
 ```python
 # Pseudocode for session init
 config = read_yaml(".claude/config.yaml")
-mode = config.mode  # supervised | semi-auto | autonomous
+mode = config.mode  # supervised | semi-auto | auto
 checkpoints = config.checkpoints
 kanban_port = config.kanban.get("port", 3333)
 ```
