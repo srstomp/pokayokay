@@ -121,7 +121,7 @@ Time-boxed investigation with mandatory decision output (GO/NO-GO/PIVOT).
 ```bash
 /pokayokay:work supervised   # Pause after every task
 /pokayokay:work semi-auto    # Pause at story boundaries
-/pokayokay:work autonomous   # Pause at epic boundaries
+/pokayokay:work auto         # Pause at epic boundaries
 ```
 - Routes to appropriate skills based on task type
 - Handles spike tasks with time-boxing
@@ -383,7 +383,7 @@ Hooks guarantee critical actions execute at session lifecycle points, eliminatin
 
 - **supervised**: sync only (no auto-commit)
 - **semi-auto**: sync, commit
-- **autonomous**: sync, commit, quick-test
+- **auto**: sync, commit, quick-test
 
 ### Custom Hooks
 
@@ -673,7 +673,7 @@ Starts or continues an orchestrated work session with configurable human control
 **Modes:**
 - `supervised` (default) - Pause after every task
 - `semi-auto` - Pause at story/epic boundaries
-- `autonomous` - Pause only at epic boundaries
+- `auto` - Pause only at epic boundaries
 
 **Flags:**
 - `--continue` - Resume an interrupted session, picking up tasks with saved WIP data
@@ -690,7 +690,7 @@ Starts or continues an orchestrated work session with configurable human control
 /pokayokay:work --continue            # Resume interrupted session
 /pokayokay:work semi-auto -n 3        # 3 tasks in parallel
 /pokayokay:work semi-auto -n auto     # Adaptive parallel sizing
-/pokayokay:work autonomous --story story-abc123  # Scoped to a story
+/pokayokay:work auto --story story-abc123  # Scoped to a story
 ```
 
 ### /pokayokay:audit
@@ -776,10 +776,10 @@ The audit catches these gaps and creates remediation tasks automatically.
 - Best for: Established patterns, trusted implementations
 - Review batches of related work together
 
-### Autonomous
+### Auto
 
 ```bash
-/pokayokay:work autonomous
+/pokayokay:work auto
 ```
 
 - **Only pauses at epic boundaries**
@@ -792,7 +792,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 |------|--------------|----------------|---------------|
 | supervised | PAUSE | PAUSE | PAUSE |
 | semi-auto | log | PAUSE | PAUSE |
-| autonomous | log | log | PAUSE |
+| auto | log | log | PAUSE |
 
 ---
 
@@ -818,7 +818,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 
 ### Headless session chaining
 1. Configure chaining in `.claude/pokayokay.json` (see README)
-2. Run `/pokayokay:work autonomous --story story-abc123` with a scope
+2. Run `/pokayokay:work auto --story story-abc123` with a scope
 3. When context fills, session exits gracefully and a new one spawns automatically
 4. Chain reports are generated to `.ohno/reports/`
 5. Max chain limit (default 10) prevents runaway execution
@@ -844,8 +844,8 @@ The audit catches these gaps and creates remediation tasks automatically.
 - **Define success criteria**: How do you know a feature is done?
 
 ### Working
-- **Start supervised**: Get comfortable before using autonomous mode
-- **Review at boundaries**: Even in autonomous mode, review at epic boundaries
+- **Start supervised**: Get comfortable before using auto mode
+- **Review at boundaries**: Even in auto mode, review at epic boundaries
 - **Use handoff notes**: Document decisions for future sessions
 
 ### Auditing

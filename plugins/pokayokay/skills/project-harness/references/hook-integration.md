@@ -47,7 +47,7 @@ Continuing...
 |------|-----------------|
 | supervised | sync only |
 | semi-auto | sync, commit |
-| autonomous | sync, commit, quick-test |
+| auto | sync, commit, quick-test |
 
 ## Hook Failures
 

@@ -211,6 +211,67 @@ def load_pokayokay_config() -> dict:
         return {}
 
 
+# ==========================================================================
+# Chain State File Functions
+# ==========================================================================
+
+CHAIN_STATE_FILENAME = "pokayokay-chain-state.json"
+
+
+def _chain_state_path() -> Path:
+    """Get path to the chain state file."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    return Path(project_dir) / ".claude" / CHAIN_STATE_FILENAME
+
+
+def load_chain_state() -> dict:
+    """Load chain state from .claude/pokayokay-chain-state.json.
+
+    Returns:
+        Chain state dict with keys: chain_id, chain_index, scope_type,
+        scope_id, tasks_completed. Empty dict if no state file exists.
+    """
+    state_path = _chain_state_path()
+    if not state_path.exists():
+        return {}
+
+    try:
+        with open(state_path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_chain_state(state: dict) -> None:
+    """Save chain state to .claude/pokayokay-chain-state.json.
+
+    Uses atomic write (temp file + rename) to prevent corruption.
+    """
+    state_path = _chain_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp_path = state_path.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        tmp_path.rename(state_path)
+    except OSError:
+        # Best-effort - don't crash hooks on write failure
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def delete_chain_state() -> None:
+    """Remove the chain state file (chain is done)."""
+    state_path = _chain_state_path()
+    try:
+        if state_path.exists():
+            state_path.unlink()
+    except OSError:
+        pass  # Best-effort cleanup
+
+
 def handle_session_end(input_data: dict) -> dict:
     """Handle SessionEnd event - run post-session hooks and session chaining."""
     results = []
@@ -219,8 +280,9 @@ def handle_session_end(input_data: dict) -> dict:
     results.append(run_action("sync"))
     results.append(run_action("session-summary"))
 
-    # Check for session chaining
-    chain_id = os.environ.get("YOKAY_CHAIN_ID", "")
+    # Check for session chaining via state file
+    chain_state = load_chain_state()
+    chain_id = chain_state.get("chain_id", "")
     chain_result = None
 
     if chain_id:
@@ -230,17 +292,32 @@ def handle_session_end(input_data: dict) -> dict:
 
         chain_env = {
             "CHAIN_ID": chain_id,
-            "CHAIN_INDEX": os.environ.get("YOKAY_CHAIN_INDEX", "0"),
+            "CHAIN_INDEX": str(chain_state.get("chain_index", 0)),
             "MAX_CHAINS": str(headless_config.get("max_chains", 10)),
-            "SCOPE_TYPE": os.environ.get("YOKAY_SCOPE_TYPE", ""),
-            "SCOPE_ID": os.environ.get("YOKAY_SCOPE_ID", ""),
-            "TASKS_COMPLETED": os.environ.get("YOKAY_TASKS_COMPLETED", "0"),
+            "SCOPE_TYPE": chain_state.get("scope_type", ""),
+            "SCOPE_ID": chain_state.get("scope_id", ""),
+            "TASKS_COMPLETED": str(chain_state.get("tasks_completed", 0)),
             "REPORT_MODE": headless_config.get("report", "on_complete"),
             "NOTIFY_MODE": headless_config.get("notify", "terminal"),
         }
 
         chain_result = run_action("session-chain", env=chain_env)
         results.append(chain_result)
+
+        # Parse chain result to check if chain is ending
+        if chain_result and chain_result.get("output"):
+            try:
+                chain_data = json.loads(chain_result["output"])
+                chain_action = chain_data.get("action", "")
+                if chain_action == "continue":
+                    # Update state file for next session
+                    chain_state["chain_index"] = chain_state.get("chain_index", 0) + 1
+                    save_chain_state(chain_state)
+                elif chain_action in ("complete", "limit_reached"):
+                    # Chain is done - clean up state file
+                    delete_chain_state()
+            except json.JSONDecodeError:
+                pass
 
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")
@@ -388,6 +465,12 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
                 )
             except Exception:
                 pass  # Best-effort
+
+    # Update chain state: increment tasks_completed
+    chain_state = load_chain_state()
+    if chain_state.get("chain_id"):
+        chain_state["tasks_completed"] = chain_state.get("tasks_completed", 0) + 1
+        save_chain_state(chain_state)
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
