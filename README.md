@@ -15,7 +15,7 @@
 
 - **PRD to Tasks** - Automatically break down requirements into epics, stories, and tasks
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
-- **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, or auto
+- **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, auto, or unattended
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
 - **23 Specialized Skills** - Route work to domain experts automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
@@ -114,7 +114,7 @@ npx @stevestomp/ohno-cli serve
 |---------|-------------|
 | `/pokayokay:plan [--headless] [--review] <path>` | Analyze PRD and create tasks with skill routing |
 | `/pokayokay:revise [--direct]` | Revise existing plan with impact analysis |
-| `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/auto) |
+| `/pokayokay:work [mode] [-n N]` | Start/continue work session (supervised/semi-auto/auto/unattended) |
 | `/pokayokay:audit [feature]` | Audit feature completeness across 5 dimensions |
 | `/pokayokay:review` | Analyze session patterns and skill effectiveness |
 | `/pokayokay:handoff` | Prepare session handoff with context preservation |
@@ -206,6 +206,7 @@ The `/pokayokay:audit` command checks 5 dimensions:
 | `supervised` | PAUSE | PAUSE | PAUSE |
 | `semi-auto` | log | PAUSE | PAUSE |
 | `auto` | skip | log | PAUSE |
+| `unattended` | skip | skip | skip |
 
 ### Parallel Execution
 
