@@ -1,6 +1,7 @@
 ---
 description: Urgent production fix with expedited workflow
 argument-hint: <incident-description>
+skill: error-handling
 ---
 
 # Hotfix Workflow

@@ -1,6 +1,7 @@
 ---
 description: List, create, cleanup, switch, or remove worktrees
 argument-hint: [list|cleanup|switch <id>|remove <id>]
+skill: worktrees
 ---
 
 # Worktrees Management
