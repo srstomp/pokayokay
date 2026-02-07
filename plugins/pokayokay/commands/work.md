@@ -488,12 +488,13 @@ For each task:
 2. **Understand the task**: Read task details via `get_task()`
 3. **Route to skill** (if needed): Based on task type
 4. **Brainstorm gate** (conditional): See Brainstorm Gate section
-5. **Dispatch implementer**: Single Task tool call
-6. **Auto-fix test failures** (conditional): See Auto-Fix section
-7. **Browser verification** (conditional): See Browser Verification section
-8. **Task review**: Spec compliance + code quality
-9. **Complete task**: Mark done, trigger hooks
-10. **Checkpoint**: Based on mode
+5. **Pre-implementation validation**: Verify description quality, dependencies, skill hint
+6. **Dispatch implementer**: Single Task tool call
+7. **Auto-fix test failures** (conditional): See Auto-Fix section
+8. **Browser verification** (conditional): See Browser Verification section
+9. **Task review**: Spec compliance + code quality
+10. **Complete task**: Mark done, trigger hooks
+11. **Checkpoint**: Based on mode
 
 ### Parallel Mode (parallel > 1)
 
@@ -915,11 +916,43 @@ If brainstorm triggers:
 └──────────────┘
 ```
 
+### 3.5 Pre-Implementation Validation
+
+Before dispatching the implementer, verify the task is ready:
+
+```python
+def validate_task(task):
+    issues = []
+
+    # 1. Description quality
+    if len(task.description or "") < 50:
+        issues.append("BLOCK: Description too short for implementer")
+    if not task.acceptance_criteria:
+        issues.append("WARN: No acceptance criteria")
+
+    # 2. Dependency check (belt-and-suspenders with get_next_task)
+    deps = get_task_dependencies(task.id)
+    blocked_by = [d for d in deps.blocked_by if d.status != "done"]
+    if blocked_by:
+        issues.append(f"BLOCK: {len(blocked_by)} unresolved dependencies")
+
+    # 3. Skill hint
+    if not task.skill_hint:
+        issues.append("WARN: No skill assigned — will use default routing")
+
+    return issues
+```
+
+**BLOCK issues**: Skip task, set blocker in ohno, move to next task.
+**WARN issues**: Log and proceed — implementer can handle missing criteria if description is sufficient.
+
+If task was just brainstormed (Step 3) and still has BLOCK issues, something went wrong. Log and skip rather than re-brainstorming.
+
 ### 4. Dispatch Implementer Subagent
 
 **CRITICAL: Do not implement inline. Always dispatch subagent.**
 
-*Note: If brainstorm ran in Step 3, task now has refined requirements.*
+*Note: If brainstorm ran in Step 3, task now has refined requirements. Validation in Step 3.5 confirmed readiness.*
 
 1. Extract full task details from ohno:
    ```
@@ -928,9 +961,9 @@ If brainstorm triggers:
 
 2. Prepare context for subagent:
    - Task description (full text)
-   - Acceptance criteria (if any)
+   - Acceptance criteria (from task or brainstorm output)
    - Architectural context (where this fits in the project)
-   - Relevant skill (determined in Step 2)
+   - Relevant skill (determined in Step 2 or assigned by planner)
 
 3. Dispatch subagent using Task tool:
    ```
