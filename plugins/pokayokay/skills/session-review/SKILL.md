@@ -36,3 +36,4 @@ After an agent session, this skill helps you:
 |-----------|-------------|
 | [pattern-library.md](references/pattern-library.md) | Common session patterns and their fixes |
 | [analysis-scripts.md](references/analysis-scripts.md) | Scripts for extracting session metrics |
+| [review-report-template.md](references/review-report-template.md) | Template for session review reports |
