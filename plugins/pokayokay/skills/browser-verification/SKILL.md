@@ -1,3 +1,8 @@
+---
+name: browser-verification
+description: Automatically verify UI changes in a real browser after implementation. Integrated into the /work workflow — checks visual elements, interactions, and console errors using Playwright. Not a standalone skill.
+---
+
 # Browser Verification Skill
 
 Automatically verify UI changes in a real browser after implementation.
@@ -73,6 +78,7 @@ Projects can customize in `.pokayokay.json`:
 
 - `references/testability-detection.md` - How to determine if verification should run
 - `references/verification-flow.md` - Step-by-step verification process
+- `references/configuration.md` - Project-level configuration options
 
 ## Integration Point
 

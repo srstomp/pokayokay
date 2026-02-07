@@ -46,3 +46,4 @@ Transform product requirements into actionable implementation plans with visual 
 | [features-json.md](references/features-json.md) | features.json format and integration points |
 | [anti-patterns.md](references/anti-patterns.md) | Analysis, breakdown, and output anti-patterns |
 | [design-integration.md](references/design-integration.md) | Design plugin detection, UI/UX workflows, design-first routing |
+| [kanban-template.html](references/kanban-template.html) | HTML template for interactive kanban board |
