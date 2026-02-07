@@ -47,3 +47,4 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 | [ohno-integration.md](references/ohno-integration.md) | MCP tools and CLI commands reference |
 | [error-recovery.md](references/error-recovery.md) | Build failures, blocked tasks |
 | [anti-patterns.md](references/anti-patterns.md) | Common mistakes and fixes |
+| [bug-fix-pipeline.md](references/bug-fix-pipeline.md) | Agent pipeline for /fix and /hotfix commands |

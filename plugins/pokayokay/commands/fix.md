@@ -59,22 +59,41 @@ Before coding:
 - Consider side effects
 - Plan regression test
 
-### 5. Implement Fix
-- Make minimal necessary changes
-- Add inline comments explaining fix if non-obvious
-- Commit with message: `fix: [description]`
+### 5. Dispatch Agent Pipeline
 
-### 6. Add Regression Test
-- Write test that would have caught the bug
-- Verify test fails without fix
-- Verify test passes with fix
+**Do not implement the fix inline. Hand off to the agent pipeline.**
 
-### 7. Verify Fix
-- Confirm original reproduction steps no longer show bug
-- Run related tests
-- Check for regressions
+The diagnostic work from Steps 2-4 (root cause, reproduction steps, fix strategy) becomes context for the agents.
 
-### 8. Complete Task
+Read and follow `skills/project-harness/references/bug-fix-pipeline.md` with these settings:
+- **Mode**: `/fix` (max 3 fixer retries, max 3 review cycles, standard quality threshold)
+- **Root cause**: from Step 3
+- **Reproduction steps**: from Step 2
+- **Files to change**: from Step 4
+- **Fix strategy**: from Step 4
+
+The pipeline will:
+1. Dispatch `yokay-implementer` with bug fix context + mandatory regression test
+2. Auto-fix test failures if needed (`yokay-fixer`, max 3 attempts)
+3. Verify regression test exists (re-dispatch if missing)
+4. Run spec review (`yokay-spec-reviewer`)
+5. Run quality review (`yokay-quality-reviewer`)
+
+Wait for pipeline result before proceeding.
+
+### 6. Review Pipeline Result
+
+**If PASS**:
+- Implementation committed with regression test
+- Spec and quality reviews passed
+- Proceed to Step 7
+
+**If FAIL**:
+- Task is blocked with reason in ohno
+- Review the blocker: `npx @stevestomp/ohno-cli get <task-id>`
+- Either resolve manually or re-run `/fix` with additional context
+
+### 7. Complete Task
 ```bash
 npx @stevestomp/ohno-cli done <task-id> --notes "Root cause: X. Fixed by: Y. Test: Z"
 ```
@@ -87,8 +106,9 @@ npx @stevestomp/ohno-cli done <task-id> --notes "Root cause: X. Fixed by: Y. Tes
 **Bug**: [task-id] - [description]
 **Root Cause**: [explanation]
 **Fix**: [summary of changes]
-**Test Added**: [test file/name]
+**Regression Test**: [test file/name]
 **Files Changed**: [list]
+**Pipeline**: Implementer + Fixer([attempts]) + Spec Review + Quality Review
 
 Commit: [hash] fix: [message]
 ```
