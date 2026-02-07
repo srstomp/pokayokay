@@ -104,45 +104,58 @@ Epic (1-4 weeks)
 - **S**mall: Fits in a sprint/iteration
 - **T**estable: Clear acceptance criteria
 
-### Story Template
+### Story Template (ohno MCP format)
+
+When creating stories via `mcp__ohno__create_story`, the description provides context for all tasks within the story.
+
+```
+mcp__ohno__create_story:
+  title: "Email/Password Registration"
+  epic_id: "<epic_id>"
+  description: |
+    Users can create accounts using email and password.
+
+    Acceptance Criteria:
+    - Given a valid email and password (8+ chars), when user submits registration form, then account is created and verification email is sent
+    - Given an existing email, when user submits, then error "Email already registered" is shown
+    - Given an invalid email format, when user submits, then validation error is shown before submission
+
+    Edge Cases:
+    - Concurrent registration with same email
+    - Password with unicode characters
+
+    Out of Scope:
+    - Social auth (separate story)
+    - Email verification flow (separate story)
+```
+
+**Required description sections:**
+1. 1-2 sentence summary of the user capability
+2. Acceptance criteria in Given/When/Then format (3-5 minimum)
+3. Edge cases (2-3 items)
+4. Out-of-scope items (prevents scope creep)
+
+### Story Template (detailed planning)
+
+For internal planning documents (not ohno), use the expanded format:
 
 ```markdown
 ### Story: [Name]
 
-**ID**: STORY-001
 **Epic**: EPIC-001
 **Priority**: P0/P1/P2
 
-### User Story
 **As a** [user type]
 **I want to** [action/capability]
 **So that** [benefit/outcome]
 
-### Acceptance Criteria
-- [ ] Given [context], when [action], then [outcome]
-- [ ] Given [context], when [action], then [outcome]
-- [ ] [Additional criteria]
+**Acceptance Criteria**:
+- Given [context], when [action], then [outcome]
+- Given [context], when [action], then [outcome]
 
-### Scope
-**Includes**:
-- [Specific functionality]
-
-**Excludes**:
-- [What's NOT in this story]
-
-### Design Notes
-[UI mockups, interaction details, edge cases]
-
-### Technical Notes
-[Implementation hints, API changes, data model]
-
-### Dependencies
-- **Blocked by**: [Story/task IDs]
-- **Blocks**: [Story/task IDs]
-
-### Estimate
-- **Points/Days**: [X]
-- **Tasks**: [Count]
+**Edge Cases**: [2-3 items]
+**Out of Scope**: [What's NOT in this story]
+**Estimate**: [X days], [N tasks]
 ```
 
 ### Story Sizing
@@ -230,38 +243,47 @@ Split:
 - **Specific**: Clear what "done" means
 - **Technical**: Implementation-focused
 
-### Task Template
+### Task Template (ohno MCP format)
 
-```markdown
-#### Task: [Name]
+When creating tasks via `mcp__ohno__create_task`, the description field is the implementer agent's primary context. It must be self-contained.
 
-**ID**: TASK-001
-**Story**: STORY-001
-**Type**: Frontend / Backend / Design / DevOps / QA
-
-### Description
-[What needs to be implemented]
-
-### Acceptance Criteria
-- [ ] [Specific implementation criterion]
-- [ ] [Specific implementation criterion]
-
-### Technical Details
-- Files to modify: [List]
-- New files: [List]
-- Tests required: [List]
-
-### Dependencies
-- **Blocked by**: [Task IDs]
-- **Blocks**: [Task IDs]
-
-### Estimate
-- **Hours**: [1-8]
-- **Size**: XS/S/M/L
-
-### Notes
-[Implementation hints, gotchas, references]
 ```
+mcp__ohno__create_task:
+  title: "Create registration API endpoint"
+  story_id: "<story_id>"
+  task_type: "feature"
+  estimate_hours: 4
+  description: |
+    POST /api/auth/register endpoint accepting {email, password, name}.
+
+    Behavior:
+    - Validate email format and uniqueness against users table
+    - Hash password with bcrypt (12 rounds)
+    - Create user record with status "pending_verification"
+    - Return 201 with {id, email} (no password in response)
+    - Return 409 if email exists, 422 if validation fails
+
+    Acceptance Criteria:
+    - [ ] Endpoint responds to POST /api/auth/register
+    - [ ] Returns 201 on success with user object (no password)
+    - [ ] Returns 409 for duplicate email
+    - [ ] Returns 422 for invalid input with field-level errors
+    - [ ] Password is never returned in any response
+
+    Connects To:
+    - Depends on: User schema task (creates the table this writes to)
+    - Blocks: Registration form task (needs this endpoint)
+
+    Patterns to Follow:
+    - Follow existing endpoint patterns in src/routes/
+```
+
+**Required description sections:**
+1. **Behavior**: What the code does (not just what the feature is)
+2. **Input/output contract**: Endpoints, functions, data shapes
+3. **Acceptance criteria**: Checkboxes the implementer self-verifies against
+4. **Connects To**: Dependencies with brief context
+5. **Patterns to Follow**: Where to find conventions in existing code
 
 ### Task Types
 

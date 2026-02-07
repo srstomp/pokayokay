@@ -122,22 +122,23 @@ mcp__ohno__create_epic:
 ```
 
 #### 4.2 Create Stories (User-Facing Capabilities)
-For each epic, create stories representing user-facing chunks:
+For each epic, create stories representing user-facing chunks. See Section 4.5 for required description format.
 ```
 mcp__ohno__create_story:
   title: "Email/Password Registration"
   epic_id: "<epic_id from step above>"
-  description: "Users can create accounts with email and password"
+  description: "<rich description per Section 4.5>"
 ```
 
 #### 4.3 Create Tasks (Implementable Units)
-For each story, create tasks (1-8 hours each):
+For each story, create tasks (1-8 hours each). See Section 4.5 for required description format.
 ```
 mcp__ohno__create_task:
   title: "Create registration form component"
   story_id: "<story_id from step above>"
   task_type: "feature"  # feature, bug, chore, spike, test
   estimate_hours: 4
+  description: "<rich description per Section 4.5>"
 ```
 
 #### 4.4 Add Dependencies
@@ -149,6 +150,105 @@ mcp__ohno__add_dependency:
 ```
 
 **Important**: Always create in order: epics first, then stories (with epic_id), then tasks (with story_id). This ensures proper relationships.
+
+### 4.5 Task & Story Description Quality
+
+Every story and task MUST include rich descriptions. The implementer agent receives these descriptions as its only context — vague descriptions force it to guess or waste tokens asking questions.
+
+#### Story Description Format
+
+```
+mcp__ohno__create_story:
+  title: "Email/Password Registration"
+  epic_id: "<epic_id>"
+  description: |
+    Users can create accounts using email and password.
+
+    Acceptance Criteria:
+    - Given a valid email and password (8+ chars), when user submits registration form, then account is created and verification email is sent
+    - Given an existing email, when user submits, then error "Email already registered" is shown
+    - Given an invalid email format, when user submits, then validation error is shown before submission
+
+    Edge Cases:
+    - Concurrent registration with same email
+    - Password with unicode characters
+
+    Out of Scope:
+    - Social auth (separate story)
+    - Email verification flow (separate story)
+```
+
+Every story description MUST include:
+1. 1-2 sentence summary of the user capability
+2. Acceptance criteria in Given/When/Then format (3-5 minimum)
+3. Edge cases (2-3 items)
+4. Out-of-scope items (prevents scope creep)
+
+#### Task Description Format
+
+```
+mcp__ohno__create_task:
+  title: "Create registration API endpoint"
+  story_id: "<story_id>"
+  task_type: "feature"
+  estimate_hours: 4
+  description: |
+    POST /api/auth/register endpoint accepting {email, password, name}.
+
+    Behavior:
+    - Validate email format and uniqueness against users table
+    - Hash password with bcrypt (12 rounds)
+    - Create user record with status "pending_verification"
+    - Return 201 with {id, email} (no password in response)
+    - Return 409 if email exists, 422 if validation fails
+
+    Acceptance Criteria:
+    - [ ] Endpoint responds to POST /api/auth/register
+    - [ ] Returns 201 on success with user object (no password)
+    - [ ] Returns 409 for duplicate email
+    - [ ] Returns 422 for invalid input with field-level errors
+    - [ ] Password is never returned in any response
+
+    Connects To:
+    - Depends on: User schema task (creates the table this writes to)
+    - Blocks: Registration form task (needs this endpoint)
+
+    Patterns to Follow:
+    - Follow existing endpoint patterns in src/routes/
+```
+
+Every task description MUST include:
+1. **Behavior**: What the code should _do_, not just what the feature _is_
+2. **Input/output contract**: Endpoints, function signatures, data shapes (where applicable)
+3. **Acceptance criteria**: 3-5 checkboxes the implementer can self-verify against
+4. **Connects To**: Which tasks this depends on and blocks, with brief context
+5. **Patterns to Follow**: Where to look for conventions in existing code
+
+#### Anti-Pattern: Vague Descriptions
+
+```
+BAD:  title: "Set up authentication"
+      description: "Implement auth for the app"
+
+GOOD: title: "Create JWT token service"
+      description: |
+        Service that generates and validates JWT access tokens.
+
+        Behavior:
+        - generateToken(userId): returns signed JWT with 1h expiry
+        - validateToken(token): returns userId or throws InvalidTokenError
+        - Use RS256 signing with key from AUTH_PRIVATE_KEY env var
+
+        Acceptance Criteria:
+        - [ ] generateToken returns valid JWT with userId claim
+        - [ ] validateToken rejects expired tokens
+        - [ ] validateToken rejects tampered tokens
+        - [ ] Tokens include userId and exp claims
+
+        Connects To:
+        - Blocks: Login endpoint (needs token generation)
+        - Blocks: Auth middleware (needs token validation)
+```
 
 ### 5. Assign Skill Hints
 
@@ -174,7 +274,7 @@ Tag tasks with recommended skills based on their content:
 
 ### 5.1 Keyword Detection
 
-When skill not explicitly specified, detect from task title/description:
+When skill not explicitly specified, detect from task title/description. When a skill is detected, incorporate the skill's purpose into the task description so the implementer understands why that skill was assigned.
 
 | Keywords | Skill | Task Type |
 |----------|-------|-----------|
@@ -205,233 +305,7 @@ mcp__ohno__create_task:
 
 ### 5.3 Design Plugin Integration
 
-When planning UI/UX heavy features, check if design plugin is available to enable design-first workflows.
-
-#### Detect UI/UX Heavy Features
-
-A feature is considered UI/UX heavy if the PRD contains:
-
-**Visual/Component Keywords:**
-- `wireframe`, `mockup`, `prototype`, `design system`
-- `component`, `interface`, `visual`, `layout`, `responsive`
-- `ui`, `ux`, `user interface`, `user experience`
-
-**Interaction Keywords:**
-- `flow`, `journey`, `interaction`, `navigation`
-- `animation`, `transition`, `gesture`
-
-**Design System Keywords:**
-- `tokens`, `theming`, `branding`, `style guide`
-- `design tokens`, `design system`, `component library`
-
-**Persona/Research Keywords:**
-- `persona`, `user research`, `empathy map`, `user needs`
-
-**Accessibility Keywords:**
-- `accessibility`, `a11y`, `wcag`, `screen reader`, `keyboard navigation`
-
-#### Detection Logic
-
-```python
-def is_uiux_heavy(prd_text):
-    """Check if PRD describes UI/UX heavy work"""
-    text = prd_text.lower()
-
-    visual_keywords = ['wireframe', 'mockup', 'prototype', 'component',
-                       'interface', 'visual', 'layout', 'responsive',
-                       'ui', 'ux', 'user interface', 'user experience']
-
-    interaction_keywords = ['flow', 'journey', 'interaction', 'navigation',
-                           'animation', 'transition']
-
-    design_system_keywords = ['tokens', 'theming', 'design system',
-                             'component library', 'style guide']
-
-    persona_keywords = ['persona', 'user research', 'empathy map']
-
-    accessibility_keywords = ['accessibility', 'a11y', 'wcag', 'screen reader']
-
-    # Count keyword categories found
-    categories_found = 0
-    if any(kw in text for kw in visual_keywords):
-        categories_found += 1
-    if any(kw in text for kw in interaction_keywords):
-        categories_found += 1
-    if any(kw in text for kw in design_system_keywords):
-        categories_found += 1
-    if any(kw in text for kw in persona_keywords):
-        categories_found += 1
-    if any(kw in text for kw in accessibility_keywords):
-        categories_found += 1
-
-    # Feature is UI/UX heavy if 2+ categories present
-    return categories_found >= 2
-```
-
-#### Design Plugin Availability Check
-
-The design plugin availability was checked at the start of the workflow (Step 1).
-
-Use the stored `design_plugin_available` variable to determine routing:
-
-```python
-# Already available from Step 1
-if design_plugin_available:
-    # Enable design-first workflows
-else:
-    # Suggest installation or proceed without design plugin
-```
-
-#### Headless vs Interactive
-
-**If `--headless` is active:**
-- If design plugin IS available AND PRD is UI/UX heavy: automatically create design tasks with dependencies (option a). Log decision:
-  ```
-  mcp__ohno__add_task_activity(epic_id, "decision", "DESIGN: Auto-created design-first tasks for [story names] — PRD matches [N] UI/UX keyword categories")
-  ```
-- If design plugin is NOT available: continue without it (no prompt, no decision logged — this is the obvious default).
-
-**If interactive (default, no flags):**
-- Show the existing prompts below as-is (current behavior, unchanged).
-
-#### Design-First Workflow Suggestion
-
-**When design plugin IS available (`design_plugin_available == True`):**
-
-After creating epics and stories, suggest design tasks BEFORE implementation:
-
-```markdown
-## Design-First Workflow Detected
-
-This feature appears to be UI/UX heavy. The design plugin is available.
-
-**Suggested workflow:**
-1. Run design commands BEFORE creating implementation tasks
-2. Design artifacts inform implementation requirements
-3. Implementation follows validated designs
-
-**Design commands to consider:**
-- `/design:ux` - For user flows, information architecture, interactions
-- `/design:ui` - For visual design, components, design tokens
-- `/design:persona` - For user personas and research insights
-- `/design:a11y` - For accessibility requirements and audit
-
-**Example approach:**
-1. Create epic and stories as planned
-2. For each story, run appropriate design commands first
-3. Design outputs become input to implementation tasks
-4. Create implementation tasks based on design artifacts
-
-Would you like to:
-  a) Create design tasks now (recommended)
-  b) Skip and create implementation tasks only
-  c) Mix: Some stories need design first, others don't
-```
-
-**If user chooses (a) - Create design tasks:**
-
-For each story identified as design-heavy, create design tasks:
-
-```
-mcp__ohno__create_task:
-  title: "Design: [UX/UI aspect] for [story name]"
-  story_id: "<story_id>"
-  task_type: "ux"  # or "ui", "persona", "a11y"
-  estimate_hours: 3
-  description: "Run /design:[command] to create design artifacts before implementation"
-```
-
-Then create implementation tasks that depend on design tasks:
-
-```
-mcp__ohno__add_dependency:
-  task_id: "<implementation_task_id>"
-  depends_on_task_id: "<design_task_id>"
-```
-
-**When design plugin is NOT available:**
-
-Show installation suggestion:
-
-```markdown
-## UI/UX Heavy Feature Detected
-
-This feature appears to require significant design work, but the design plugin is not installed.
-
-**The design plugin provides:**
-- UX flows and user journeys (`/design:ux`)
-- Visual design and components (`/design:ui`)
-- User personas and research (`/design:persona`)
-- Accessibility audits (`/design:a11y`)
-- Marketing pages (`/design:marketing`)
-
-**Benefits of design-first approach:**
-- Validate user flows before building
-- Establish design system early
-- Catch accessibility issues in design phase
-- Reduce implementation rework
-
-**To enable design workflows:**
-```bash
-claude plugin install design
-```
-
-Then re-run `/plan` to include design tasks in the breakdown.
-
-**Continue without design plugin?** [y/n]
-```
-
-If user chooses yes, continue with standard task creation. If no, pause and suggest plugin installation.
-
-#### Design Task Types
-
-When creating design tasks, use appropriate task_type:
-
-| Task Type | When to Use | Triggers |
-|-----------|-------------|----------|
-| `ux` | User flows, IA, interactions | `/design:ux` in `/work` |
-| `ui` | Visual design, components | `/design:ui` in `/work` |
-| `persona` | User research, personas | `/design:persona` in `/work` |
-| `a11y` | Accessibility requirements | `/design:a11y` in `/work` |
-
-These task types will trigger design routing in `/work` command (see Section 2.5 in work.md).
-
-#### Design Routing in Skill Hints
-
-Update the skill hints table (Section 4) to explicitly include design routing:
-
-**Design & UX** (expanded):
-- User flows, wireframes, IA → `ux-design` (task_type: `ux`)
-- Visual components, styling → `aesthetic-ui-designer` (task_type: `ui`)
-- User research, personas → `persona-creation` (task_type: `persona`)
-- Accessibility requirements → `accessibility-auditor` (task_type: `a11y`)
-
-When design plugin is available, these skills map to `/design:*` commands.
-When not available, tasks use standard skill-based implementation.
-
-#### Keyword Detection Updates
-
-Add design keywords to Section 4.1 table:
-
-| Keywords | Skill | Task Type |
-|----------|-------|-----------|
-| wireframe, mockup, user flow, journey, ia | ux-design | ux |
-| visual, component, design system, tokens | aesthetic-ui-designer | ui |
-| persona, user research, empathy map | persona-creation | persona |
-| accessibility, a11y, wcag, screen reader | accessibility-auditor | a11y |
-
-#### Integration with Work Command
-
-Tasks created with design task types will automatically route to design plugin in `/work`:
-
-1. `/plan` creates task with `task_type: "ux"`
-2. User runs `/work`
-3. Work command detects design task type
-4. Work routes to `/design:ux` (if plugin available)
-5. Design command creates artifacts
-6. Task is marked complete with design deliverables
-
-See work.md Section 2.5 "Design Task Routing" for full routing logic.
+For UI/UX heavy features, check design plugin availability and create design-first workflows. See the prd-analyzer skill's [design-integration.md](references/design-integration.md) reference for full detection logic, keyword lists, and workflow details.
 
 ### 6. Create Project Context
 Create `.claude/PROJECT.md` with:
