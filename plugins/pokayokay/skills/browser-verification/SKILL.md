@@ -1,5 +1,6 @@
 ---
 name: browser-verification
+agents: [yokay-browser-verifier]
 description: Automatically verify UI changes in a real browser after implementation. Integrated into the /work workflow — checks visual elements, interactions, and console errors using Playwright. Not a standalone skill.
 ---
 
