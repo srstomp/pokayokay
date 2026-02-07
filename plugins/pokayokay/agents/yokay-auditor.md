@@ -39,7 +39,7 @@ Detect framework from indicators:
 
 ### 2. Load Feature Context
 
-If `.claude/` exists with prd-analyzer output:
+If `.claude/` exists with planning output:
 ```bash
 cat .claude/features.json
 sqlite3 .claude/tasks.db "SELECT id, title, status FROM epics"

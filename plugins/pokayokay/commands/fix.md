@@ -65,7 +65,7 @@ Before coding:
 
 The diagnostic work from Steps 2-4 (root cause, reproduction steps, fix strategy) becomes context for the agents.
 
-Read and follow `skills/project-harness/references/bug-fix-pipeline.md` with these settings:
+Read and follow `skills/work-session/references/bug-fix-pipeline.md` with these settings:
 - **Mode**: `/fix` (max 3 fixer retries, max 3 review cycles, standard quality threshold)
 - **Root cause**: from Step 3
 - **Reproduction steps**: from Step 2
@@ -76,8 +76,7 @@ The pipeline will:
 1. Dispatch `yokay-implementer` with bug fix context + mandatory regression test
 2. Auto-fix test failures if needed (`yokay-fixer`, max 3 attempts)
 3. Verify regression test exists (re-dispatch if missing)
-4. Run spec review (`yokay-spec-reviewer`)
-5. Run quality review (`yokay-quality-reviewer`)
+4. Run task review (`yokay-task-reviewer`)
 
 Wait for pipeline result before proceeding.
 

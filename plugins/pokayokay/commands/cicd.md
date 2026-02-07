@@ -1,7 +1,7 @@
 ---
 description: Create, debug, or optimize CI/CD pipelines
 argument-hint: <pipeline-task>
-skill: ci-cd-expert
+skill: ci-cd
 ---
 
 # CI/CD Pipeline Workflow

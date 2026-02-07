@@ -19,6 +19,12 @@ Systematic security review for application code, dependencies, and configuration
 | Architecture | Attack surface, data flow | Design phase, major refactors |
 | API Security | Auth, authz, rate limiting | New endpoints, public APIs |
 
+## When NOT to Use
+
+- **Designing new auth flows** — Use `api-design` for designing OAuth2/JWT endpoints from scratch
+- **Performance issues** — Use `performance-optimization` even if caused by auth overhead
+- **CI/CD pipeline security** — Use `ci-cd` for pipeline hardening (secret management, permissions)
+
 ## Key Principles
 
 - **Scope first** — Define audit area, depth, and constraints before scanning

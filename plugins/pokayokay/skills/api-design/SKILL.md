@@ -7,6 +7,13 @@ description: Design RESTful APIs with consistent patterns, clear conventions, an
 
 Design clear, consistent, and developer-friendly REST APIs.
 
+## When NOT to Use
+
+- **Consuming external APIs** — Use `api-integration` for building clients to call third-party services (Stripe, Twilio, etc.)
+- **Writing tests for APIs** — Use `testing-strategy` for contract tests, integration tests, mocking strategies
+- **Reviewing existing API security** — Use `security-audit` for vulnerability scanning of live endpoints
+- **Designing auth mechanisms** that are the whole task — Use `security-audit` if reviewing, this skill if designing from scratch
+
 ## Core Principles
 
 - **Resource-oriented** — Design around nouns (resources), not verbs (actions)

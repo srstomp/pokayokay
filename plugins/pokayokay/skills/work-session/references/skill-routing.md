@@ -25,7 +25,7 @@ Check these in order:
 | performance | performance-optimization | — |
 | backend | api-design | api-integration, error-handling |
 | database | database-design | — |
-| devops | ci-cd-expert | — |
+| devops | ci-cd | — |
 | qa | testing-strategy | testing-strategy |
 
 ## By Keywords in Title/Description
@@ -44,10 +44,10 @@ Check these in order:
 | "database", "schema", "migration", "query", "index" | database-design |
 | "error", "exception", "error handling", "retry", "fallback" | error-handling |
 | "logging", "metrics", "tracing", "monitoring", "alerting" | observability |
-| "CI", "CD", "pipeline", "deploy", "GitHub Actions", "workflow" | ci-cd-expert |
+| "CI", "CD", "pipeline", "deploy", "GitHub Actions", "workflow" | ci-cd |
 | "README", "docs", "ADR", "documentation", "user guide" | documentation |
-| "PRD", "requirements", "feature spec", "implementation plan" | prd-analyzer |
-| "completeness", "gap analysis", "feature audit" | product-manager |
+| "PRD", "requirements", "feature spec", "implementation plan" | planning |
+| "completeness", "gap analysis", "feature audit" | feature-audit |
 | "worktree", "branch", "isolation" | worktrees |
 | "session", "retrospective", "review session" | session-review |
 
@@ -72,7 +72,7 @@ Some tasks benefit from multiple skills in sequence:
 
 ### New Project/Epic Setup
 ```
-1. prd-analyzer       → Create implementation plan
+1. planning       → Create implementation plan
 2. architecture-review → Verify structure
 3. testing-strategy   → Plan test approach
 ```
