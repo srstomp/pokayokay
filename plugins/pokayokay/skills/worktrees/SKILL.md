@@ -38,3 +38,5 @@ Guide for managing git worktrees in pokayokay.
 | Reference | Description |
 |-----------|-------------|
 | [worktree-management.md](references/worktree-management.md) | Lifecycle, completion options, dependency install, troubleshooting |
+| [cleanup-strategies.md](references/cleanup-strategies.md) | Cleanup criteria, detection, disk management, scheduled cleanup |
+| [parallel-worktrees.md](references/parallel-worktrees.md) | Parallel execution worktree isolation, conflict prevention |

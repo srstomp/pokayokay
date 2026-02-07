@@ -1,19 +1,27 @@
 ---
 name: session-review
-description: Analyzes completed agent sessions to identify what went well, what went wrong, and patterns to improve. Reads from .claude/ folder (session logs, progress.md, git history) and produces actionable insights. Use after completing work sessions to learn from agent behavior and improve future runs.
+description: Analyzes completed agent sessions and prepares session handoffs. Supports both retrospective pattern analysis (/review) and session handoff preparation (/handoff). Reads from .claude/ folder (session logs, progress.md, git history) and ohno task data. Use after completing work sessions to learn from agent behavior, or when ending a session to preserve context for the next one.
 ---
 
-# Session Review
+# Session Review & Handoff
 
-Analyze agent sessions to extract lessons and improve future performance.
+Analyze agent sessions and prepare context handoffs for session continuity.
 
 ## Purpose
 
-After an agent session, this skill helps you:
+This skill serves two complementary workflows:
+
+**Review** (`/pokayokay:review`) — Retrospective analysis:
 - Understand what the agent actually did vs what was planned
 - Identify good patterns to reinforce and bad patterns to prevent
 - Find wasted effort and context efficiency issues
 - Generate improvements for skills, prompts, and workflows
+
+**Handoff** (`/pokayokay:handoff`) — Forward-looking context preservation:
+- Document completed work and in-progress state
+- Capture decisions, blockers, and next steps
+- Track skill usage and ad-hoc work
+- Prepare context for the next session or agent
 
 ## Key Principles
 
@@ -37,3 +45,4 @@ After an agent session, this skill helps you:
 | [pattern-library.md](references/pattern-library.md) | Common session patterns and their fixes |
 | [analysis-scripts.md](references/analysis-scripts.md) | Scripts for extracting session metrics |
 | [review-report-template.md](references/review-report-template.md) | Template for session review reports |
+| [handoff-guide.md](references/handoff-guide.md) | Handoff state documentation, templates, ohno integration |

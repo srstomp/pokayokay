@@ -1,5 +1,6 @@
 ---
 name: security-audit
+agents: [yokay-security-scanner]
 description: Security review of application code, dependencies, configurations, and architecture. Covers OWASP Top 10, dependency scanning, secret management, authentication patterns, and API security. Use this skill when reviewing security of code, auditing dependencies for vulnerabilities, checking configuration security, assessing API endpoints, or answering security concerns about implementations. Triggers on "security", "audit", "vulnerability", "CVE", "OWASP", "injection", "XSS", "CSRF", "authentication security", "authorization flaw".
 ---
 
