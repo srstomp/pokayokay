@@ -318,6 +318,7 @@ pokayokay includes **12 specialized sub-agents** that run in isolated context wi
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
 | `yokay-fixer` | Sonnet | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | TDD implementation with fresh context |
+| `yokay-planner` | Sonnet | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
 | `yokay-task-reviewer` | Sonnet | Spec compliance + code quality review |

@@ -1,6 +1,7 @@
 ---
 description: Diagnose and fix a bug with structured workflow
 argument-hint: <bug-description-or-task-id>
+skill: error-handling
 ---
 
 # Bug Fix Workflow

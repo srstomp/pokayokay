@@ -215,6 +215,7 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
 | `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | Can write | TDD implementation with fresh context |
+| `yokay-planner` | Sonnet | Read-only | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
 | `yokay-task-reviewer` | Sonnet | Read-only | Spec compliance + code quality review |
@@ -235,6 +236,7 @@ Commands that benefit from isolated execution include delegation instructions:
 | Command | Delegates To | When |
 |---------|--------------|------|
 | `/pokayokay:audit` | yokay-auditor | Always (verbose scanning) |
+| `/pokayokay:plan` | yokay-planner | PRD analysis (context isolation) |
 | `/pokayokay:spike` | yokay-spike-runner | Deep investigations (>1h) |
 | `/pokayokay:security` | yokay-security-scanner | Always (verbose scanning) |
 | `/pokayokay:test` | yokay-test-runner | Running tests (not designing) |

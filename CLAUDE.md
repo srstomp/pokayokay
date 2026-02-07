@@ -70,12 +70,13 @@ The `/work` command uses a coordinator pattern that dispatches specialized agent
 3. **yokay-explorer** - Fast codebase search (Haiku model, read-only)
 4. **yokay-fixer** - Auto-retry on test failures with targeted fixes
 5. **yokay-implementer** - Executes tasks with fresh context (TDD)
-6. **yokay-reviewer** - Code review and analysis (read-only)
-7. **yokay-security-scanner** - OWASP vulnerability scanning (read-only)
-8. **yokay-task-reviewer** - Spec compliance + code quality review
-9. **yokay-spike-runner** - Time-boxed technical investigations
-10. **yokay-test-runner** - Test execution with concise output
-11. **yokay-auditor** - L0-L5 completeness scanning (read-only)
+6. **yokay-planner** - PRD analysis and structured plan generation
+7. **yokay-reviewer** - Code review and analysis (read-only)
+8. **yokay-security-scanner** - OWASP vulnerability scanning (read-only)
+9. **yokay-task-reviewer** - Spec compliance + code quality review
+10. **yokay-spike-runner** - Time-boxed technical investigations
+11. **yokay-test-runner** - Test execution with concise output
+12. **yokay-auditor** - L0-L5 completeness scanning (read-only)
 
 Agents are dispatched via the Task tool with `subagent_type` matching the agent filename (without .md).
 

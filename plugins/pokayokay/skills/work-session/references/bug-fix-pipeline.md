@@ -14,10 +14,12 @@ Before entering this pipeline, the coordinator MUST have:
 
 | Setting | `/fix` | `/hotfix` |
 |---------|--------|-----------|
-| Max fixer retries | 3 | 2 |
-| Max review cycles | 3 | 1 |
+| Max fixer retries | 3 (default) | 2 |
+| Max review cycles | 3 (default) | 1 |
 | Quality review threshold | Warning+ (standard) | Critical only |
 | Browser verification | Conditional (same as /work) | Skip |
+
+These limits are passed to the fixer agent in the dispatch prompt (e.g., "Max attempts: 3"). The agent respects whatever limit the coordinator provides.
 
 ## Step 1: Build Acceptance Criteria
 
