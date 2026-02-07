@@ -1,5 +1,6 @@
 ---
 name: testing-strategy
+agents: [yokay-test-runner]
 description: Comprehensive test architecture, coverage strategy, and test design. Covers test pyramid design, API integration testing (Supertest, contract tests, OpenAPI validation), frontend/component testing (React Testing Library, Vue Test Utils), E2E testing (Playwright, Cypress), visual regression, mocking strategies (MSW), test data management (factories, fixtures), CI/CD test pipelines, and flaky test prevention. Use this skill when designing test architecture, building API test suites, validating API contracts, setting up component or E2E testing, managing test data, debugging flaky tests, reviewing coverage strategy, or organizing test files.
 ---
 
