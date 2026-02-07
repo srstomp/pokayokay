@@ -6,7 +6,7 @@ set -euo pipefail
 echo "Testing parallel mode documentation..."
 
 WORK_FILE="plugins/pokayokay/commands/work.md"
-SKILL_FILE="plugins/pokayokay/skills/project-harness/SKILL.md"
+SKILL_FILE="plugins/pokayokay/skills/work-session/SKILL.md"
 
 # Test 1: work.md has parallel flag in argument-hint
 echo "Test 1: Parallel flag in argument-hint"
@@ -44,7 +44,7 @@ else
   exit 1
 fi
 
-# Test 5: project-harness has parallel execution docs
+# Test 5: work-session has parallel execution docs
 echo "Test 5: Project harness parallel docs"
 if grep -q "Parallel Execution" "$SKILL_FILE"; then
   echo "  PASS: Parallel execution in skill"

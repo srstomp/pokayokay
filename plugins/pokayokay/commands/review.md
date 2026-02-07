@@ -77,7 +77,7 @@ Track spike decisions and follow-through:
 #### Skill Gaps Identified
 Note when work would have benefited from a skill:
 - Database migration manually done - would benefit from `database-design`
-- CI pipeline created without `ci-cd-expert` - missing caching optimization
+- CI pipeline created without `ci-cd` - missing caching optimization
 - No security review on auth changes - should use `security-audit`
 
 ### 6.2 Session Quality Metrics

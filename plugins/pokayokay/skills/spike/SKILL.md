@@ -14,6 +14,12 @@ Structured technical investigation to reduce uncertainty. Answer specific questi
 - Output is a decision (GO/NO-GO/PIVOT/MORE-INFO), not a general exploration
 - Create follow-up tasks from findings, not just a report
 
+## When NOT to Use
+
+- **Multi-day evaluations** — Use `deep-research` for comprehensive technology evaluations with stakeholder reports
+- **Already know what to build** — Skip straight to implementation; spikes are for reducing uncertainty, not planning known work
+- **Bug investigation** — Use `error-handling` or `/fix`; bugs have reproduction steps, spikes have open questions
+
 ## Quick Start Checklist
 
 1. Define the question clearly (what are we trying to learn?)

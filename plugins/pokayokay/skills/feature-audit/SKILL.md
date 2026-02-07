@@ -1,11 +1,17 @@
 ---
-name: product-manager
-description: Audits feature completeness by scanning codebases and comparing against PRD requirements. Identifies gaps between backend implementation and user-facing accessibility. Generates remediation tasks and integrates with prd-analyzer output. Supports multiple frameworks including Next.js, React Router, TanStack, React Native, Expo, and more.
+name: feature-audit
+description: Audits feature completeness by scanning codebases and comparing against PRD requirements. Identifies gaps between backend implementation and user-facing accessibility. Generates remediation tasks and integrates with planning skill output. Supports multiple frameworks including Next.js, React Router, TanStack, React Native, Expo, and more.
 ---
 
-# Product Manager
+# Feature Audit
 
 Ensures features are not just implemented but actually user-accessible. Bridges the gap between "code complete" and "user can use it."
+
+## When NOT to Use
+
+- **Analyzing agent/session patterns** — Use `session-review` for retrospectives on how work went
+- **Security review** — Use `security-audit` for vulnerability scanning; this skill checks feature completeness, not security
+- **Creating the plan** — Use `planning` to break down PRDs into tasks; this skill audits after implementation
 
 ## Completeness Levels
 

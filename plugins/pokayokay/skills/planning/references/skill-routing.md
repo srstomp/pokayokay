@@ -14,7 +14,7 @@ Available skills that can be assigned to features:
 | `testing-strategy` | API test suites | API spec | Test files |
 | `frontend-design` | Frontend architecture | Requirements | Component structure |
 | `sdk-development` | SDK/library creation | API spec | SDK package |
-| `product-manager` | Completeness audit | Codebase | Gap report |
+| `feature-audit` | Completeness audit | Codebase | Gap report |
 
 ---
 
@@ -63,7 +63,7 @@ Skills should run in this order:
    - sdk-development (if SDK needed)
 
 3. Quality
-   - product-manager (final audit)
+   - feature-audit (final audit)
 ```
 
 ### Dependency Graph
@@ -85,7 +85,7 @@ Skills should run in this order:
              │
              ▼
       ┌──────────────┐
-      │product-manager│
+      │feature-audit│
       └──────────────┘
 ```
 
@@ -273,7 +273,7 @@ def complete_skill_work(skill_name: str, epic_id: str, db_path: str):
 | api-design | F002, F007, F008 | P0, P0, P0 | pending |
 | testing-strategy | F002, F007 | P0, P0 | blocked |
 | sdk-development | F026 | P1 | not started |
-| product-manager | All features | — | not started |
+| feature-audit | All features | — | not started |
 
 ### Skill Dependencies
 
@@ -284,7 +284,7 @@ api-design ──────────────────► testing-str
                               sdk-development
                                      │
                                      ▼
-                              product-manager
+                              feature-audit
 ```
 
 ### Next Skill to Run
@@ -406,7 +406,7 @@ Pure configuration or documentation features:
 
 ## Integration Checklist
 
-### prd-analyzer Output
+### planning Output
 - [ ] Every feature has `assigned_skills`
 - [ ] Every feature has `skill_order`
 - [ ] `current_skill` set to first in order
@@ -419,7 +419,7 @@ Pure configuration or documentation features:
 - [ ] Skill updates status when complete
 - [ ] Skill transitions to next skill in order
 
-### product-manager Audit
+### feature-audit Audit
 - [ ] Runs after all skills complete
 - [ ] Checks implementation matches assignments
 - [ ] Updates audit_level in tasks.db

@@ -6,10 +6,10 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 
 | Command | Purpose | Primary Skill |
 |---------|---------|---------------|
-| `/pokayokay:plan` | Analyze PRD, create tasks | prd-analyzer |
+| `/pokayokay:plan` | Analyze PRD, create tasks | planning |
 | `/pokayokay:revise` | Revise existing plan | plan-revision |
-| `/pokayokay:work` | Execute work sessions | project-harness |
-| `/pokayokay:audit` | Check feature completeness | product-manager |
+| `/pokayokay:work` | Execute work sessions | work-session |
+| `/pokayokay:audit` | Check feature completeness | feature-audit |
 | `/pokayokay:review` | Analyze session patterns | session-review |
 | `/pokayokay:handoff` | Prepare session handoff | session-review |
 | `/pokayokay:api` | Design REST/GraphQL APIs | api-design |
@@ -18,7 +18,7 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:fix` | Bug diagnosis and fix | - |
 | `/pokayokay:spike` | Time-boxed investigation | spike |
 | `/pokayokay:hotfix` | Production incident response | - |
-| `/pokayokay:cicd` | CI/CD pipelines | ci-cd-expert |
+| `/pokayokay:cicd` | CI/CD pipelines | ci-cd |
 | `/pokayokay:db` | Database design | database-design |
 | `/pokayokay:test` | Testing strategy | testing-strategy |
 | `/pokayokay:research` | Deep research | deep-research |
@@ -154,7 +154,7 @@ The `/work` command routes to skills based on task type, or use direct commands:
 |-----------|-------|----------------|
 | API endpoints | api-design | `/pokayokay:api` |
 | Database work | database-design | `/pokayokay:db` |
-| CI/CD | ci-cd-expert | `/pokayokay:cicd` |
+| CI/CD | ci-cd | `/pokayokay:cicd` |
 | Testing | testing-strategy | `/pokayokay:test` |
 | Security | security-audit | `/pokayokay:security` |
 | Monitoring | observability | `/pokayokay:observe` |
@@ -172,7 +172,7 @@ Tasks are automatically routed based on keywords:
 |----------|-------|
 | database, schema, migration | database-design |
 | test, coverage, e2e, playwright | testing-strategy |
-| deploy, pipeline, ci/cd | ci-cd-expert |
+| deploy, pipeline, ci/cd | ci-cd |
 | security, auth, encryption | security-audit |
 | logging, monitoring, metrics | observability |
 | spike, investigate, feasibility | spike |
@@ -215,10 +215,9 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
 | `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | Can write | TDD implementation with fresh context |
-| `yokay-quality-reviewer` | Haiku | Read-only | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
-| `yokay-spec-reviewer` | Haiku | Read-only | Verify implementation matches spec |
+| `yokay-task-reviewer` | Sonnet | Read-only | Spec compliance + code quality review |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
 
@@ -243,8 +242,7 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
 | `/pokayokay:work` | yokay-browser-verifier | UI changes (after implementation) |
 | `/pokayokay:work` | yokay-fixer | When tests fail after implementation |
-| `/pokayokay:work` | yokay-spec-reviewer | After browser verification |
-| `/pokayokay:work` | yokay-quality-reviewer | After spec review passes |
+| `/pokayokay:work` | yokay-task-reviewer | After browser verification |
 
 ### Manual Invocation
 
@@ -287,42 +285,29 @@ AMBIGUOUS TASK → yokay-brainstormer → CLEAR REQUIREMENTS → Implementation
 
 This prevents wasted implementation effort from misunderstood requirements.
 
-### Two-Stage Review
+### Task Review
 
-After implementation completes, work passes through two sequential reviews:
+After implementation completes, a single reviewer checks both spec compliance and code quality:
 
 ```
-IMPLEMENTATION → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
-                      ↓ FAIL                  ↓ FAIL
-                 Re-implement              Re-implement
+IMPLEMENTATION → yokay-task-reviewer → COMPLETE
+                      ↓ FAIL
+                 Re-implement
 ```
 
-**Stage 1: Spec Review** (`yokay-spec-reviewer`)
-- Verifies all acceptance criteria are met
-- Checks for misinterpretations
-- Flags scope creep (unrequested features)
+**What it checks** (`yokay-task-reviewer`):
+- Spec compliance: all acceptance criteria met, no misinterpretations, no scope creep
+- Code quality: structure, readability, test coverage, project conventions
 - Binary PASS/FAIL verdict
 
-**Stage 2: Quality Review** (`yokay-quality-reviewer`)
-- Only runs after spec review passes
-- Checks code structure and readability
-- Verifies test coverage and quality
-- Checks project conventions
-- Binary PASS/FAIL verdict
-
-Both reviews must PASS before a task is marked complete. If either fails, the implementer is re-dispatched with specific fix requirements.
-
-**Why two stages?**
-- Separates "did we build the right thing?" from "did we build it well?"
-- Prevents quality issues from masking spec failures
-- Enables focused, actionable feedback
+The review must PASS before a task is marked complete. If it fails, the implementer is re-dispatched with specific fix requirements.
 
 ### Browser Verification
 
-For tasks that modify UI-related files, browser verification runs **after implementation and before reviews**:
+For tasks that modify UI-related files, browser verification runs **after implementation and before review**:
 
 ```
-IMPLEMENTATION → browser-verify → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
+IMPLEMENTATION → browser-verify → yokay-task-reviewer → COMPLETE
 ```
 
 **What it checks:**

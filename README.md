@@ -167,7 +167,7 @@ The plugin includes 23 specialized skills that are automatically loaded based on
 - `architecture-review` - Code structure, module boundaries
 
 ### DevOps & Infrastructure
-- `ci-cd-expert` - GitHub Actions, GitLab CI, deployment strategies
+- `ci-cd` - GitHub Actions, GitLab CI, deployment strategies
 - `observability` - Logging, metrics, tracing, alerting
 
 ### Quality & Security
@@ -318,10 +318,9 @@ pokayokay includes **12 specialized sub-agents** that run in isolated context wi
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
 | `yokay-fixer` | Sonnet | Auto-retry on test failures with targeted fixes |
 | `yokay-implementer` | Sonnet | TDD implementation with fresh context |
-| `yokay-quality-reviewer` | Haiku | Code quality, tests, and conventions review |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
-| `yokay-spec-reviewer` | Haiku | Verifies implementation matches spec |
+| `yokay-task-reviewer` | Sonnet | Spec compliance + code quality review |
 | `yokay-spike-runner` | Sonnet | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Test execution with concise output |
 
@@ -347,14 +346,13 @@ This prevents wasted work from misunderstood requirements.
 
 ### Two-Stage Review
 
-After implementation, work passes through two sequential reviews:
+After implementation, a single task reviewer checks both spec compliance and code quality:
 
-| Stage | Agent | Checks |
-|-------|-------|--------|
-| 1. Spec Review | `yokay-spec-reviewer` | Does implementation match requirements? |
-| 2. Quality Review | `yokay-quality-reviewer` | Is the code well-written and tested? |
+| Agent | Checks |
+|-------|--------|
+| `yokay-task-reviewer` | Spec compliance (requirements met?) + code quality (well-written and tested?) |
 
-Both must PASS before a task is marked complete. This separation ensures completeness (spec) and quality are independently verified.
+The review must PASS before a task is marked complete.
 
 ## Hook System
 

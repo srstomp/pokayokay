@@ -9,7 +9,7 @@ Revise existing plans with full impact visibility.
 
 **Integrates with:**
 - `ohno` — Task CRUD, dependencies, activity logging
-- `project-harness` — Works within session workflow
+- `work-session` — Works within session workflow
 
 ## Quick Reference
 
