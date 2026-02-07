@@ -96,21 +96,31 @@ This check is non-blocking - it only detects availability. The result will be us
 - Suggest design plugin installation for UI/UX heavy features when not available
 - Enable design-first workflows that create design artifacts before implementation
 
-### 2. Read the PRD
-Read and understand the document at the provided path. Extract:
-- Project name and description
-- Core features and requirements
-- Technical constraints
-- Success criteria
+### 2. Dispatch Planner Agent
+
+Delegate PRD analysis to the `yokay-planner` agent for context isolation. This keeps the (potentially large) PRD content out of the main conversation.
+
+```
+Task tool (yokay-planner):
+  description: "Plan: {prd_filename}"
+  prompt: [Fill planner-prompt.md template with:
+    - PRD_PATH: path to PRD
+    - PROJECT_CONTEXT: existing codebase info (tech stack, structure)
+    - DESIGN_PLUGIN_AVAILABLE: result from Step 1
+    - MODE: interactive or headless
+  ]
+```
+
+The planner returns a **structured JSON plan** with epics, stories, tasks, dependencies, spikes, and design tasks.
 
 ### 3. Initialize ohno (if needed)
 ```bash
 npx @stevestomp/ohno-cli init
 ```
 
-### 4. Create Hierarchical Structure
+### 4. Create Hierarchical Structure from Plan
 
-Use the ohno MCP tools to create a proper epic → story → task hierarchy:
+Use the planner's JSON output to create the ohno hierarchy via MCP tools:
 
 #### 4.1 Create Epics (Major Features)
 For each major feature area, create an epic with priority:

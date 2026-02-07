@@ -997,12 +997,12 @@ After implementer completes:
    ```
    Task tool (yokay-fixer):
      description: "Fix test failure: {task.title}"
-     prompt: [Include task details, test output, max 3 retries]
+     prompt: [Include task details, test output, "Max attempts: 3"]
    ```
 
 4. **Process fixer result**:
    - **PASS**: Fixer fixed the issue → Continue to Browser Verification
-   - **FAIL**: Fixer couldn't fix after 3 attempts → Mark task blocked
+   - **FAIL**: Fixer couldn't fix within attempt limit → Mark task blocked
 
 5. **Handle fixer failure**:
    ```bash
@@ -1010,7 +1010,7 @@ After implementer completes:
    npx @stevestomp/ohno-cli block <task-id> "Test failures could not be auto-fixed"
 
    # Log activity
-   add_task_activity(task_id, "note", "Auto-fix failed after 3 attempts: [reason]")
+   add_task_activity(task_id, "note", "Auto-fix failed after N attempts: [reason]")
    ```
 
 6. **Continue queue**: Get next task and continue work loop (don't stop the session)
@@ -1022,7 +1022,7 @@ The yokay-fixer agent:
 - Identifies root cause (assertion failure, type error, missing await, etc.)
 - Makes targeted code edits (using Edit tool only)
 - Re-runs tests after each fix
-- Maximum 3 attempts
+- Attempt limit set by coordinator dispatch (default: 3 for /work, 2 for /hotfix)
 - Reports PASS or FAIL with detailed handoff
 
 #### Flow Diagram
