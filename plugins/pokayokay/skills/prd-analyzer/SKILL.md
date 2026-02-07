@@ -45,3 +45,4 @@ Transform product requirements into actionable implementation plans with visual 
 | [database-schema.md](references/database-schema.md) | Full SQLite schema for tasks.db |
 | [features-json.md](references/features-json.md) | features.json format and integration points |
 | [anti-patterns.md](references/anti-patterns.md) | Analysis, breakdown, and output anti-patterns |
+| [design-integration.md](references/design-integration.md) | Design plugin detection, UI/UX workflows, design-first routing |
