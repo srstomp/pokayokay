@@ -20,13 +20,13 @@ Check these in order:
 | spike | spike | deep-research |
 | chore | *(use keywords)* | — |
 | docs | documentation | — |
-| test | testing-strategy | api-testing |
+| test | testing-strategy | testing-strategy |
 | security | security-audit | — |
 | performance | performance-optimization | — |
 | backend | api-design | api-integration, error-handling |
 | database | database-design | — |
 | devops | ci-cd-expert | — |
-| qa | api-testing | testing-strategy |
+| qa | testing-strategy | testing-strategy |
 
 ## By Keywords in Title/Description
 
@@ -35,7 +35,7 @@ Check these in order:
 | "API", "endpoint", "REST", "GraphQL", "route" | api-design |
 | "integrate", "third-party", "external API", "client", "SDK consume" | api-integration |
 | "test", "testing", "spec", "coverage", "TDD" | testing-strategy |
-| "API test", "contract test", "integration test", "mock" | api-testing |
+| "API test", "contract test", "integration test", "mock" | testing-strategy |
 | "refactor", "architecture", "structure", "module", "boundary" | architecture-review |
 | "SDK", "library", "package", "npm publish", "extract" | sdk-development |
 | "Figma", "plugin", "design tool" | figma-plugin |
@@ -60,14 +60,14 @@ Some tasks benefit from multiple skills in sequence:
 1. api-design         → Design endpoints, schemas
 2. api-integration    → If consuming external APIs
 3. error-handling     → Error responses and recovery
-4. api-testing        → Test suite
+4. testing-strategy        → Test suite
 ```
 
 ### Security Review
 ```
 1. security-audit     → Scan and classify findings
 2. error-handling     → Fix error-related vulnerabilities
-3. api-testing        → Security regression tests
+3. testing-strategy        → Security regression tests
 ```
 
 ### New Project/Epic Setup

@@ -27,7 +27,7 @@ Transform product requirements into actionable implementation plans with visual 
 
 | Feature Type | Primary Skill | Secondary Skills |
 |--------------|---------------|------------------|
-| REST/GraphQL APIs | api-design | api-testing |
+| REST/GraphQL APIs | api-design | testing-strategy |
 | Database schemas | database-design | — |
 | SDK/library | sdk-development | — |
 | Auth/Security | api-design | — |

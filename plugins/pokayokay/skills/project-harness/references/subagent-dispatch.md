@@ -268,13 +268,13 @@ See [skill-routing.md](skill-routing.md) for complete routing rules.
 | bug | error-handling | testing-strategy |
 | spike | spike | deep-research |
 | docs | documentation | — |
-| test | testing-strategy | api-testing |
+| test | testing-strategy | testing-strategy |
 | security | security-audit | — |
 | performance | performance-optimization | — |
 | backend | api-design | api-integration |
 | database | database-design | — |
 | devops | ci-cd-expert | — |
-| qa | api-testing | testing-strategy |
+| qa | testing-strategy | testing-strategy |
 
 See [skill-routing.md](skill-routing.md) for keyword-based routing and multi-skill workflows
 

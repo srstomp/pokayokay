@@ -11,7 +11,7 @@ Available skills that can be assigned to features:
 | Skill | Purpose | Input | Output |
 |-------|---------|-------|--------|
 | `api-design` | REST/GraphQL API design | Feature requirements | OpenAPI spec, endpoints |
-| `api-testing` | API test suites | API spec | Test files |
+| `testing-strategy` | API test suites | API spec | Test files |
 | `frontend-design` | Frontend architecture | Requirements | Component structure |
 | `sdk-development` | SDK/library creation | API spec | SDK package |
 | `product-manager` | Completeness audit | Codebase | Gap report |
@@ -57,7 +57,7 @@ Skills should run in this order:
 ```
 1. API
    - api-design (endpoints, contracts)
-   - api-testing (after API implemented)
+   - testing-strategy (after API implemented)
 
 2. Implementation
    - sdk-development (if SDK needed)
@@ -75,7 +75,7 @@ Skills should run in this order:
              │
              ▼
       ┌──────────────┐
-      │  api-testing │
+      │  testing-strategy │
       └──────┬───────┘
              │
              ▼
@@ -97,7 +97,7 @@ Skills should run in this order:
 
 | Feature Pattern | Primary | Secondary | Order |
 |-----------------|---------|-----------|-------|
-| "REST API for X" | api-design | api-testing | api → testing |
+| "REST API for X" | api-design | testing-strategy | api → testing |
 | "Slack Integration" | api-design | — | api |
 | "SDK/Client Library" | sdk-development | — | sdk |
 
@@ -117,8 +117,8 @@ Skills should run in this order:
       "id": "F003",
       "title": "Chat API",
       "type_signals": ["api", "realtime"],
-      "assigned_skills": ["api-design", "api-testing"],
-      "skill_order": ["api-design", "api-testing"]
+      "assigned_skills": ["api-design", "testing-strategy"],
+      "skill_order": ["api-design", "testing-strategy"]
     },
     {
       "id": "F026",
@@ -140,8 +140,8 @@ Skills should run in this order:
 ```sql
 -- Track skill assignment at epic level
 UPDATE epics SET
-    assigned_skills = '["api-design", "api-testing"]',
-    skill_order = '["api-design", "api-testing"]',
+    assigned_skills = '["api-design", "testing-strategy"]',
+    skill_order = '["api-design", "testing-strategy"]',
     current_skill = 'api-design'
 WHERE id = 'epic-001';
 
@@ -179,7 +179,7 @@ WHERE id = 'epic-001';
 
 -- Or explicitly
 UPDATE epics SET
-    current_skill = 'api-testing',  -- was 'api-design'
+    current_skill = 'testing-strategy',  -- was 'api-design'
     updated_at = datetime('now')
 WHERE id = 'epic-001';
 ```
@@ -271,14 +271,14 @@ def complete_skill_work(skill_name: str, epic_id: str, db_path: str):
 | Skill | Features | Priority | Status |
 |-------|----------|----------|--------|
 | api-design | F002, F007, F008 | P0, P0, P0 | pending |
-| api-testing | F002, F007 | P0, P0 | blocked |
+| testing-strategy | F002, F007 | P0, P0 | blocked |
 | sdk-development | F026 | P1 | not started |
 | product-manager | All features | — | not started |
 
 ### Skill Dependencies
 
 ```
-api-design ──────────────────► api-testing
+api-design ──────────────────► testing-strategy
                                      │
                                      ▼
                               sdk-development
@@ -293,7 +293,7 @@ Based on dependencies and P0 priorities:
 1. **api-design** for F002 (RAG Pipeline) — no blockers
 
 After those complete:
-2. **api-testing** for F002, F007
+2. **testing-strategy** for F002, F007
 ```
 
 ---
@@ -379,7 +379,7 @@ Handle with:
 {
   "skill_order": [
     "api-design",      // sequential
-    "api-testing"      // sequential
+    "testing-strategy"      // sequential
   ]
 }
 ```
