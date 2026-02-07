@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-02-07
+
+### Changed
+- **Plan Command Efficiency**: Reduced `plan.md` from 562 to 435 lines (-23%) by extracting design-plugin detection logic to on-demand reference file
+- **Task Description Quality**: Added Section 4.5 requiring rich task/story descriptions with behavior, acceptance criteria, dependency context, and pattern hints
+- **Story Description Quality**: Stories now require Given/When/Then acceptance criteria, edge cases, and explicit out-of-scope items
+- Updated `task-breakdown.md` templates to match ohno MCP call format with required description sections
+
 ## [0.10.0] - 2026-02-06
 
 ### Added
