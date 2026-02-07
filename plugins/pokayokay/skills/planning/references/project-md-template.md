@@ -43,7 +43,7 @@ The most important output — shared context for all skills.
 | api-design | F001, F002 | pending |
 
 ## Current Gaps
-[Updated by product-manager after audit]
+[Updated by feature-audit after audit]
 
 ## Next Actions
 1. [First recommended action]

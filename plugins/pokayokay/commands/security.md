@@ -131,4 +131,4 @@ Created [N] remediation tasks:
 When security audit involves:
 - **API security** → Also load `api-design` skill
 - **Database security** → Also load `database-design` skill
-- **Infrastructure** → Also load `ci-cd-expert` skill
+- **Infrastructure** → Also load `ci-cd` skill

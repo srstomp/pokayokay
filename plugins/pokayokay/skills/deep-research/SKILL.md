@@ -16,6 +16,12 @@ Comprehensive investigation that informs major decisions. Produces structured re
 | Output | GO/NO-GO decision | Comprehensive report |
 | Depth | Proof of concept | Full evaluation |
 
+## When NOT to Use
+
+- **Single focused question answerable in hours** — Use `spike` for quick GO/NO-GO decisions
+- **Reviewing existing code/architecture** — Use `architecture-review` for structural analysis of what's already built
+- **Known technology, just need implementation guidance** — Read docs or use relevant skill directly
+
 ## Key Principles
 
 - Define research questions and success criteria upfront

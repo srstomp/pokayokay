@@ -1,7 +1,7 @@
 ---
 description: Start or continue orchestrated work session
 argument-hint: [supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
-skill: project-harness
+skill: work-session
 ---
 
 # Work Session Workflow
@@ -491,7 +491,7 @@ For each task:
 5. **Dispatch implementer**: Single Task tool call
 6. **Auto-fix test failures** (conditional): See Auto-Fix section
 7. **Browser verification** (conditional): See Browser Verification section
-8. **Two-stage review**: Spec review → Quality review
+8. **Task review**: Spec compliance + code quality
 9. **Complete task**: Mark done, trigger hooks
 10. **Checkpoint**: Based on mode
 
@@ -526,9 +526,7 @@ Coordinator maintains N concurrent implementers:
 As each agent returns:
 
 1. **Remove from active_agents**
-2. **Run review pipeline** (sequential for this task):
-   - Spec review
-   - Quality review (if spec passes)
+2. **Run task review** (spec + quality in one pass)
 3. **Handle result**:
    - PASS: Add to `completed_this_batch`, attempt commit
    - FAIL: Re-dispatch or add to `failed_blocked`
@@ -620,7 +618,7 @@ Based on task type, determine relevant skill for domain knowledge:
 - Third-party integration → Load `api-integration` skill
 
 **DevOps & Infrastructure**:
-- CI/CD work → Load `ci-cd-expert` skill
+- CI/CD work → Load `ci-cd` skill
 - Observability work → Load `observability` skill
 
 **Quality & Security**:
@@ -1171,13 +1169,13 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 6. Two-Stage Review
+### 6. Task Review
 
-After implementer completes, run reviews in sequence:
+After implementer completes, run a combined spec + quality review:
 
 #### Environment Setup for Review Hooks
 
-Before dispatching any reviewer, set the current task context for hook integration:
+Before dispatching the reviewer, set the current task context for hook integration:
 
 ```bash
 export CURRENT_OHNO_TASK_ID="<current-task-id>"
@@ -1185,47 +1183,22 @@ export CURRENT_OHNO_TASK_ID="<current-task-id>"
 
 This enables the post-review-fail hook to capture failures and integrate with kaizen automatically.
 
-#### Stage 1: Spec Compliance Review
+#### Dispatch Task Reviewer
 
-Verify implementation matches task specification.
-
-1. Dispatch spec reviewer:
+1. Dispatch task reviewer:
    ```
-   Task tool (yokay-spec-reviewer):
-     description: "Spec review: {task.title}"
-     prompt: [Fill template from agents/templates/spec-review-prompt.md]
+   Task tool (yokay-task-reviewer):
+     description: "Review: {task.title}"
+     prompt: [Fill template from agents/templates/task-review-prompt.md]
    ```
 
-2. Process spec review result:
-   - **PASS**: Proceed to quality review (Stage 2)
-   - **FAIL**: Re-dispatch implementer with spec issues
-
-**What spec reviewer checks:**
-- All acceptance criteria met
-- No missing requirements
-- No scope creep (extra work)
-- Correct interpretation of spec
-
-#### Stage 2: Quality Review
-
-Only runs if spec review passes.
-
-1. Dispatch quality reviewer:
-   ```
-   Task tool (yokay-quality-reviewer):
-     description: "Quality review: {task.title}"
-     prompt: [Fill template from agents/templates/quality-review-prompt.md]
-   ```
-
-2. Process quality review result:
+2. Process review result:
    - **PASS**: Proceed to task completion (Step 7)
-   - **FAIL**: Re-dispatch implementer with quality issues
+   - **FAIL**: Re-dispatch implementer with issues
 
-**What quality reviewer checks:**
-- Code structure and readability
-- Test quality and coverage
-- Edge case handling
-- Project convention compliance
+**What the reviewer checks (single pass):**
+- **Spec compliance**: All acceptance criteria met, no missing requirements, no scope creep
+- **Code quality**: Structure, readability, test quality, edge cases, conventions
 
 #### Review Failure Hook Integration
 
@@ -1424,17 +1397,12 @@ Review FAIL
        │ PASS/SKIP   │    │
        ▼             ▼    │
 ┌──────────────┐  ┌──────┴────┐
-│ Spec Review  │  │Re-dispatch│
-└──────┬───────┘  │implementer│
-       │ PASS     └─────▲─────┘
-       ▼                │
-┌──────────────┐        │
-│Quality Review│  FAIL  │
-└──────┬───────┘────────┤
-       │ PASS           │
-       │                │
-       │ ┌──────────────┘
-       │ │ Review FAIL
+│ Task Review  │  │Re-dispatch│
+│(spec+quality)│  │implementer│
+└──────┬───────┘  └─────▲─────┘
+       │ PASS      FAIL │
+       │           ┌────┘
+       │           │ Review FAIL
        │ ▼
        │ ┌─────────────────┐
        │ │ post-review-    │
@@ -1478,15 +1446,14 @@ Review FAIL
 
 #### Logging Reviews to ohno
 
-After each review, log activity:
+After review, log activity:
 ```
-add_task_activity(task_id, "note", "Spec review: PASS")
-add_task_activity(task_id, "note", "Quality review: PASS")
+add_task_activity(task_id, "note", "Task review: PASS")
 ```
 
 Or for failures:
 ```
-add_task_activity(task_id, "note", "Spec review: FAIL - Missing requirement X")
+add_task_activity(task_id, "note", "Task review: FAIL - Missing requirement X")
 ```
 
 ### 7. Complete Task

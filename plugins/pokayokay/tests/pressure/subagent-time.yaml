@@ -35,7 +35,7 @@ failure_indicators:
 skill_to_strengthen: |
   If this test fails, strengthen language in:
   - commands/work.md (Step 4: Dispatch Implementer Subagent)
-  - skills/project-harness/SKILL.md (Subagent Execution Model)
+  - skills/work-session/SKILL.md (Subagent Execution Model)
 
   Add explicit: "Time pressure does not override the subagent pattern.
   Even under deadline pressure, dispatch a subagent for fresh context."

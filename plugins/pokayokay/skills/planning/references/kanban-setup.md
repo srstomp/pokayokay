@@ -31,11 +31,11 @@ All outputs go to `.claude/` folder:
 
 | File | Purpose | Updated By |
 |------|---------|------------|
-| `PROJECT.md` | Shared context | prd-analyzer, product-manager |
+| `PROJECT.md` | Shared context | planning, feature-audit |
 | `tasks.db` | Source of truth | All skills |
-| `features.json` | Machine-readable features | prd-analyzer |
+| `features.json` | Machine-readable features | planning |
 | `kanban.html` | Interactive board | Generated, manual sync |
-| `progress.md` | Session tracking | project-harness |
+| `progress.md` | Session tracking | work-session |
 
 ---
 
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS epics (
     skill_order TEXT,          -- JSON array: order to run skills
     current_skill TEXT,        -- Currently active skill
     
-    -- Audit fields (NEW - updated by product-manager)
+    -- Audit fields (NEW - updated by feature-audit)
     audit_level INTEGER DEFAULT 0 
         CHECK(audit_level BETWEEN 0 AND 5),
     audit_date TEXT,
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS task_tags (
     PRIMARY KEY (task_id, tag_id)
 );
 
--- Session log (NEW - for project-harness integration)
+-- Session log (NEW - for work-session integration)
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT UNIQUE NOT NULL,
@@ -365,7 +365,7 @@ class KanbanDB:
     
     def update_epic_audit(self, epic_id: str, audit_level: int, 
                           audit_gaps: list = None):
-        """Update audit information (called by product-manager)."""
+        """Update audit information (called by feature-audit)."""
         self.conn.execute(
             """UPDATE epics SET 
                audit_level = ?, audit_date = ?, audit_gaps = ?
@@ -406,7 +406,7 @@ class KanbanDB:
     
     def log_session(self, session_id: str, skill_used: str, 
                     stories_completed: list = None, notes: str = None):
-        """Log a work session (called by project-harness)."""
+        """Log a work session (called by work-session)."""
         self.conn.execute(
             """INSERT INTO sessions 
                (session_id, skill_used, stories_completed, notes)
@@ -715,7 +715,7 @@ if __name__ == "__main__":
 
 ## File Generation Workflow
 
-When prd-analyzer runs:
+When planning runs:
 
 1. **Create `.claude/` folder**
    ```bash

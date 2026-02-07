@@ -273,7 +273,7 @@ See [skill-routing.md](skill-routing.md) for complete routing rules.
 | performance | performance-optimization | — |
 | backend | api-design | api-integration |
 | database | database-design | — |
-| devops | ci-cd-expert | — |
+| devops | ci-cd | — |
 | qa | testing-strategy | testing-strategy |
 
 See [skill-routing.md](skill-routing.md) for keyword-based routing and multi-skill workflows
@@ -648,17 +648,15 @@ Before dispatching a subagent:
 
 ---
 
-## Two-Stage Review Dispatch
+## Task Review Dispatch
 
-After implementer completes, dispatch reviewers in sequence.
+After implementer completes, dispatch a single reviewer for both spec compliance and code quality.
 
-### Stage 1: Spec Review
+**Agent**: `yokay-task-reviewer`
+**Template**: `agents/templates/task-review-prompt.md`
+**Model**: sonnet (quality judgments require it)
 
-**Agent**: `yokay-spec-reviewer`
-**Template**: `agents/templates/spec-review-prompt.md`
-**Model**: haiku (fast, focused check)
-
-#### Template Variables
+### Template Variables
 
 | Variable | Source | Description |
 |----------|--------|-------------|
@@ -671,78 +669,31 @@ After implementer completes, dispatch reviewers in sequence.
 | `{COMMIT_INFO}` | Implementer report | Hash and message |
 | `{COMMIT_HASH}` | Implementer report | Just the hash |
 
-#### Dispatch Example
+### Dispatch Example
 
 ```markdown
-## Dispatching Spec Reviewer
+## Dispatching Task Reviewer
 
 **Task**: task-abc123 - Create grid component
-**Agent**: yokay-spec-reviewer
+**Agent**: yokay-task-reviewer
 
-Checking implementation against spec...
+Checking spec compliance and code quality...
 
-[Invoke Task tool with filled spec-review-prompt.md]
+[Invoke Task tool with filled task-review-prompt.md]
 ```
 
-#### Processing Result
+### Processing Result
 
 ```python
 # Pseudocode
-if spec_review.verdict == "PASS":
-    proceed_to_quality_review()
-else:
-    log_activity(task_id, "note", f"Spec review: FAIL - {spec_review.issues}")
-    redispatch_implementer(
-        original_task=task,
-        issues=spec_review.required_fixes
-    )
-```
-
-### Stage 2: Quality Review
-
-**Agent**: `yokay-quality-reviewer`
-**Template**: `agents/templates/quality-review-prompt.md`
-**Model**: haiku (fast, focused check)
-
-Only dispatch after spec review PASSES.
-
-#### Template Variables
-
-| Variable | Source | Description |
-|----------|--------|-------------|
-| `{TASK_ID}` | Original task | Task identifier |
-| `{TASK_TITLE}` | Original task | Task title |
-| `{FILES_CHANGED}` | Implementer report | File list |
-| `{COMMIT_INFO}` | Implementer report | Hash and message |
-| `{COMMIT_HASH}` | Implementer report | Just the hash |
-
-#### Dispatch Example
-
-```markdown
-## Dispatching Quality Reviewer
-
-**Task**: task-abc123 - Create grid component
-**Agent**: yokay-quality-reviewer
-**Prerequisite**: Spec review PASSED
-
-Checking code quality...
-
-[Invoke Task tool with filled quality-review-prompt.md]
-```
-
-#### Processing Result
-
-```python
-# Pseudocode
-if quality_review.verdict == "PASS":
-    log_activity(task_id, "note", "Spec review: PASS")
-    log_activity(task_id, "note", "Quality review: PASS")
+if review.verdict == "PASS":
+    log_activity(task_id, "note", "Task review: PASS")
     proceed_to_task_completion()
 else:
-    log_activity(task_id, "note", f"Quality review: FAIL - {quality_review.issues}")
+    log_activity(task_id, "note", f"Task review: FAIL - {review.issues}")
     redispatch_implementer(
         original_task=task,
-        issues=quality_review.required_fixes
+        issues=review.required_fixes
     )
 ```
 

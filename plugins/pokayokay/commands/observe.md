@@ -155,4 +155,4 @@ Critical blind spots: [list of most important gaps]
 When observability involves:
 - **API monitoring** → Also load `api-design` skill
 - **Database monitoring** → Also load `database-design` skill
-- **Pipeline monitoring** → Also load `ci-cd-expert` skill
+- **Pipeline monitoring** → Also load `ci-cd` skill

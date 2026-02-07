@@ -89,10 +89,9 @@ npx @stevestomp/ohno-cli init
 | yokay-explorer | Haiku | Fast codebase search |
 | yokay-fixer | Sonnet | Auto-retry test failures |
 | yokay-implementer | Sonnet | TDD implementation |
-| yokay-quality-reviewer | Haiku | Code quality |
 | yokay-reviewer | Sonnet | Code review |
 | yokay-security-scanner | Sonnet | OWASP scanning |
-| yokay-spec-reviewer | Haiku | Spec compliance |
+| yokay-task-reviewer | Sonnet | Spec + quality review |
 | yokay-spike-runner | Sonnet | Investigations |
 | yokay-test-runner | Haiku | Test execution |
 

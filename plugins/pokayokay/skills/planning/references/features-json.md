@@ -38,16 +38,16 @@
 
 ## Integration Points
 
-### With product-manager
+### With feature-audit
 
-After implementation, product-manager:
+After implementation, feature-audit:
 1. Reads `tasks.db` and `features.json`
 2. Scans codebase for implementation evidence
 3. Updates `audit_level` and `audit_gaps` in epics table
 4. Adds remediation tasks to `tasks.db`
 5. Updates `PROJECT.md` with current gaps
 
-### With project-harness
+### With work-session
 
 Project-harness:
 1. Reads `PROJECT.md` for context

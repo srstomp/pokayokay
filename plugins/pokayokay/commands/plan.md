@@ -1,7 +1,7 @@
 ---
 description: Analyze PRD and create implementation plan with task breakdown
 argument-hint: [--headless] [--review] <prd-path>
-skill: prd-analyzer
+skill: planning
 ---
 
 # PRD Analysis Workflow
@@ -261,7 +261,7 @@ Tag tasks with recommended skills based on their content:
 - Third-party integrations → api-integration
 
 **DevOps & Infrastructure**:
-- CI/CD pipelines, GitHub Actions → ci-cd-expert
+- CI/CD pipelines, GitHub Actions → ci-cd
 - Logging, monitoring, alerts → observability
 
 **Quality & Security**:
@@ -280,7 +280,7 @@ When skill not explicitly specified, detect from task title/description. When a 
 |----------|-------|-----------|
 | database, schema, migration, model, prisma | database-design | feature |
 | test, coverage, e2e, playwright, cypress, jest | testing-strategy | test |
-| deploy, pipeline, ci/cd, github actions, release | ci-cd-expert | chore |
+| deploy, pipeline, ci/cd, github actions, release | ci-cd | chore |
 | security, auth, encryption, vulnerability, owasp | security-audit | feature |
 | logging, monitoring, alert, metrics, tracing | observability | feature |
 | spike, investigate, feasibility, can we, how hard | spike | spike |
@@ -305,7 +305,7 @@ mcp__ohno__create_task:
 
 ### 5.3 Design Plugin Integration
 
-For UI/UX heavy features, check design plugin availability and create design-first workflows. See the prd-analyzer skill's [design-integration.md](references/design-integration.md) reference for full detection logic, keyword lists, and workflow details.
+For UI/UX heavy features, check design plugin availability and create design-first workflows. See the planning skill's [design-integration.md](references/design-integration.md) reference for full detection logic, keyword lists, and workflow details.
 
 ### 6. Create Project Context
 Create `.claude/PROJECT.md` with:

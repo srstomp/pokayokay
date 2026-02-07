@@ -1,7 +1,7 @@
 ---
 description: Audit feature completeness and identify gaps
 argument-hint: [feature-name]
-skill: product-manager
+skill: feature-audit
 ---
 
 # Feature Audit Workflow

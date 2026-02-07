@@ -1,6 +1,6 @@
-# Quality Review Assignment
+# Task Review Assignment
 
-You are being dispatched by the coordinator to review implementation quality. Spec compliance has already passed.
+You are being dispatched by the coordinator to review a completed task implementation for both spec compliance and code quality.
 
 ---
 
@@ -9,9 +9,21 @@ You are being dispatched by the coordinator to review implementation quality. Sp
 **Task ID**: {TASK_ID}
 **Title**: {TASK_TITLE}
 
+### Original Description
+
+{TASK_DESCRIPTION}
+
+### Acceptance Criteria
+
+{ACCEPTANCE_CRITERIA}
+
 ---
 
 ## Implementation Details
+
+### What Was Implemented
+
+{IMPLEMENTATION_SUMMARY}
 
 ### Files Changed
 
@@ -25,12 +37,23 @@ You are being dispatched by the coordinator to review implementation quality. Sp
 
 ## Your Assignment
 
-Verify that the implementation meets quality standards:
+Review the implementation in two phases:
+
+### Phase 1: Spec Compliance
+
+1. **Check each acceptance criterion** - Is it fully met?
+2. **Look for gaps** - Is anything from the spec missing?
+3. **Check for scope creep** - Was anything extra added?
+4. **Verify understanding** - Was the spec interpreted correctly?
+
+### Phase 2: Code Quality
 
 1. **Code structure** - Is the code readable and well-organized?
 2. **Test quality** - Are tests meaningful and comprehensive?
 3. **Edge cases** - Are error states and boundaries handled?
 4. **Conventions** - Does code follow project patterns?
+
+If Phase 1 fails, note Phase 2 findings but make spec issues the primary failure reason.
 
 ### Review Commands
 
@@ -47,48 +70,21 @@ npm test -- --testPathPattern="[relevant pattern]"
 
 ---
 
-## Quality Checklist
-
-### Code Quality
-- [ ] Functions are focused and readable
-- [ ] No deep nesting or complex conditionals
-- [ ] Appropriate error handling
-- [ ] Clear naming conventions
-
-### Test Quality
-- [ ] Tests exist for new functionality
-- [ ] Happy path covered
-- [ ] Edge cases covered
-- [ ] Tests have meaningful assertions
-
-### Conventions
-- [ ] Matches existing codebase patterns
-- [ ] Correct file organization
-- [ ] Consistent style
-
-### Security (Always Critical)
-- [ ] No hardcoded secrets
-- [ ] Input validation present
-- [ ] No injection vulnerabilities
-
----
-
 ## Expected Output
 
 Return one of:
 
 ### PASS
 ```markdown
-## Quality Review: PASS
+## Task Review: PASS
 
 **Task**: {TASK_TITLE}
-**Verdict**: PASS - Implementation meets quality standards
+
+### Spec Compliance
+All [N] acceptance criteria met. No scope creep detected.
 
 ### Code Quality
-[Status table]
-
-### Test Quality
-[Status table]
+Code is well-structured, tested, and follows conventions.
 
 ### Summary
 [Brief confirmation]
@@ -96,16 +92,15 @@ Return one of:
 
 ### FAIL
 ```markdown
-## Quality Review: FAIL
+## Task Review: FAIL
 
 **Task**: {TASK_TITLE}
-**Verdict**: FAIL - Implementation has quality issues
 
 ### Issues Found
 [Specific issues with file:line references]
 
 ### Required Fixes
-[Numbered list of what needs to change]
+1. [Numbered list of what needs to change]
 ```
 
 ---
@@ -114,8 +109,8 @@ Return one of:
 
 | Level | Examples | Action |
 |-------|----------|--------|
-| Critical | Security issue, crash potential | FAIL |
-| Warning | Bug, logic error, missing tests | FAIL |
+| Critical | Missing spec requirement, security issue, crash | FAIL |
+| Warning | Bug, logic error, missing tests, scope creep | FAIL |
 | Suggestion | Better pattern, minor improvement | Note but PASS |
 
 **Only FAIL for Critical or Warning issues.**
@@ -125,6 +120,7 @@ Return one of:
 ## Reminders
 
 - **Binary verdict**: PASS or FAIL only
-- **Be specific**: Cite exact files, lines, issues
+- **Spec first**: Spec failures take priority over quality issues
+- **Be specific**: Cite exact criteria, files, lines, issues
 - **Don't nitpick**: Suggestions don't cause FAIL
 - **Context matters**: Consider codebase conventions

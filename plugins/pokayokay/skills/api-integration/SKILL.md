@@ -15,6 +15,12 @@ Build robust, type-safe API clients from specs and documentation.
 - **Retry intelligently** — Only idempotent methods, only transient failures, with backoff
 - **Isolate the boundary** — Transform API shapes at the integration layer, not in app code
 
+## When NOT to Use
+
+- **Designing your own APIs** — Use `api-design` for building endpoints others will consume
+- **Writing API test suites** — Use `testing-strategy` for test architecture, contract tests, mocking
+- **Building SDKs for your API** — Use `sdk-development` for packaging your own API as a client library
+
 ## Quick Start Checklist
 
 1. Obtain API credentials and locate documentation (spec, docs, or examples)

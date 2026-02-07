@@ -54,6 +54,6 @@ npx @stevestomp/ohno-cli create "Implement [endpoint]" -t feature
 When API design involves:
 - **Database changes** → Also load `database-design` skill
 - **Security concerns** → Also load `security-audit` skill
-- **CI/CD pipeline** → Also load `ci-cd-expert` for deployment
+- **CI/CD pipeline** → Also load `ci-cd` for deployment
 - **Monitoring needs** → Also load `observability` skill
 - **Third-party APIs** → Consider `/pokayokay:integrate` instead

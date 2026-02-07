@@ -145,7 +145,7 @@ Architecture audit with:
 
 When architecture review involves:
 - **Database structure** → Also load `database-design` skill
-- **CI/CD concerns** → Also load `ci-cd-expert` skill
+- **CI/CD concerns** → Also load `ci-cd` skill
 - **Observability gaps** → Also load `observability` skill
 - **Security concerns** → Also load `security-audit` skill
 

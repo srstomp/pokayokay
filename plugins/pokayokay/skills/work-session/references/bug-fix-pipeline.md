@@ -120,12 +120,10 @@ Check the list of changed files for test files (files matching `*.test.*`, `*.sp
 - Set blocker: `set_blocker(task_id, "No regression test after {N} implementation cycles")`
 - STOP pipeline. Return FAIL to calling command.
 
-## Step 6: Two-Stage Review
+## Step 6: Task Review
 
-### Stage 1: Spec Review
-
-Agent: `yokay-spec-reviewer`
-Template: `agents/templates/spec-review-prompt.md`
+Agent: `yokay-task-reviewer`
+Template: `agents/templates/task-review-prompt.md`
 
 Fill template with:
 - `{TASK_DESCRIPTION}`: enriched description from Step 2
@@ -134,17 +132,7 @@ Fill template with:
 - `{FILES_CHANGED}`: from implementer's report
 - `{COMMIT_INFO}`: from implementer's commit
 
-**PASS**: proceed to Stage 2.
-**FAIL**: re-dispatch implementer with spec issues (counts toward review cycle limit).
-
-### Stage 2: Quality Review
-
-Agent: `yokay-quality-reviewer`
-Template: `agents/templates/quality-review-prompt.md`
-
-Fill template with files changed and commit info.
-
-**For `/hotfix` mode**, prepend this to the quality review prompt:
+**For `/hotfix` mode**, prepend this to the review prompt:
 ```markdown
 ## Review Mode: HOTFIX
 
@@ -156,10 +144,10 @@ Due to time pressure, only FAIL on CRITICAL issues:
 WARNING and SUGGESTION issues should be noted but result in PASS.
 ```
 
-**For `/fix` mode**: standard quality review (same thresholds as `/work`).
+**For `/fix` mode**: standard review (same thresholds as `/work`).
 
 **PASS**: proceed to Step 7.
-**FAIL**: re-dispatch implementer with quality issues (counts toward review cycle limit).
+**FAIL**: re-dispatch implementer with issues (counts toward review cycle limit).
 
 ### Review Cycle Exhaustion
 
