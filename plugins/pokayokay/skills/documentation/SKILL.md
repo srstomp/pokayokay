@@ -39,3 +39,5 @@ Create clear, maintainable technical documentation that serves your audience.
 | [api-docs.md](references/api-docs.md) | API documentation patterns, OpenAPI integration |
 | [adr-guide.md](references/adr-guide.md) | Architecture Decision Record format and workflow |
 | [diagrams.md](references/diagrams.md) | Mermaid diagram patterns for common scenarios |
+| [readme-template.md](references/readme-template.md) | Template for project README files |
+| [adr-template.md](references/adr-template.md) | Template for Architecture Decision Records |

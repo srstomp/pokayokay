@@ -50,13 +50,8 @@ Revise existing plans with full impact visibility.
 - Dependencies need updating
 - Part of partially complete epic
 
-## ohno MCP Tools Used
+## References
 
-- `get_tasks(fields: "standard")` - Load plan with descriptions
-- `get_project_status()` - Summary
-- `get_task_dependencies()` - Dependency map
-- `update_task()` - Modify tasks
-- `archive_task()` - Remove tasks
-- `create_task()` - Add tasks
-- `add_dependency()` / `remove_dependency()` - Update deps
-- `add_task_activity()` - Log revision
+| Reference | Description |
+|-----------|-------------|
+| [ohno-tools.md](references/ohno-tools.md) | ohno MCP tools used for plan revision |

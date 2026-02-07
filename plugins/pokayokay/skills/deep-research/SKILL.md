@@ -39,3 +39,5 @@ Comprehensive investigation that informs major decisions. Produces structured re
 | [research-types.md](references/research-types.md) | Technology evaluation, competitive analysis, best practices |
 | [source-quality.md](references/source-quality.md) | Evaluating source reliability and relevance |
 | [synthesis-patterns.md](references/synthesis-patterns.md) | Comparison matrices, decision frameworks |
+| [research-report-template.md](references/research-report-template.md) | Template for comprehensive research reports |
+| [comparison-matrix-template.md](references/comparison-matrix-template.md) | Template for multi-option comparison scoring |
