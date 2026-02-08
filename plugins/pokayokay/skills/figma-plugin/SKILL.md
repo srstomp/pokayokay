@@ -1,6 +1,6 @@
 ---
 name: figma-plugin
-description: Create Figma plugins with the Plugin API. Covers plugin architecture (sandbox + UI), node manipulation, styles, components, UI development with postMessage communication, and publishing. Use this skill when building Figma plugins, working with the Figma Plugin API, or creating design automation tools.
+description: Use when building Figma plugins, creating design automation tools, implementing sandbox/UI communication, or working with the Figma Plugin API for node manipulation, styles, and components.
 ---
 
 # Figma Plugin Development

@@ -1,7 +1,7 @@
 ---
 name: error-handling
 agents: [yokay-implementer, yokay-fixer, yokay-task-reviewer]
-description: Comprehensive error handling patterns for robust applications including custom errors, error boundaries, recovery strategies, and user-facing error messages. Use this skill when designing error hierarchies, implementing React error boundaries, adding retry logic or fallbacks, creating API error responses, integrating error tracking (Sentry), or improving user error communication.
+description: Use when designing error hierarchies, implementing React error boundaries, adding retry logic or fallbacks, creating API error responses, integrating error tracking (Sentry), or improving user-facing error communication.
 ---
 
 # Error Handling

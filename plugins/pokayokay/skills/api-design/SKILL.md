@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Design RESTful APIs with consistent patterns, clear conventions, and comprehensive documentation. Covers endpoint design, HTTP methods, status codes, request/response formats, pagination, filtering, versioning, authentication, and OpenAPI specifications. Use this skill when designing new APIs, reviewing API designs, or establishing API standards for a project or organization.
+description: Use when designing new REST APIs, reviewing API designs, establishing API standards, designing request/response formats, pagination, versioning, authentication flows, or creating OpenAPI specifications.
 ---
 
 # API Design

@@ -1,6 +1,6 @@
 ---
 name: performance-optimization
-description: Performance analysis, optimization techniques, and performance testing for web applications. Covers profiling, bottleneck identification, frontend optimization (bundle size, rendering, Core Web Vitals), backend optimization (query optimization, caching, async patterns), load testing (k6, Artillery), and monitoring (performance budgets, SLIs). Use this skill when analyzing performance issues, optimizing slow pages or APIs, setting up load testing, implementing caching, reducing bundle sizes, or establishing performance budgets. Triggers on "performance", "slow", "optimize", "bundle size", "load testing", "cache", "bottleneck", "latency", "Core Web Vitals", "LCP", "FCP", "lighthouse", "profiling".
+description: Use when analyzing performance issues, optimizing slow pages or APIs, setting up load testing (k6, Artillery), implementing caching, reducing bundle sizes, establishing performance budgets, or profiling bottlenecks. Covers frontend (Core Web Vitals, rendering, bundle size) and backend (query optimization, caching, async patterns) optimization.
 ---
 
 # Performance Optimization

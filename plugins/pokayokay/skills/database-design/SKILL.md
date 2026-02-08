@@ -1,6 +1,6 @@
 ---
 name: database-design
-description: Design database schemas, plan migrations, optimize queries, and manage data models. Covers relational databases (PostgreSQL, MySQL, SQLite), document databases (MongoDB), and ORM integration (Prisma, Drizzle, TypeORM). Use this skill when designing schemas, reviewing data models, planning migrations, optimizing slow queries, or establishing database patterns for a project.
+description: Use when designing database schemas, reviewing data models, planning migrations, optimizing slow queries, or establishing database patterns. Covers relational (PostgreSQL, MySQL, SQLite), document (MongoDB), and ORM-integrated (Prisma, Drizzle, TypeORM) projects.
 ---
 
 # Database Design

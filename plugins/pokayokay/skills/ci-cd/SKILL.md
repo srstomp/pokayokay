@@ -1,6 +1,6 @@
 ---
 name: ci-cd
-description: Create, review, debug, and optimize CI/CD pipelines across platforms. Covers GitHub Actions, GitLab CI, CircleCI, Azure DevOps, and Bitbucket Pipelines. Use this skill when creating new pipelines, debugging failing builds, implementing deployment strategies (blue-green, canary, rolling), reviewing pipelines for security and efficiency, or optimizing build times.
+description: Use when creating or debugging CI/CD pipelines, implementing deployment strategies (blue-green, canary, rolling), optimizing build times, reviewing pipeline security, or working with GitHub Actions, GitLab CI, CircleCI, Azure DevOps, or Bitbucket Pipelines.
 ---
 
 # CI/CD Expert

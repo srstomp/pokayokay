@@ -1,7 +1,7 @@
 ---
 name: work-session
 agents: [yokay-brainstormer, yokay-implementer, yokay-fixer, yokay-task-reviewer, yokay-browser-verifier, yokay-test-runner]
-description: Orchestrates long-running AI development sessions with human checkpoint control. Uses ohno for task management, manages progress tracking, routes work to appropriate skills, and implements supervised/semi-auto/auto/unattended modes. Use this skill when starting work sessions, resuming interrupted work, or managing multi-session projects.
+description: Use when starting AI development sessions, resuming interrupted work, managing multi-session projects, or orchestrating work with human checkpoint control (supervised, semi-auto, auto, or unattended modes).
 ---
 
 # Work Session
