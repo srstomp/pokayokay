@@ -321,7 +321,8 @@ pokayokay includes **12 specialized sub-agents** that run in isolated context wi
 | `yokay-planner` | Sonnet | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
-| `yokay-task-reviewer` | Sonnet | Spec compliance + code quality review |
+| `yokay-spec-reviewer` | Sonnet | Adversarial spec compliance review |
+| `yokay-quality-reviewer` | Sonnet | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Test execution with concise output |
 
@@ -347,13 +348,14 @@ This prevents wasted work from misunderstood requirements.
 
 ### Two-Stage Review
 
-After implementation, a single task reviewer checks both spec compliance and code quality:
+After implementation, two sequential reviewers check the work:
 
-| Agent | Checks |
-|-------|--------|
-| `yokay-task-reviewer` | Spec compliance (requirements met?) + code quality (well-written and tested?) |
+| Stage | Agent | Checks |
+|-------|-------|--------|
+| 1 | `yokay-spec-reviewer` | Adversarial spec compliance (requirements met? no scope creep?) |
+| 2 | `yokay-quality-reviewer` | Code quality (well-written and tested?) |
 
-The review must PASS before a task is marked complete.
+Stage 2 only runs if Stage 1 passes. Both must PASS before a task is marked complete.
 
 ## Hook System
 

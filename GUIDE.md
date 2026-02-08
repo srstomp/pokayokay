@@ -218,7 +218,8 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-planner` | Sonnet | Read-only | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
-| `yokay-task-reviewer` | Sonnet | Read-only | Spec compliance + code quality review |
+| `yokay-spec-reviewer` | Sonnet | Read-only | Adversarial spec compliance review |
+| `yokay-quality-reviewer` | Sonnet | Read-only | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
 
@@ -244,7 +245,8 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
 | `/pokayokay:work` | yokay-browser-verifier | UI changes (after implementation) |
 | `/pokayokay:work` | yokay-fixer | When tests fail after implementation |
-| `/pokayokay:work` | yokay-task-reviewer | After browser verification |
+| `/pokayokay:work` | yokay-spec-reviewer | After browser verification (stage 1) |
+| `/pokayokay:work` | yokay-quality-reviewer | After spec review passes (stage 2) |
 
 ### Manual Invocation
 
@@ -287,29 +289,33 @@ AMBIGUOUS TASK → yokay-brainstormer → CLEAR REQUIREMENTS → Implementation
 
 This prevents wasted implementation effort from misunderstood requirements.
 
-### Task Review
+### Task Review (Two-Stage)
 
-After implementation completes, a single reviewer checks both spec compliance and code quality:
+After implementation completes, two sequential reviewers check the work:
 
 ```
-IMPLEMENTATION → yokay-task-reviewer → COMPLETE
-                      ↓ FAIL
-                 Re-implement
+IMPLEMENTATION → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
+                      ↓ FAIL                   ↓ FAIL
+                 Re-implement             Re-implement
 ```
 
-**What it checks** (`yokay-task-reviewer`):
-- Spec compliance: all acceptance criteria met, no misinterpretations, no scope creep
-- Code quality: structure, readability, test coverage, project conventions
+**Stage 1** (`yokay-spec-reviewer`): Adversarial spec compliance
+- All acceptance criteria met against actual code (not implementer's claims)
+- No missing requirements, no scope creep
+- If FAIL: skip quality review, re-dispatch implementer
+
+**Stage 2** (`yokay-quality-reviewer`): Code quality (only runs if spec passes)
+- Structure, readability, test coverage, project conventions
 - Binary PASS/FAIL verdict
 
-The review must PASS before a task is marked complete. If it fails, the implementer is re-dispatched with specific fix requirements.
+Both reviews must PASS before a task is marked complete.
 
 ### Browser Verification
 
 For tasks that modify UI-related files, browser verification runs **after implementation and before review**:
 
 ```
-IMPLEMENTATION → browser-verify → yokay-task-reviewer → COMPLETE
+IMPLEMENTATION → browser-verify → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
 ```
 
 **What it checks:**

@@ -1,6 +1,6 @@
 ---
 name: work-session
-agents: [yokay-brainstormer, yokay-implementer, yokay-fixer, yokay-task-reviewer, yokay-browser-verifier, yokay-test-runner]
+agents: [yokay-brainstormer, yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer, yokay-browser-verifier, yokay-test-runner]
 description: Use when starting AI development sessions, resuming interrupted work, managing multi-session projects, or orchestrating work with human checkpoint control (supervised, semi-auto, auto, or unattended modes).
 ---
 
