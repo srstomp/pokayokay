@@ -79,6 +79,7 @@ if [ "$ACTION" != "continue" ]; then
             SCOPE_DESC="story ${SCOPE_ID}"
         fi
 
+        # Build report header
         cat > "$REPORT_PATH" <<REPORT
 # Session Chain Report
 
@@ -94,6 +95,61 @@ if [ "$ACTION" != "continue" ]; then
 
 $([ "$ACTION" = "complete" ] && echo "All tasks in scope completed successfully." || echo "Chain limit reached (${MAX_CHAINS} sessions). ${READY_COUNT} tasks remaining.")
 REPORT
+
+        # Enrich report with task handoff summaries
+        if command -v npx &>/dev/null; then
+            # Get completed tasks and their handoffs
+            DONE_TASKS=$(npx @stevestomp/ohno-cli list --status done --format json 2>/dev/null || echo "[]")
+            if [ "$DONE_TASKS" != "[]" ] && [ -n "$DONE_TASKS" ]; then
+                echo "" >> "$REPORT_PATH"
+                echo "## Completed Tasks" >> "$REPORT_PATH"
+                echo "" >> "$REPORT_PATH"
+
+                # Parse task IDs and titles, get handoff for each
+                echo "$DONE_TASKS" | python3 -c "
+import json, sys, subprocess
+try:
+    tasks = json.load(sys.stdin)
+    if isinstance(tasks, list):
+        for t in tasks[:50]:  # Cap at 50
+            tid = t.get('id', '')
+            title = t.get('title', 'Unknown')
+            # Try to get handoff summary
+            try:
+                result = subprocess.run(
+                    ['npx', '@stevestomp/ohno-cli', 'get-handoff', tid, '--format', 'brief'],
+                    capture_output=True, text=True, timeout=5
+                )
+                handoff = result.stdout.strip() if result.returncode == 0 else 'No handoff'
+            except Exception:
+                handoff = 'No handoff'
+            print(f'- **{tid}**: {title} — {handoff}')
+except Exception:
+    pass
+" >> "$REPORT_PATH" 2>/dev/null || true
+
+                # Add failed/blocked tasks
+                BLOCKED_TASKS=$(npx @stevestomp/ohno-cli list --status blocked --format json 2>/dev/null || echo "[]")
+                if [ "$BLOCKED_TASKS" != "[]" ] && [ -n "$BLOCKED_TASKS" ]; then
+                    echo "" >> "$REPORT_PATH"
+                    echo "## Blocked Tasks" >> "$REPORT_PATH"
+                    echo "" >> "$REPORT_PATH"
+                    echo "$BLOCKED_TASKS" | python3 -c "
+import json, sys
+try:
+    tasks = json.load(sys.stdin)
+    if isinstance(tasks, list):
+        for t in tasks:
+            tid = t.get('id', '')
+            title = t.get('title', 'Unknown')
+            reason = t.get('blocker_reason', t.get('blockers', 'Unknown reason'))
+            print(f'- **{tid}**: {title} — Blocked: {reason}')
+except Exception:
+    pass
+" >> "$REPORT_PATH" 2>/dev/null || true
+                fi
+            fi
+        fi
     fi
 
     # Notify if configured

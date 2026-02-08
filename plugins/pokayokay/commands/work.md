@@ -220,11 +220,23 @@ When context pressure is detected during a chained session:
    For each in-progress task with uncommitted changes:
      update_task_wip(task_id, { files_modified, last_commit, uncommitted_changes, next_step })
    ```
-4. **Log session summary**:
+4. **Save coordinator state** to chain state file:
+   ```
+   Read existing .claude/pokayokay-chain-state.json
+   Update with:
+     adaptive_n: current parallel count
+     batches_completed: count
+     batches_failed: count
+     failed_tasks: [task IDs that failed/blocked]
+     conflict_tasks: [task IDs with git conflicts]
+     last_session_summary: "Completed X tasks, Y failed, Z conflicts"
+   Write back to .claude/pokayokay-chain-state.json
+   ```
+5. **Log session summary**:
    ```
    add_task_activity(task_id, "note", "Session ending: context pressure detected, chaining to next session")
    ```
-5. **End the session** — output a brief summary and stop. This triggers:
+6. **End the session** — output a brief summary and stop. This triggers:
    - SessionEnd hook → bridge.py reads chain state → session-chain.sh spawns next session
 
 ### Why Proactive?
@@ -250,6 +262,12 @@ is present and can decide.
 ### 0. Load Configuration
 Read `.claude/pokayokay.json` for headless and work settings.
 
+### 0.5 Load Project Learnings
+MEMORY.md is already in your system prompt. Additionally check topic files when relevant:
+- `memory/recurring-failures.md` — review failure patterns to include as "Known Pitfalls" in implementer prompts
+- `memory/spike-results.md` — closed spike investigations (avoid re-investigating)
+- `memory/chain-learnings.md` — session chain progress history
+
 ### 1. Scope Validation (if auto/unattended or --continue)
 If mode is `auto` or `unattended` or `--continue` flag is set, verify scope:
 - If `--epic <id>` → filter tasks to this epic only
@@ -269,7 +287,13 @@ Write .claude/pokayokay-chain-state.json:
   "chain_index": 0,
   "scope_type": "<epic|story|all>",
   "scope_id": "<id or empty string>",
-  "tasks_completed": 0
+  "tasks_completed": 0,
+  "adaptive_n": 2,
+  "batches_completed": 0,
+  "batches_failed": 0,
+  "failed_tasks": [],
+  "conflict_tasks": [],
+  "last_session_summary": ""
 }
 ```
 
@@ -290,11 +314,17 @@ Use ohno MCP `get_session_context` to understand:
 
 When `--continue` flag is set, resume from previous WIP instead of starting fresh:
 
-1. **Find resumable tasks**: Check `get_session_context()` for in_progress tasks with WIP data
-2. **Select task to resume**: Pick the task with most recent `wip_updated_at`
-3. **Load WIP**: Get full task via `get_task(task_id, fields="full")` to access `work_in_progress`
-4. **Load handoff**: Call `get_task_handoff(task_id)` for the implementer's previous handoff data (summary, files_changed, full_details with self-review findings). If absent, continue with WIP-only resume.
-5. **Display resume context**:
+1. **Restore coordinator state**: Read `.claude/pokayokay-chain-state.json`. If it contains extended fields (`adaptive_n`, `failed_tasks`, etc.), restore them:
+   - `adaptive_state.current_n = chain_state.adaptive_n` (instead of reset to 2)
+   - `adaptive_state.batches_completed = chain_state.batches_completed`
+   - `adaptive_state.batches_failed = chain_state.batches_failed`
+   - `failed_blocked = chain_state.failed_tasks` (skip these tasks)
+   - `conflict_tasks = chain_state.conflict_tasks` (flag for manual resolution)
+2. **Find resumable tasks**: Check `get_session_context()` for in_progress tasks with WIP data
+3. **Select task to resume**: Pick the task with most recent `wip_updated_at`
+4. **Load WIP**: Get full task via `get_task(task_id, fields="full")` to access `work_in_progress`
+5. **Load handoff**: Call `get_task_handoff(task_id)` for the implementer's previous handoff data (summary, files_changed, full_details with self-review findings). If absent, continue with WIP-only resume.
+6. **Display resume context**:
 
 ```markdown
 ## Resuming: {task.title} ({task.id})
@@ -972,6 +1002,7 @@ If task was just brainstormed (Step 3) and still has BLOCK issues, something wen
    - Acceptance criteria (from task or brainstorm output)
    - Architectural context (where this fits in the project)
    - Relevant skill (determined in Step 2 or assigned by planner)
+   - Known pitfalls (from `memory/recurring-failures.md` if file exists — include entries matching the task domain as a "## Known Pitfalls" section in the implementer prompt)
 
 3. Dispatch subagent using Task tool:
    ```
@@ -1771,7 +1802,13 @@ Use the Write tool to create it:
   "chain_index": 0,
   "scope_type": "all",
   "scope_id": "",
-  "tasks_completed": 0
+  "tasks_completed": 0,
+  "adaptive_n": 2,
+  "batches_completed": 0,
+  "batches_failed": 0,
+  "failed_tasks": [],
+  "conflict_tasks": [],
+  "last_session_summary": ""
 }
 ```
 
@@ -1780,9 +1817,16 @@ Use the Write tool to create it:
 - `scope_type`: "epic", "story", or "all" (from `--epic`, `--story`, or `--all` flag)
 - `scope_id`: The epic/story ID (empty string for "all")
 - `tasks_completed`: Starts at 0, auto-incremented by bridge.py on each task completion
+- `adaptive_n`: Current parallel count (written by coordinator before shutdown)
+- `batches_completed`: Successful batch count (for adaptive sizing decisions)
+- `batches_failed`: Failed batch count (for adaptive sizing decisions)
+- `failed_tasks`: Task IDs that failed or got blocked (skip on resume)
+- `conflict_tasks`: Task IDs with git conflicts (flag for manual resolution)
+- `last_session_summary`: Brief summary of what the last session accomplished
 
 **When `--continue`**: Read the existing state file. Do NOT overwrite it — bridge.py
-already incremented `chain_index` and tracks `tasks_completed`.
+already incremented `chain_index` and tracks `tasks_completed`. Restore coordinator state
+from extended fields (`adaptive_n`, `failed_tasks`, etc.).
 
 **When NOT auto or no scope**: Do NOT write the state file. Non-chaining sessions
 should not have a state file.
