@@ -49,14 +49,15 @@ Claude Code Hook Event
         ▼
     bridge.py  ──→ Routes to appropriate hook action
         │
-        ├── SessionStart  → verify-clean.sh
+        ├── SessionStart  → verify-clean.sh, pre-flight.sh (unattended), recover.sh (if crashed)
         ├── update_task_status(done) → sync.sh, commit.sh, detect-spike.sh
         │   └── if story_completed → test.sh, audit-gate.sh
         │   └── if epic_completed → audit-gate.sh
         ├── update_task_status(in_progress) → check-blockers.sh, setup-worktree.sh
         ├── set_blocker → notification
-        ├── Task (reviewer agents) → post-review-fail hook (kaizen integration)
-        └── SessionEnd → sync, session-summary, session-chain
+        ├── Task (any agent) → token tracking; reviewers → post-review-fail hook
+        ├── Bash (git commit) → lint.sh, check-ref-sizes.sh
+        └── SessionEnd → sync, session-summary (with token costs), session-chain
 ```
 
 Hook configuration is in `.claude/settings.local.json` under the `hooks` key.

@@ -5,7 +5,26 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.11.0] - 2026-02-08
+
+### Added
+- **Cloud Infrastructure Skill**: AWS-primary cloud provisioning skill with 8 reference files covering service selection, CDK patterns, serverless, containers, IAM/security, storage/CDN, databases, and cost optimization
+- **Anti-Rationalization Engineering**: Iron Laws, rationalization pre-rebuttals, and Red Flag STOP patterns added to testing-strategy, error-handling, architecture-review, and cloud-infrastructure skills
+- **Pre-flight Validation**: `pre-flight.sh` hook checks MCP connectivity, git state, and disk space before unattended sessions
+- **Crash Recovery Hook**: `recover.sh` detects stale in-progress tasks from crashed sessions and resets them
+- **Cross-task Dependency Validator**: Pre-dispatch validation ensures parallel tasks don't share file dependencies
+- **Reference File Size Lint**: `check-ref-sizes.sh` pre-commit hook blocks commits with reference files over 500 lines
+- **Subagent Token Tracking**: Session summaries now include per-agent token usage, tool counts, and duration via bridge.py state file
+- **Memory Integration**: Worktree memory symlinked to main repo; chain learnings written at session end
+
+### Changed
+- **Two-Stage Review Pipeline**: Split yokay-task-reviewer back into adversarial spec-reviewer + quality-reviewer for better "right thing vs well-built" separation
+- **CSO Skill Descriptions**: Rewrote 18 of 22 skill descriptions to trigger-condition-only format (prevents the "Description Trap" where Claude follows description instead of loading skill)
+- **Domain-Specific TDD**: Skills now include TDD patterns and review checklists relevant to their domain
+- **Planning Skill Routing**: Added cloud-infrastructure to skill catalog, routing logic, and feature mapping
+- **Reference File Splits**: Split 30+ oversized reference files across 5 skills (testing-strategy, ci-cd, api-integration, figma-plugin, sdk-development) to comply with 500-line guideline
+- **Session Summaries**: Now persisted to ohno activity log and `.ohno/sessions/` directory for chain reports
+- **Task Handoff Data**: Resume flow now includes task handoff notes for better session continuity
 
 ## [0.10.1] - 2026-02-07
 
