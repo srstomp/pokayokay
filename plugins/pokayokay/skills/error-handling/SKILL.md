@@ -44,3 +44,5 @@ Design resilient applications through intentional error handling strategies. Err
 | [recovery-patterns.md](references/recovery-patterns.md) | Retry, circuit breaker, fallbacks, degradation |
 | [overview.md](references/overview.md) | Error types, Result pattern, user messages, tracking, anti-patterns |
 | [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for error handling discipline |
+| [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for error paths, retry logic, boundaries |
+| [review-checklist.md](references/review-checklist.md) | Error handling review checklist (classes, messages, recovery, tracking) |
