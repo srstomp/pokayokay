@@ -1,6 +1,6 @@
 ---
 name: api-integration
-description: Consume external APIs with type safety, robust error handling, and production-ready patterns. Handles OpenAPI/Swagger specs, GraphQL schemas, REST documentation, and example requests. Produces typed clients with authentication, retry logic, and comprehensive error handling. Primary focus on TypeScript with patterns applicable to other languages. Use this skill when integrating third-party APIs, generating API clients, or implementing authentication flows.
+description: Use when consuming external APIs, integrating third-party services, generating type-safe API clients, implementing authentication flows, or working with OpenAPI/Swagger, GraphQL, or REST specs. TypeScript-primary with language-agnostic patterns.
 ---
 
 # API Integration

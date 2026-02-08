@@ -1,6 +1,6 @@
 ---
 name: session-review
-description: Analyzes completed agent sessions and prepares session handoffs. Supports both retrospective pattern analysis (/review) and session handoff preparation (/handoff). Reads from .claude/ folder (session logs, progress.md, git history) and ohno task data. Use after completing work sessions to learn from agent behavior, or when ending a session to preserve context for the next one.
+description: Use after completing work sessions to analyze agent behavior patterns, prepare session handoffs for continuity, document completed work, identify blockers, or preserve context for the next session.
 ---
 
 # Session Review & Handoff

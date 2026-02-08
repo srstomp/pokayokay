@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: Review project architecture, identify structural issues, and plan refactoring. Analyzes directory structure, module boundaries, dependencies, and code organization. Provides systematic approaches for cleanup, restructuring, and migration. Primary focus on TypeScript/JavaScript projects with patterns applicable to other languages. Use this skill when auditing codebases, planning refactors, or improving project organization.
+description: Use when auditing project structure, planning refactors, improving code organization, analyzing dependencies and module boundaries, or identifying structural issues. TypeScript/JavaScript-primary with language-agnostic patterns.
 ---
 
 # Architecture Review
