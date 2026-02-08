@@ -124,10 +124,10 @@ Check the list of changed files for test files (files matching `*.test.*`, `*.sp
 
 ## Step 6: Task Review
 
-Agent: `yokay-task-reviewer`
-Template: `agents/templates/task-review-prompt.md`
+Agents: `yokay-spec-reviewer` then `yokay-quality-reviewer`
+Templates: `agents/templates/spec-review-prompt.md`, `agents/templates/quality-review-prompt.md`
 
-Fill template with:
+Fill templates with:
 - `{TASK_DESCRIPTION}`: enriched description from Step 2
 - `{ACCEPTANCE_CRITERIA}`: from Step 1 (bug fixed + regression test + all tests pass + minimal)
 - `{IMPLEMENTATION_SUMMARY}`: from implementer's report

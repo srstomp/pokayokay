@@ -84,7 +84,7 @@ Projects can customize in `.pokayokay.json`:
 ## Integration Point
 
 ```
-yokay-implementer → browser-verify → yokay-task-reviewer → complete
+yokay-implementer → browser-verify → yokay-spec-reviewer → yokay-quality-reviewer → complete
 ```
 
 Browser verification runs AFTER implementation and BEFORE spec review.

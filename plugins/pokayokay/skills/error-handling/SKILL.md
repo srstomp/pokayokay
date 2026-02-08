@@ -1,6 +1,6 @@
 ---
 name: error-handling
-agents: [yokay-implementer, yokay-fixer, yokay-task-reviewer]
+agents: [yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer]
 description: Use when designing error hierarchies, implementing React error boundaries, adding retry logic or fallbacks, creating API error responses, integrating error tracking (Sentry), or improving user-facing error communication.
 ---
 

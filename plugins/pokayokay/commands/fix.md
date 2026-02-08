@@ -77,7 +77,7 @@ The pipeline will:
 1. Dispatch `yokay-implementer` with bug fix context + mandatory regression test
 2. Auto-fix test failures if needed (`yokay-fixer`, max 3 attempts)
 3. Verify regression test exists (re-dispatch if missing)
-4. Run task review (`yokay-task-reviewer`)
+4. Run two-stage review (`yokay-spec-reviewer` + `yokay-quality-reviewer`)
 
 Wait for pipeline result before proceeding.
 

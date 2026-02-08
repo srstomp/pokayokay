@@ -92,7 +92,8 @@ npx @stevestomp/ohno-cli init
 | yokay-planner | Sonnet | PRD analysis + plan generation |
 | yokay-reviewer | Sonnet | Code review |
 | yokay-security-scanner | Sonnet | OWASP scanning |
-| yokay-task-reviewer | Sonnet | Spec + quality review |
+| yokay-spec-reviewer | Sonnet | Adversarial spec compliance |
+| yokay-quality-reviewer | Sonnet | Code quality (after spec) |
 | yokay-spike-runner | Sonnet | Investigations |
 | yokay-test-runner | Haiku | Test execution |
 
