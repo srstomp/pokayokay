@@ -1,7 +1,7 @@
 ---
 name: planning
 agents: [yokay-planner]
-description: Analyzes PRD documents, concept briefs, or feature specs and creates structured implementation plans with visual kanban tracking. Breaks requirements into epics, stories, and tasks with dependencies and estimates. Outputs to `.claude/` folder for integration with work-session and other skills. Generates PROJECT.md for shared project context.
+description: Use when analyzing PRD documents, concept briefs, or feature specs to create implementation plans, breaking work into epics/stories/tasks with dependencies and estimates, or generating PROJECT.md and kanban tracking.
 ---
 
 # PRD Analyzer & Implementation Planner

@@ -1,6 +1,6 @@
 ---
 name: observability
-description: Implement logging, metrics, tracing, and alerting for production applications. Covers structured logging (Pino, Winston), metrics (Prometheus, DataDog, CloudWatch), distributed tracing (OpenTelemetry), and alert design. Use this skill when adding logging to services, setting up monitoring, creating alerts, debugging production issues, or designing SLIs/SLOs.
+description: Use when adding logging to services, setting up monitoring, creating alerts, debugging production issues, designing SLIs/SLOs, or implementing structured logging (Pino, Winston), metrics (Prometheus, DataDog, CloudWatch), or distributed tracing (OpenTelemetry).
 ---
 
 # Observability

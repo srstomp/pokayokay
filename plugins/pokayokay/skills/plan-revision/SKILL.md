@@ -1,6 +1,6 @@
 ---
 name: plan-revision
-description: Guided plan revision with impact analysis. Supports explore mode (discover what to change) and direct mode (apply known changes). Always shows impact before execution.
+description: Use when revising existing implementation plans, analyzing impact of task changes, exploring modifications to project scope or dependencies, or updating task hierarchies with full impact visibility before execution.
 ---
 
 # Plan Revision

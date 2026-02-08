@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: Extended investigation for technology evaluation, competitive analysis, architectural exploration, and best practices research. Unlike spike (time-boxed hours), deep-research supports multi-day comprehensive investigation producing reports for major decisions.
+description: Use for multi-day technology evaluations, competitive analysis, architectural exploration, best practices research, or major strategic decisions requiring comprehensive investigation and stakeholder reports. Unlike spike (time-boxed hours), supports extended multi-day investigation.
 ---
 
 # Deep Research

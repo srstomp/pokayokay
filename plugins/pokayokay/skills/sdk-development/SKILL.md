@@ -1,6 +1,6 @@
 ---
 name: sdk-development
-description: Create, extract, and publish TypeScript SDKs. Covers analyzing existing applications to extract reusable logic, designing clean SDK APIs, implementing typed clients with proper error handling, bundling for multiple targets (ESM/CJS/browser), and publishing to npm (public or private registries). Use this skill when building SDKs, extracting shared code into packages, or creating developer tooling libraries.
+description: Use when building TypeScript SDKs, extracting shared code into packages, creating developer tooling libraries, designing clean API surfaces, or publishing to npm (public or private). Covers typed clients, error handling, multi-target bundling (ESM/CJS/browser).
 ---
 
 # SDK Development
