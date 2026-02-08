@@ -43,3 +43,4 @@ Design resilient applications through intentional error handling strategies. Err
 | [api-errors.md](references/api-errors.md) | HTTP errors, response shapes, status codes |
 | [recovery-patterns.md](references/recovery-patterns.md) | Retry, circuit breaker, fallbacks, degradation |
 | [overview.md](references/overview.md) | Error types, Result pattern, user messages, tracking, anti-patterns |
+| [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for error handling discipline |

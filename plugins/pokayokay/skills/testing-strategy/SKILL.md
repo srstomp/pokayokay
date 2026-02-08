@@ -56,3 +56,4 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 | [api-test-data.md](references/api-test-data.md) | Factories, fixtures, database seeding |
 | [api-contract-testing.md](references/api-contract-testing.md) | OpenAPI validation, schema testing |
 | [api-test-ci-cd.md](references/api-test-ci-cd.md) | CI pipeline configuration for API tests |
+| [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for TDD discipline |
