@@ -60,6 +60,10 @@ _tracked_files: set = set()
 _last_wip_update: float = 0
 WIP_UPDATE_INTERVAL = 5  # seconds - don't update more than every 5 seconds
 
+# Review failure tracking
+REVIEW_FAILURE_THRESHOLD = 3  # Write to memory after this many occurrences
+REVIEW_FAILURE_MAX_ENTRIES = 50  # Max entries in recurring-failures.md
+
 
 def sanitize_env_value(value: str, field_name: str = "unknown") -> str:
     """
@@ -272,6 +276,106 @@ def delete_chain_state() -> None:
         pass  # Best-effort cleanup
 
 
+def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> None:
+    """Write chain progress to memory at session end."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+
+    # Find memory directory (Claude project memory or project-local)
+    project_key = project_dir.replace("/", "-").lstrip("-")
+    claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
+    target_dir = claude_memory if claude_memory.exists() else Path(project_dir) / "memory"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    learnings_file = target_dir / "chain-learnings.md"
+    date_str = time.strftime("%Y-%m-%d %H:%M")
+    chain_id = chain_state.get("chain_id", "unknown")
+    chain_index = chain_state.get("chain_index", 0)
+    scope = chain_state.get("scope_type", "unknown")
+    scope_id = chain_state.get("scope_id", "")
+
+    entry = f"\n## Session {chain_index} of {chain_id} ({date_str})\n"
+    entry += f"- Scope: {scope}"
+    if scope_id:
+        entry += f" ({scope_id})"
+    entry += "\n"
+    entry += f"- Tasks completed this session: {tasks_completed_count}\n"
+
+    try:
+        existing = ""
+        if learnings_file.exists():
+            existing = learnings_file.read_text()
+
+        if not existing.strip():
+            existing = "# Chain Learnings\n\nSession-level progress from chained work sessions.\n"
+
+        # Cap at 100 entries — rotate oldest
+        entry_count = existing.count("\n## Session ")
+        if entry_count >= 100:
+            lines = existing.split("\n")
+            # Find first "## Session" after header and remove that block
+            start = None
+            end = None
+            for i, line in enumerate(lines):
+                if line.startswith("## Session ") and start is None and i > 2:
+                    start = i
+                elif line.startswith("## Session ") and start is not None:
+                    end = i
+                    break
+            if start is not None:
+                if end is None:
+                    end = len(lines)
+                lines = lines[:start] + lines[end:]
+                existing = "\n".join(lines)
+
+        existing += entry
+        learnings_file.write_text(existing)
+    except OSError:
+        pass
+
+
+def _write_spike_result(task_id: str, task_title: str, task_notes: str) -> None:
+    """Write spike GO/NO-GO result to memory."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+
+    project_key = project_dir.replace("/", "-").lstrip("-")
+    claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
+    target_dir = claude_memory if claude_memory.exists() else Path(project_dir) / "memory"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    spike_file = target_dir / "spike-results.md"
+    date_str = time.strftime("%Y-%m-%d")
+
+    # Determine result from notes
+    notes_lower = (task_notes or "").lower()
+    if "no-go" in notes_lower or "no go" in notes_lower:
+        result = "NO-GO"
+    elif "pivot" in notes_lower:
+        result = "PIVOT"
+    elif "more-info" in notes_lower or "more info" in notes_lower:
+        result = "MORE-INFO"
+    else:
+        result = "GO"
+
+    entry = f"\n## {task_title} ({date_str})\n"
+    entry += f"- **Result**: {result}\n"
+    entry += f"- **Task**: {task_id}\n"
+    finding = (task_notes or "No notes")[:200]
+    entry += f"- **Finding**: {finding}\n"
+
+    try:
+        existing = ""
+        if spike_file.exists():
+            existing = spike_file.read_text()
+
+        if not existing.strip():
+            existing = "# Spike Results\n\nGO/NO-GO decisions from time-boxed investigations. Prevents future sessions from re-investigating closed questions.\n"
+
+        existing += entry
+        spike_file.write_text(existing)
+    except OSError:
+        pass
+
+
 def handle_session_end(input_data: dict) -> dict:
     """Handle SessionEnd event - run post-session hooks and session chaining."""
     results = []
@@ -284,6 +388,10 @@ def handle_session_end(input_data: dict) -> dict:
     chain_state = load_chain_state()
     chain_id = chain_state.get("chain_id", "")
     chain_result = None
+
+    # Write chain learnings to memory before chaining
+    if chain_id:
+        _write_chain_learnings(chain_state, chain_state.get("tasks_completed", 0))
 
     if chain_id:
         # We're in a chain - check if we should continue
@@ -311,6 +419,7 @@ def handle_session_end(input_data: dict) -> dict:
                 chain_action = chain_data.get("action", "")
                 if chain_action == "continue":
                     # Update state file for next session
+                    # Preserve all coordinator state fields (adaptive_n, failed_tasks, etc.)
                     chain_state["chain_index"] = chain_state.get("chain_index", 0) + 1
                     save_chain_state(chain_state)
                 elif chain_action in ("complete", "limit_reached"):
@@ -426,6 +535,10 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     results.append(run_action("commit", env=env))
     results.append(run_action("detect-spike", env=env))
     results.append(run_action("capture-knowledge", env=env))
+
+    # Write spike results to memory
+    if task_type == "spike":
+        _write_spike_result(task_id, task_title, task_notes)
 
     # Run post-story hooks if story completed
     if story_completed:
@@ -581,6 +694,173 @@ def handle_skill_complete(tool_input: dict, tool_response: dict) -> dict:
     }
 
 
+# ==========================================================================
+# Review Failure Tracking
+# ==========================================================================
+
+FAILURE_TRACKING_FILENAME = "pokayokay-review-failures.json"
+
+FAILURE_CATEGORIES = [
+    ("missing_error_handling", ["error handling", "error state", "try/catch", "catch block", "unhandled"]),
+    ("missing_tests", ["no test", "missing test", "test coverage", "untested"]),
+    ("scope_creep", ["scope creep", "unrequested", "extra work", "not in spec"]),
+    ("missing_validation", ["validation", "input validation", "sanitiz"]),
+    ("missing_auth", ["auth", "permission", "access control", "rate limit"]),
+    ("missing_edge_cases", ["edge case", "boundary", "null", "empty", "undefined"]),
+    ("naming_conventions", ["naming", "convention", "inconsistent name"]),
+    ("missing_types", ["type", "typing", "type safety", "any type"]),
+]
+
+
+def _failure_tracking_path() -> Path:
+    """Get path to the review failure tracking file."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    return Path(project_dir) / ".claude" / FAILURE_TRACKING_FILENAME
+
+
+def load_failure_tracking() -> dict:
+    """Load review failure tracking data."""
+    path = _failure_tracking_path()
+    if not path.exists():
+        return {"categories": {}}
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {"categories": {}}
+
+
+def save_failure_tracking(data: dict) -> None:
+    """Save review failure tracking data."""
+    path = _failure_tracking_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2)
+            f.write("\n")
+        tmp_path.rename(path)
+    except OSError:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def categorize_failure(failure_text: str) -> List[str]:
+    """Categorize a review failure into known patterns."""
+    text_lower = failure_text.lower()
+    matched = []
+    for category, keywords in FAILURE_CATEGORIES:
+        if any(kw in text_lower for kw in keywords):
+            matched.append(category)
+    return matched if matched else ["uncategorized"]
+
+
+def write_recurring_failure_to_memory(category: str, count: int, recent_context: str) -> None:
+    """Write a recurring failure pattern to memory/recurring-failures.md."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    memory_dir = Path(project_dir) / "memory"
+
+    # Also check Claude's project memory directory
+    claude_memory_dir = Path.home() / ".claude" / "projects"
+    # Find the right project memory dir by matching project_dir
+    project_key = project_dir.replace("/", "-").lstrip("-")
+    claude_project_memory = claude_memory_dir / project_key / "memory"
+
+    # Use Claude project memory if it exists, otherwise project-local
+    target_dir = claude_project_memory if claude_project_memory.exists() else memory_dir
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    failures_file = target_dir / "recurring-failures.md"
+
+    # Format the category name for display
+    display_name = category.replace("_", " ").title()
+    date_str = time.strftime("%Y-%m-%d")
+
+    entry = f"\n## {display_name} (seen {count}x)\n"
+    entry += f"**Pattern**: Review failures for {display_name.lower()}\n"
+    entry += f"**Context**: {recent_context[:200]}\n"
+    entry += f"**First recorded**: {date_str}\n"
+
+    try:
+        existing = ""
+        if failures_file.exists():
+            existing = failures_file.read_text()
+
+        # Count existing entries
+        entry_count = existing.count("\n## ")
+
+        if entry_count >= REVIEW_FAILURE_MAX_ENTRIES:
+            # Rotate: remove oldest entry (first ## block after header)
+            lines = existing.split("\n")
+            # Find and remove first entry block
+            start = None
+            end = None
+            for i, line in enumerate(lines):
+                if line.startswith("## ") and start is None:
+                    # Skip header
+                    if i == 0:
+                        continue
+                    start = i
+                elif line.startswith("## ") and start is not None:
+                    end = i
+                    break
+            if start is not None:
+                if end is None:
+                    end = len(lines)
+                lines = lines[:start] + lines[end:]
+                existing = "\n".join(lines)
+
+        if not existing.strip():
+            existing = "# Recurring Review Failures\n\nPatterns detected from repeated review failures. Include relevant entries in implementer prompts as \"Known Pitfalls\".\n"
+
+        # Check if this category already has an entry — update count instead
+        category_header = f"## {display_name}"
+        if category_header in existing:
+            # Update the existing entry's count
+            import re
+            existing = re.sub(
+                rf"(## {re.escape(display_name)}) \(seen \d+x\)",
+                rf"\1 (seen {count}x)",
+                existing
+            )
+        else:
+            existing += entry
+
+        failures_file.write_text(existing)
+    except OSError:
+        pass  # Best-effort
+
+
+def track_review_failure(failure_text: str, task_id: str) -> List[str]:
+    """Track a review failure and write to memory if threshold reached.
+
+    Returns list of categories that hit the threshold (newly written to memory).
+    """
+    categories = categorize_failure(failure_text)
+    tracking = load_failure_tracking()
+
+    newly_recorded = []
+
+    for category in categories:
+        cat_data = tracking["categories"].setdefault(category, {"count": 0, "last_context": "", "written": False})
+        cat_data["count"] += 1
+        cat_data["last_context"] = failure_text[:300]
+        cat_data["last_task"] = task_id
+        cat_data["last_seen"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+        if cat_data["count"] >= REVIEW_FAILURE_THRESHOLD and not cat_data.get("written"):
+            write_recurring_failure_to_memory(category, cat_data["count"], cat_data["last_context"])
+            cat_data["written"] = True
+            newly_recorded.append(category)
+
+        # Update count even after written (for re-recording at higher thresholds)
+        if cat_data.get("written") and cat_data["count"] % REVIEW_FAILURE_THRESHOLD == 0:
+            write_recurring_failure_to_memory(category, cat_data["count"], cat_data["last_context"])
+
+    save_failure_tracking(tracking)
+    return newly_recorded
+
+
 def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     """Handle Task tool PostToolUse for review agents (spec-reviewer, quality-reviewer).
 
@@ -620,6 +900,9 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     for char in SHELL_METACHARACTERS:
         failure_details = failure_details.replace(char, ' ')
 
+    # Track failure for recurring pattern detection
+    newly_recorded = track_review_failure(failure_details, task_id)
+
     # Call post-review-fail hook (located in project root hooks/ directory)
     # This hook integrates with kaizen if installed, otherwise logs gracefully
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
@@ -651,7 +934,7 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     except json.JSONDecodeError:
         action_data = {"action": "LOGGED", "message": "failed to parse hook output"}
 
-    return {
+    response = {
         "hooks_run": ["post-review-fail"],
         "review_type": failure_source,
         "task_id": task_id,
@@ -661,6 +944,11 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
         "results": [result],
         "summary": f"Review failed, kaizen action: {action_data.get('action', 'LOGGED')}"
     }
+
+    if newly_recorded:
+        response["recurring_failures_detected"] = newly_recorded
+
+    return response
 
 
 def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) -> Dict:
