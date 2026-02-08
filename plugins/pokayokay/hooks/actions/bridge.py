@@ -35,6 +35,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "test": 120,        # Tests may take longer
     "audit-gate": 60,   # Audit checks may be extensive
     "lint": 60,         # Linting large codebases
+    "check-ref-sizes": 10,  # Reference file size check
     "sync": 30,
     "commit": 30,
     "verify-tasks": 15,
@@ -225,6 +226,9 @@ def handle_session_start(input_data: dict) -> dict:
     """Handle SessionStart event - run pre-session hooks and crash recovery."""
     results = []
 
+    # Reset token usage tracking for this session
+    reset_token_usage()
+
     # Run pre-session verification
     results.append(run_action("verify-clean"))
 
@@ -328,6 +332,89 @@ def delete_chain_state() -> None:
             state_path.unlink()
     except OSError:
         pass  # Best-effort cleanup
+
+
+# ==========================================================================
+# Token Usage Tracking
+# ==========================================================================
+
+TOKEN_USAGE_FILENAME = "pokayokay-token-usage.json"
+
+
+def _token_usage_path() -> Path:
+    """Get path to the token usage file."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    return Path(project_dir) / ".claude" / TOKEN_USAGE_FILENAME
+
+
+def load_token_usage() -> dict:
+    """Load token usage data for the current session."""
+    usage_path = _token_usage_path()
+    if not usage_path.exists():
+        return {"agents": [], "total_tokens": 0, "total_agents": 0}
+    try:
+        with open(usage_path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {"agents": [], "total_tokens": 0, "total_agents": 0}
+
+
+def save_token_usage(usage: dict) -> None:
+    """Save token usage data."""
+    usage_path = _token_usage_path()
+    usage_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(usage_path, "w") as f:
+            json.dump(usage, f, indent=2)
+    except OSError:
+        pass  # Best-effort
+
+
+def reset_token_usage() -> None:
+    """Reset token usage file at session start."""
+    usage_path = _token_usage_path()
+    try:
+        if usage_path.exists():
+            usage_path.unlink()
+    except OSError:
+        pass
+
+
+def record_agent_tokens(agent_type: str, description: str, tool_response: dict) -> None:
+    """Record token usage from a completed Task (subagent) tool call."""
+    # Extract usage from tool_response
+    # Claude Code includes usage data in task-notification messages
+    result_text = str(tool_response.get("result", ""))
+
+    # Parse total_tokens from the response if available
+    total_tokens = 0
+    tool_uses = 0
+    duration_ms = 0
+
+    # The tool_response for Task contains usage info
+    if "total_tokens" in result_text:
+        import re
+        token_match = re.search(r'total_tokens["\s:]+(\d+)', result_text)
+        if token_match:
+            total_tokens = int(token_match.group(1))
+        tool_match = re.search(r'tool_uses["\s:]+(\d+)', result_text)
+        if tool_match:
+            tool_uses = int(tool_match.group(1))
+        duration_match = re.search(r'duration_ms["\s:]+(\d+)', result_text)
+        if duration_match:
+            duration_ms = int(duration_match.group(1))
+
+    usage = load_token_usage()
+    usage["agents"].append({
+        "type": agent_type,
+        "description": description[:80],
+        "total_tokens": total_tokens,
+        "tool_uses": tool_uses,
+        "duration_ms": duration_ms,
+    })
+    usage["total_tokens"] = sum(a["total_tokens"] for a in usage["agents"])
+    usage["total_agents"] = len(usage["agents"])
+    save_token_usage(usage)
 
 
 def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> None:
@@ -689,15 +776,20 @@ def handle_pre_commit(tool_input: dict) -> dict:
 
     # Run pre-commit hooks
     results.append(run_action("lint"))
+    results.append(run_action("check-ref-sizes"))
 
     # Check for failures that should block
     has_blocking_error = any(r["status"] == "error" for r in results)
+
+    # Build reason from all failing hooks
+    failing = [r["action"] for r in results if r["status"] == "error"]
+    reason = ", ".join(failing) + " failed" if failing else None
 
     return {
         "hooks_run": ["pre-commit"],
         "results": results,
         "block": has_blocking_error,
-        "reason": "lint failed" if has_blocking_error else None
+        "reason": reason
     }
 
 
@@ -1270,6 +1362,12 @@ def main():
         result = handle_skill_complete(tool_input, tool_response)
 
     elif tool_name == "Task" and hook_event == "PostToolUse":
+        # Track token usage for all subagent completions
+        record_agent_tokens(
+            tool_input.get("subagent_type", "unknown"),
+            tool_input.get("description", ""),
+            tool_response,
+        )
         result = handle_review_complete(tool_input, tool_response)
 
     elif tool_name in ("Edit", "Write") and hook_event == "PostToolUse":
