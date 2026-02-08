@@ -310,7 +310,8 @@ The bridge script uses this to determine which hooks to run:
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/lint.sh` | Runs linter |
-| `actions/session-summary.sh` | Prints session summary (post-session) |
+| `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |
+| `actions/session-summary.sh` | Prints session summary with token costs (post-session) |
 | `actions/recover.sh` | Error recovery |
 
 ### Configuration Location
