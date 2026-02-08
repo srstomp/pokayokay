@@ -46,6 +46,8 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "session-summary": 15,
     "session-chain": 30,
     "post-review-fail": 30,
+    "recover": 30,
+    "pre-flight": 30,
 }
 
 # Rate limiting configuration
@@ -183,12 +185,64 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
         return {"action": name, "status": "error", "reason": "Script execution failed"}
 
 
+def _detect_stale_session() -> Optional[dict]:
+    """Detect if a previous session crashed by checking for stale chain state.
+
+    A session is considered crashed if:
+    1. Chain state file exists (session was chaining)
+    2. There are in_progress tasks in ohno (not cleaned up)
+    3. No active Claude process is running this chain
+
+    Returns dict with stale_tasks and chain_id if crash detected, None otherwise.
+    """
+    chain_state = load_chain_state()
+    if not chain_state.get("chain_id"):
+        return None
+
+    # Check for in_progress tasks via ohno-cli
+    try:
+        result = subprocess.run(
+            ["npx", "@stevestomp/ohno-cli", "list", "--status", "in_progress", "--format", "json"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            import json as json_mod
+            tasks = json_mod.loads(result.stdout)
+            if isinstance(tasks, list) and len(tasks) > 0:
+                task_ids = [t.get("id", "") for t in tasks if t.get("id")]
+                if task_ids:
+                    return {
+                        "stale_tasks": task_ids,
+                        "chain_id": chain_state.get("chain_id", ""),
+                    }
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+        pass
+
+    return None
+
+
 def handle_session_start(input_data: dict) -> dict:
-    """Handle SessionStart event - run pre-session hooks."""
+    """Handle SessionStart event - run pre-session hooks and crash recovery."""
     results = []
 
     # Run pre-session verification
     results.append(run_action("verify-clean"))
+
+    # Run pre-flight validation for unattended mode
+    work_mode = os.environ.get("YOKAY_WORK_MODE", "")
+    if work_mode == "unattended":
+        preflight_result = run_action("pre-flight", env={"WORK_MODE": work_mode})
+        results.append(preflight_result)
+
+    # Detect and recover from crashed sessions
+    stale = _detect_stale_session()
+    if stale:
+        recovery_env = {
+            "STALE_TASKS": ",".join(stale["stale_tasks"]),
+            "CHAIN_ID": stale.get("chain_id", ""),
+        }
+        recovery_result = run_action("recover", env=recovery_env)
+        results.append(recovery_result)
 
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")

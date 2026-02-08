@@ -14,6 +14,7 @@ Available skills that can be assigned to features:
 | `testing-strategy` | API test suites | API spec | Test files |
 | `frontend-design` | Frontend architecture | Requirements | Component structure |
 | `sdk-development` | SDK/library creation | API spec | SDK package |
+| `cloud-infrastructure` | AWS/cloud provisioning, IaC | Architecture requirements | CDK stacks, IAM, networking |
 | `feature-audit` | Completeness audit | Codebase | Gap report |
 
 ---
@@ -36,6 +37,14 @@ def assign_skills(feature: dict) -> list[str]:
         'authentication', 'authorization', 'webhook', 'sync'
     ]):
         skills.append('api-design')
+
+    # Cloud/Infrastructure features
+    if any(word in title + description for word in [
+        'aws', 'cloud', 'infrastructure', 'deploy', 'lambda',
+        'ecs', 'fargate', 'cdk', 'terraform', 'iam', 'vpc',
+        's3', 'dynamodb', 'rds', 'cloudfront', 'serverless'
+    ]):
+        skills.append('cloud-infrastructure')
 
     # SDK/Library features
     if any(word in title + description for word in [
@@ -100,6 +109,8 @@ Skills should run in this order:
 | "REST API for X" | api-design | testing-strategy | api → testing |
 | "Slack Integration" | api-design | — | api |
 | "SDK/Client Library" | sdk-development | — | sdk |
+| "Deploy to AWS" | cloud-infrastructure | ci-cd | cloud → ci-cd |
+| "Lambda + API Gateway" | cloud-infrastructure | api-design | cloud → api |
 
 ### Example Assignments
 

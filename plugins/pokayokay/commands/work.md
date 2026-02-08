@@ -545,7 +545,56 @@ Coordinator maintains N concurrent implementers:
    - No unmet `blockedBy` dependencies
    - Not blocked by another task in active_agents
 
-2. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
+2. **File conflict check**: Before dispatching, scan task descriptions for implicit file-level conflicts:
+
+   ```python
+   def detect_file_conflicts(tasks):
+       """Scan tasks for likely file-level conflicts that would cause merge issues."""
+       task_files = {}  # task_id -> set of likely affected files/modules
+
+       for task in tasks:
+           text = (task.title + " " + task.description).lower()
+           affected = set()
+
+           # Extract file paths (e.g., src/auth/login.ts)
+           import re
+           paths = re.findall(r'[\w/.-]+\.\w{1,4}', text)
+           affected.update(paths)
+
+           # Extract module/directory references
+           dirs = re.findall(r'(?:src|lib|app|components|hooks|utils|services)/[\w/-]+', text)
+           affected.update(dirs)
+
+           # Extract database table references
+           tables = re.findall(r'(?:table|model|schema|migration)\s+[`"]?([\w_]+)[`"]?', text)
+           affected.update(f"table:{t}" for t in tables)
+
+           task_files[task.id] = affected
+
+       # Find conflicts: tasks with overlapping affected files
+       conflicts = []
+       task_ids = list(task_files.keys())
+       for i in range(len(task_ids)):
+           for j in range(i + 1, len(task_ids)):
+               overlap = task_files[task_ids[i]] & task_files[task_ids[j]]
+               if overlap:
+                   conflicts.append((task_ids[i], task_ids[j], overlap))
+
+       return conflicts
+
+   conflicts = detect_file_conflicts(queued_tasks)
+   if conflicts:
+       # Serialize conflicting tasks, parallelize the rest
+       # Keep first task in each conflict pair, defer second to next batch
+       deferred = set()
+       for t1, t2, overlap in conflicts:
+           if t1 not in deferred:
+               deferred.add(t2)
+           log(f"File conflict: {t1} and {t2} both touch {overlap}. Serializing {t2}.")
+       queued_tasks = [t for t in queued_tasks if t.id not in deferred]
+   ```
+
+3. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
    ```
    Task tool (yokay-implementer):
      description: "Implement: {task1.title}"
