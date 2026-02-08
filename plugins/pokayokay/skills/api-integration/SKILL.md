@@ -34,8 +34,16 @@ Build robust, type-safe API clients from specs and documentation.
 
 | Reference | Description |
 |-----------|-------------|
-| [openapi-consumption.md](references/openapi-consumption.md) | Parsing specs, type generation, codegen tools |
-| [client-architecture.md](references/client-architecture.md) | Client patterns, service layers, request handling |
-| [error-handling.md](references/error-handling.md) | Error types, retry logic, circuit breakers |
-| [authentication.md](references/authentication.md) | OAuth, API keys, JWT, token refresh |
-| [testing.md](references/testing.md) | Mocking, integration tests, contract testing |
+| [openapi-specs-types.md](references/openapi-specs-types.md) | Parsing OpenAPI specs, type generation strategies |
+| [openapi-patterns-codegen.md](references/openapi-patterns-codegen.md) | Common patterns, client generation, GraphQL, informal docs |
+| [client-base-service-layer.md](references/client-base-service-layer.md) | Base client, interceptors, service layer pattern |
+| [client-request-response-caching.md](references/client-request-response-caching.md) | Request config, response parsing, caching, logging |
+| [error-classification.md](references/error-classification.md) | Error type hierarchy, classification, response conversion |
+| [error-retry-circuit-breaker.md](references/error-retry-circuit-breaker.md) | Retry with backoff, rate limits, circuit breaker |
+| [error-fallback-patterns.md](references/error-fallback-patterns.md) | Fallback strategies, Result type, error boundaries, reporting |
+| [auth-api-keys-bearer.md](references/auth-api-keys-bearer.md) | API key and bearer token authentication |
+| [auth-oauth2.md](references/auth-oauth2.md) | OAuth 2.0 authorization code, PKCE, client credentials |
+| [auth-jwt-hmac-storage.md](references/auth-jwt-hmac-storage.md) | JWT handling, HMAC signatures, secure token storage |
+| [testing-mocking-fixtures.md](references/testing-mocking-fixtures.md) | HTTP mocking (MSW, Nock), test fixtures |
+| [testing-unit-integration.md](references/testing-unit-integration.md) | Unit tests for transformers, integration tests for services |
+| [testing-contract-e2e-config.md](references/testing-contract-e2e-config.md) | Contract testing, E2E tests, Jest configuration |

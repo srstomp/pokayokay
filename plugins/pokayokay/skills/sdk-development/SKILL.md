@@ -28,8 +28,15 @@ Create professional TypeScript SDKs from scratch or by extraction.
 
 | Reference | Description |
 |-----------|-------------|
-| [extraction-analysis.md](references/extraction-analysis.md) | Analyzing code, finding boundaries, planning extraction |
-| [sdk-architecture.md](references/sdk-architecture.md) | SDK structure, patterns, API design |
-| [implementation.md](references/implementation.md) | TypeScript patterns, types, error handling |
-| [building-bundling.md](references/building-bundling.md) | Build tools, formats, tree-shaking |
-| [publishing.md](references/publishing.md) | npm publishing, private registries, versioning, CI/CD |
+| [extraction-scope-and-boundaries.md](references/extraction-scope-and-boundaries.md) | Scope identification, dependency analysis, boundary definition |
+| [extraction-usages-and-planning.md](references/extraction-usages-and-planning.md) | Finding usages, test coverage, phased extraction plan |
+| [package-structure-and-clients.md](references/package-structure-and-clients.md) | SDK layout, client design patterns (single, modular, factory) |
+| [configuration-and-api-design.md](references/configuration-and-api-design.md) | Config interfaces, defaults, barrel exports, method signatures |
+| [internal-architecture-and-best-practices.md](references/internal-architecture-and-best-practices.md) | HTTP client, state management, tree-shaking, environment agnostic |
+| [type-design.md](references/type-design.md) | Strict types, branded types, generics, discriminated unions |
+| [error-handling-and-async.md](references/error-handling-and-async.md) | Error class hierarchy, retry logic, request queues, token management |
+| [events-storage-and-logging.md](references/events-storage-and-logging.md) | Event emitter, storage abstraction, logger interface |
+| [build-tools-and-output.md](references/build-tools-and-output.md) | tsup config, output formats, package.json exports, TypeScript config |
+| [bundle-optimization-and-distribution.md](references/bundle-optimization-and-distribution.md) | Bundle size, multi-platform builds, dual packages, monorepo |
+| [publishing-and-registries.md](references/publishing-and-registries.md) | npm publishing, private registries, versioning, changelogs |
+| [ci-cd-and-documentation.md](references/ci-cd-and-documentation.md) | GitHub Actions, documentation, pre-publish checklist, deprecation |
