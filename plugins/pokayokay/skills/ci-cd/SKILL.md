@@ -37,11 +37,18 @@ Create, debug, and optimize CI/CD pipelines across platforms.
 
 | Reference | Description |
 |-----------|-------------|
-| [github-actions.md](references/github-actions.md) | Workflows, actions, matrix builds, reusable workflows |
-| [gitlab-ci.md](references/gitlab-ci.md) | .gitlab-ci.yml, stages, environments, Auto DevOps |
-| [circleci.md](references/circleci.md) | Orbs, workflows, parallelism |
-| [azure-devops.md](references/azure-devops.md) | YAML pipelines, templates, environments |
-| [bitbucket-pipelines.md](references/bitbucket-pipelines.md) | Pipes, deployments, Jira integration |
-| [deployment-strategies.md](references/deployment-strategies.md) | Blue-green, canary, rolling deployments |
-| [debugging-guide.md](references/debugging-guide.md) | Common failures, debugging techniques |
+| [github-actions-basics.md](references/github-actions-basics.md) | Workflows, triggers, jobs, steps, services |
+| [github-actions-advanced.md](references/github-actions-advanced.md) | Reusable workflows, composite actions, security, complete example |
+| [gitlab-ci-basics.md](references/gitlab-ci-basics.md) | Pipeline structure, triggers, jobs, caching, artifacts, variables |
+| [gitlab-ci-advanced.md](references/gitlab-ci-advanced.md) | Templates, includes, rules, Docker-in-Docker, security scanning |
+| [circleci-basics.md](references/circleci-basics.md) | Config structure, executors, jobs, commands, caching, artifacts |
+| [circleci-advanced.md](references/circleci-advanced.md) | Workflows, orbs, conditionals, Docker builds, complete example |
+| [azure-devops-basics.md](references/azure-devops-basics.md) | Pipeline structure, triggers, agents, variables, tasks, caching |
+| [azure-devops-advanced.md](references/azure-devops-advanced.md) | Templates, environments, deployments, conditions, containers |
+| [bitbucket-pipelines-basics.md](references/bitbucket-pipelines-basics.md) | Pipeline types, steps, caching, artifacts, variables |
+| [bitbucket-pipelines-advanced.md](references/bitbucket-pipelines-advanced.md) | Pipes, Docker, YAML anchors, deployments, complete example |
+| [deployment-strategies-blue-green-canary.md](references/deployment-strategies-blue-green-canary.md) | Blue-green and canary deployments with K8s and AWS examples |
+| [deployment-strategies-rolling-flags-rollback.md](references/deployment-strategies-rolling-flags-rollback.md) | Rolling deploys, feature flags, rollback, health checks |
+| [debugging-error-categories.md](references/debugging-error-categories.md) | Environment, permission, network, resource, timing, cache, Docker errors |
+| [debugging-platform-fixes.md](references/debugging-platform-fixes.md) | Platform-specific debugging, common fix patterns, quick reference |
 | [security-checklist.md](references/security-checklist.md) | Secrets, permissions, supply chain security |

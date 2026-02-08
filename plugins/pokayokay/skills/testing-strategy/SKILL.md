@@ -45,15 +45,26 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 
 | Reference | Description |
 |-----------|-------------|
-| [test-architecture.md](references/test-architecture.md) | Test pyramid, folder structure, naming conventions |
-| [test-design.md](references/test-design.md) | Writing good tests, AAA pattern, assertion strategies |
-| [frontend-testing.md](references/frontend-testing.md) | React Testing Library, component tests, visual regression |
-| [e2e-testing.md](references/e2e-testing.md) | Playwright, Cypress, E2E patterns |
-| [mocking-strategies.md](references/mocking-strategies.md) | MSW, test doubles, when to mock |
+| [test-architecture-structure.md](references/test-architecture-structure.md) | Project structures, shared utilities, test configuration |
+| [test-architecture-isolation.md](references/test-architecture-isolation.md) | Playwright config, database isolation, performance optimization |
+| [test-design-techniques.md](references/test-design-techniques.md) | Equivalence partitioning, boundary values, decision tables, state transitions |
+| [test-design-error-and-advanced.md](references/test-design-error-and-advanced.md) | Error handling tests, property-based testing, parameterization, regression |
+| [frontend-react-testing.md](references/frontend-react-testing.md) | React Testing Library, queries, user events, hooks, forms |
+| [frontend-vue-a11y-visual.md](references/frontend-vue-a11y-visual.md) | Vue Test Utils, accessibility, visual/Storybook testing, anti-patterns |
+| [e2e-playwright.md](references/e2e-playwright.md) | Playwright POM, fixtures, auth state, API mocking, visual comparison |
+| [e2e-cypress-and-stability.md](references/e2e-cypress-and-stability.md) | Cypress patterns, flaky test prevention, test data, debugging |
+| [mocking-fundamentals.md](references/mocking-fundamentals.md) | Mock decision tree, stubs/mocks/spies/fakes, MSW setup and usage |
+| [mocking-modules-and-patterns.md](references/mocking-modules-and-patterns.md) | Module mocking, time mocking, anti-patterns, dependency injection |
 | [coverage-guide.md](references/coverage-guide.md) | Coverage metrics, meaningful thresholds, CI integration |
-| [api-test-frameworks.md](references/api-test-frameworks.md) | Vitest, Jest, Supertest setup for API testing |
-| [api-test-patterns.md](references/api-test-patterns.md) | Request testing, authentication, error validation |
-| [api-test-data.md](references/api-test-data.md) | Factories, fixtures, database seeding |
-| [api-contract-testing.md](references/api-contract-testing.md) | OpenAPI validation, schema testing |
-| [api-test-ci-cd.md](references/api-test-ci-cd.md) | CI pipeline configuration for API tests |
+| [api-test-frameworks-setup.md](references/api-test-frameworks-setup.md) | Vitest and Jest setup, configuration, running tests |
+| [api-test-supertest-and-helpers.md](references/api-test-supertest-and-helpers.md) | Supertest usage, request helpers, custom matchers, snapshots, debugging |
+| [api-integration-patterns.md](references/api-integration-patterns.md) | CRUD endpoint tests, relationship tests |
+| [api-auth-patterns.md](references/api-auth-patterns.md) | Login/logout, protected routes, authorization, auth helpers |
+| [api-e2e-and-edge-cases.md](references/api-e2e-and-edge-cases.md) | Multi-step workflow tests, error responses, edge cases |
+| [api-test-data-factories.md](references/api-test-data-factories.md) | Factory patterns, builders, fixtures |
+| [api-test-data-database.md](references/api-test-data-database.md) | Database helpers, cleanup strategies, data generation |
+| [api-contract-openapi.md](references/api-contract-openapi.md) | OpenAPI/AJV schema validation, contract tests |
+| [api-contract-zod-advanced.md](references/api-contract-zod-advanced.md) | Zod validation, response shape testing, breaking change detection |
+| [api-test-ci-pipelines.md](references/api-test-ci-pipelines.md) | CI pipeline strategy, GitHub Actions, parallel execution |
+| [api-test-ci-environments.md](references/api-test-ci-environments.md) | Environment config, test reporting, database services, E2E environments |
 | [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for TDD discipline |

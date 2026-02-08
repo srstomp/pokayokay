@@ -33,7 +33,13 @@ Figma plugins run in two threads communicating via postMessage:
 
 | Reference | Description |
 |-----------|-------------|
-| [project-setup.md](references/project-setup.md) | Manifest, TypeScript setup, build configuration |
-| [plugin-api.md](references/plugin-api.md) | Node types, properties, creation, traversal |
-| [ui-development.md](references/ui-development.md) | iframe UI, postMessage, Figma design system |
-| [common-patterns.md](references/common-patterns.md) | Selection handling, batch operations, undo groups |
+| [project-structure-and-build.md](references/project-structure-and-build.md) | Manifest, TypeScript setup, build configuration |
+| [development-testing-and-publishing.md](references/development-testing-and-publishing.md) | Dev workflow, testing, publishing, troubleshooting |
+| [api-globals-and-nodes.md](references/api-globals-and-nodes.md) | Global objects, node types, components |
+| [api-rendering-and-advanced.md](references/api-rendering-and-advanced.md) | Paints, effects, auto layout, styles, variables, events |
+| [ui-architecture-and-messaging.md](references/ui-architecture-and-messaging.md) | iframe UI, postMessage, typed messages, plain HTML |
+| [ui-react-and-theming.md](references/ui-react-and-theming.md) | React setup, hooks, Figma theme colors |
+| [ui-patterns-and-resources.md](references/ui-patterns-and-resources.md) | Loading states, tabs, color pickers, file downloads |
+| [selection-traversal-and-batching.md](references/selection-traversal-and-batching.md) | Selection handling, node traversal, batch operations |
+| [colors-and-text.md](references/colors-and-text.md) | Color conversion, manipulation, text operations |
+| [layout-storage-and-utilities.md](references/layout-storage-and-utilities.md) | Positioning, alignment, storage, error handling, utilities |
