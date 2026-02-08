@@ -33,6 +33,9 @@ Transform product requirements into actionable implementation plans with visual 
 | SDK/library | sdk-development | — |
 | Auth/Security | api-design | — |
 | Testing infrastructure | testing-strategy | — |
+| AWS/Cloud provisioning | cloud-infrastructure | — |
+| Serverless/Lambda | cloud-infrastructure | api-design |
+| Container deployment | cloud-infrastructure | ci-cd |
 
 ## References
 
