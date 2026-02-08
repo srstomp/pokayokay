@@ -293,7 +293,8 @@ When `--continue` flag is set, resume from previous WIP instead of starting fres
 1. **Find resumable tasks**: Check `get_session_context()` for in_progress tasks with WIP data
 2. **Select task to resume**: Pick the task with most recent `wip_updated_at`
 3. **Load WIP**: Get full task via `get_task(task_id, fields="full")` to access `work_in_progress`
-4. **Display resume context**:
+4. **Load handoff**: Call `get_task_handoff(task_id)` for the implementer's previous handoff data (summary, files_changed, full_details with self-review findings). If absent, continue with WIP-only resume.
+5. **Display resume context**:
 
 ```markdown
 ## Resuming: {task.title} ({task.id})
@@ -312,8 +313,8 @@ When `--continue` flag is set, resume from previous WIP instead of starting fres
 **Test results**: {wip.test_results.passed} passed, {wip.test_results.failed} failed
 ```
 
-5. **Skip brainstorming**: Task already has context, go directly to implementation
-6. **Dispatch implementer with WIP context**:
+6. **Skip brainstorming**: Task already has context, go directly to implementation
+7. **Dispatch implementer with WIP + handoff context**:
 
 ```
 Task tool (yokay-implementer):
@@ -330,6 +331,13 @@ Task tool (yokay-implementer):
   - Test results: {wip.test_results}
   - Errors encountered: {wip.errors}
   - Next step: {wip.next_step}
+
+  ## Previous Implementation Context
+  (from implementer handoff — skip this section if no handoff data)
+  - Status: {handoff.status}
+  - Summary: {handoff.summary}
+  - Files changed: {handoff.files_changed}
+  - Self-review findings: {handoff.full_details}
 
   Pick up from where the previous session left off. Do NOT redo work
   that was already committed. Start from the "next step" above.

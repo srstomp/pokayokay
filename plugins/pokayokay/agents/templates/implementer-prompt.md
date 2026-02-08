@@ -147,4 +147,15 @@ This task was partially completed in a previous session. Here is the saved state
 
 Pick up from where the previous session left off. Do NOT redo work that was
 already committed. Start from the "next step" above.
+
+If handoff data is available from get_task_handoff(), also include:
+
+## Previous Implementation Context
+
+- **Status**: {handoff.status}
+- **Summary**: {handoff.summary}
+- **Files changed**: {handoff.files_changed}
+- **Self-review findings**: {handoff.full_details}
+
+Skip this section if no handoff data exists (it may have been compacted).
 -->
