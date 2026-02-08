@@ -648,15 +648,15 @@ Before dispatching a subagent:
 
 ---
 
-## Task Review Dispatch
+## Task Review Dispatch (Two-Stage)
 
-After implementer completes, dispatch a single reviewer for both spec compliance and code quality.
+After implementer completes, run two sequential reviews: spec compliance (adversarial), then code quality.
 
-**Agent**: `yokay-task-reviewer`
-**Template**: `agents/templates/task-review-prompt.md`
+### Stage 1: Spec Compliance Review
+
+**Agent**: `yokay-spec-reviewer`
+**Template**: `agents/templates/spec-review-prompt.md`
 **Model**: sonnet (quality judgments require it)
-
-### Template Variables
 
 | Variable | Source | Description |
 |----------|--------|-------------|
@@ -668,33 +668,74 @@ After implementer completes, dispatch a single reviewer for both spec compliance
 | `{FILES_CHANGED}` | Implementer report | File list |
 | `{COMMIT_INFO}` | Implementer report | Hash and message |
 | `{COMMIT_HASH}` | Implementer report | Just the hash |
+| `{WORKING_DIRECTORY}` | Coordinator | Current working directory |
+
+**If FAIL**: Re-dispatch implementer with spec issues. Skip quality review.
+**If PASS**: Proceed to Stage 2.
+
+### Stage 2: Code Quality Review
+
+Only runs if spec review passes.
+
+**Agent**: `yokay-quality-reviewer`
+**Template**: `agents/templates/quality-review-prompt.md`
+**Model**: sonnet
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{TASK_ID}` | Original task | Task identifier |
+| `{TASK_TITLE}` | Original task | Task title |
+| `{FILES_CHANGED}` | Implementer report | File list |
+| `{COMMIT_INFO}` | Implementer report | Hash and message |
+| `{COMMIT_HASH}` | Implementer report | Just the hash |
+| `{WORKING_DIRECTORY}` | Coordinator | Current working directory |
+
+**If FAIL**: Re-dispatch implementer with quality issues.
+**If PASS**: Proceed to task completion.
 
 ### Dispatch Example
 
 ```markdown
-## Dispatching Task Reviewer
+## Stage 1: Spec Compliance Review
 
 **Task**: task-abc123 - Create grid component
-**Agent**: yokay-task-reviewer
+**Agent**: yokay-spec-reviewer
 
-Checking spec compliance and code quality...
+Verifying spec compliance (adversarial)...
 
-[Invoke Task tool with filled task-review-prompt.md]
+[Invoke Task tool with filled spec-review-prompt.md]
+
+## Stage 2: Code Quality Review
+
+**Agent**: yokay-quality-reviewer
+
+Checking code quality...
+
+[Invoke Task tool with filled quality-review-prompt.md]
 ```
 
 ### Processing Result
 
 ```python
-# Pseudocode
-if review.verdict == "PASS":
-    log_activity(task_id, "note", "Task review: PASS")
-    proceed_to_task_completion()
-else:
-    log_activity(task_id, "note", f"Task review: FAIL - {review.issues}")
-    redispatch_implementer(
-        original_task=task,
-        issues=review.required_fixes
-    )
+# Pseudocode — sequential stages
+spec_review = dispatch(yokay_spec_reviewer, spec_review_prompt)
+
+if spec_review.verdict == "FAIL":
+    log_activity(task_id, "note", f"Spec review: FAIL - {spec_review.issues}")
+    redispatch_implementer(task, spec_review.required_fixes)
+    return
+
+log_activity(task_id, "note", "Spec review: PASS")
+
+quality_review = dispatch(yokay_quality_reviewer, quality_review_prompt)
+
+if quality_review.verdict == "FAIL":
+    log_activity(task_id, "note", f"Quality review: FAIL - {quality_review.issues}")
+    redispatch_implementer(task, quality_review.required_fixes)
+    return
+
+log_activity(task_id, "note", "Quality review: PASS")
+proceed_to_task_completion()
 ```
 
 ### Review Loop Control

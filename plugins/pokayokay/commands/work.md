@@ -1210,13 +1210,13 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 6. Task Review
+### 6. Task Review (Two-Stage)
 
-After implementer completes, run a combined spec + quality review:
+After implementer completes, run spec compliance and code quality reviews sequentially:
 
 #### Environment Setup for Review Hooks
 
-Before dispatching the reviewer, set the current task context for hook integration:
+Before dispatching reviewers, set the current task context for hook integration:
 
 ```bash
 export CURRENT_OHNO_TASK_ID="<current-task-id>"
@@ -1224,22 +1224,43 @@ export CURRENT_OHNO_TASK_ID="<current-task-id>"
 
 This enables the post-review-fail hook to capture failures and integrate with kaizen automatically.
 
-#### Dispatch Task Reviewer
+#### Stage 1: Spec Compliance Review (Adversarial)
 
-1. Dispatch task reviewer:
+1. Dispatch spec reviewer:
    ```
-   Task tool (yokay-task-reviewer):
-     description: "Review: {task.title}"
-     prompt: [Fill template from agents/templates/task-review-prompt.md]
+   Task tool (yokay-spec-reviewer):
+     description: "Spec review: {task.title}"
+     prompt: [Fill template from agents/templates/spec-review-prompt.md]
    ```
 
-2. Process review result:
+2. Process result:
+   - **PASS**: Proceed to Stage 2 (quality review)
+   - **FAIL**: Re-dispatch implementer with spec issues (skip quality review)
+
+**What the spec reviewer checks:**
+- All acceptance criteria met against actual code (not implementer's claims)
+- No missing requirements
+- No scope creep (extra work = FAIL)
+
+#### Stage 2: Code Quality Review
+
+Only runs if spec review passes.
+
+1. Dispatch quality reviewer:
+   ```
+   Task tool (yokay-quality-reviewer):
+     description: "Quality review: {task.title}"
+     prompt: [Fill template from agents/templates/quality-review-prompt.md]
+   ```
+
+2. Process result:
    - **PASS**: Proceed to task completion (Step 7)
-   - **FAIL**: Re-dispatch implementer with issues
+   - **FAIL**: Re-dispatch implementer with quality issues
 
-**What the reviewer checks (single pass):**
-- **Spec compliance**: All acceptance criteria met, no missing requirements, no scope creep
-- **Code quality**: Structure, readability, test quality, edge cases, conventions
+**What the quality reviewer checks:**
+- Code structure, readability, appropriate abstractions
+- Test quality, edge case coverage
+- Project conventions compliance
 
 #### Review Failure Hook Integration
 
@@ -1439,7 +1460,7 @@ Review FAIL
        ▼             ▼    │
 ┌──────────────┐  ┌──────┴────┐
 │ Task Review  │  │Re-dispatch│
-│(spec+quality)│  │implementer│
+│(two-stage)│  │implementer│
 └──────┬───────┘  └─────▲─────┘
        │ PASS      FAIL │
        │           ┌────┘
