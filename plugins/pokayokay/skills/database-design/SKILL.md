@@ -34,3 +34,5 @@ Design efficient, maintainable database schemas with safe migration strategies.
 | [query-optimization.md](references/query-optimization.md) | EXPLAIN, N+1 queries, join strategies |
 | [postgresql.md](references/postgresql.md) | PostgreSQL-specific features and patterns |
 | [prisma-patterns.md](references/prisma-patterns.md) | Prisma schema, relations, transactions |
+| [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for migrations, constraints, factories |
+| [review-checklist.md](references/review-checklist.md) | Database design review checklist (schema, indexes, integrity) |

@@ -51,3 +51,5 @@ Design clear, consistent, and developer-friendly REST APIs.
 | [versioning.md](references/versioning.md) | API versioning strategies |
 | [openapi.md](references/openapi.md) | OpenAPI specification, documentation |
 | [security.md](references/security.md) | Authentication, authorization, rate limiting |
+| [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for REST endpoints, supertest templates |
+| [review-checklist.md](references/review-checklist.md) | API design review checklist (validation, auth, performance, docs) |

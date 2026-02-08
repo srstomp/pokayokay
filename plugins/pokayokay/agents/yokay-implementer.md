@@ -130,6 +130,10 @@ Before committing, verify:
 - [ ] Tests are meaningful (not just coverage)
 - [ ] Tests cover happy path and edge cases
 
+### Domain-Specific Review
+- [ ] Check the relevant skill's `references/review-checklist.md` if available for domain-specific review items
+- [ ] Check the relevant skill's `references/tdd-patterns.md` if available for domain-specific test patterns
+
 ## Commit Instructions
 
 When implementation is complete and self-reviewed:
