@@ -104,6 +104,17 @@ fi
     fi
 ) &
 
+# Symlink memory directory so worktree agents can access project memory
+PROJECT_DIR=$(pwd)
+MAIN_MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT_DIR" | tr '/' '-' | sed 's/^-//')/memory"
+WORKTREE_ABS_PATH="$(cd "$WORKTREE_PATH" && pwd)"
+WORKTREE_MEMORY_DIR="$HOME/.claude/projects/$(echo "$WORKTREE_ABS_PATH" | tr '/' '-' | sed 's/^-//')/memory"
+
+if [ -d "$MAIN_MEMORY_DIR" ] && [ ! -e "$WORKTREE_MEMORY_DIR" ]; then
+    mkdir -p "$(dirname "$WORKTREE_MEMORY_DIR")"
+    ln -s "$MAIN_MEMORY_DIR" "$WORKTREE_MEMORY_DIR" 2>/dev/null || true
+fi
+
 echo "MODE=worktree"
 echo "WORKTREE_PATH=$WORKTREE_PATH"
 echo "WORKTREE_BRANCH=$NAME"
