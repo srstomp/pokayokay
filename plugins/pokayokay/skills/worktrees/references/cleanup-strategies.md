@@ -64,8 +64,9 @@ du -sh .worktrees/*/
 ### Reducing Disk Usage
 
 1. **Remove stale worktrees** — biggest savings
-2. **Shared node_modules** — worktrees each install their own dependencies
-3. **Git sparse checkout** — for large repos, worktrees can use sparse checkout to only include relevant directories
+2. **Clean up memory symlinks** — worktrees get a symlink at `~/.claude/projects/<worktree-path>/memory` pointing to the main repo memory. Remove these when removing the worktree.
+3. **Shared node_modules** — worktrees each install their own dependencies
+4. **Git sparse checkout** — for large repos, worktrees can use sparse checkout to only include relevant directories
 
 ### Warning Thresholds
 
