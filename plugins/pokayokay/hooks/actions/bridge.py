@@ -546,6 +546,7 @@ def handle_session_end(input_data: dict) -> dict:
             "SCOPE_TYPE": chain_state.get("scope_type", ""),
             "SCOPE_ID": chain_state.get("scope_id", ""),
             "TASKS_COMPLETED": str(chain_state.get("tasks_completed", 0)),
+            "CHAIN_AUDITED": str(chain_state.get("audit_passed", False)).lower(),
             "REPORT_MODE": headless_config.get("report", "on_complete"),
             "NOTIFY_MODE": headless_config.get("notify", "terminal"),
         }
@@ -562,6 +563,10 @@ def handle_session_end(input_data: dict) -> dict:
                     # Update state file for next session
                     # Preserve all coordinator state fields (adaptive_n, failed_tasks, etc.)
                     chain_state["chain_index"] = chain_state.get("chain_index", 0) + 1
+                    save_chain_state(chain_state)
+                elif chain_action == "audit_pending":
+                    # Don't end the chain - signal coordinator to run audit
+                    chain_state["audit_pending"] = True
                     save_chain_state(chain_state)
                 elif chain_action in ("complete", "limit_reached"):
                     # Chain is done - clean up state file

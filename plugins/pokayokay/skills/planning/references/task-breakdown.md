@@ -24,6 +24,18 @@ Epic (1-4 weeks)
 | **Story** | User capability | 1-5 days | Team | Shippable increment |
 | **Task** | Implementation | 1-8 hours | Individual | Code/design complete |
 
+### Infrastructure-First Ordering
+
+Certain tasks must complete before implementation begins:
+
+| Infrastructure Task | When Required | Blocks |
+|-------------------|---------------|--------|
+| Test setup | No existing test framework detected | All feature/bug tasks |
+| Database schema | PRD includes data models | API and frontend tasks |
+| Auth setup | PRD includes protected routes | Protected feature tasks |
+
+The planner MUST check for these and create them as the first tasks with appropriate dependencies.
+
 ---
 
 ## Epic Definition

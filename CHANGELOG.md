@@ -5,6 +5,16 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-02-09
+
+### Added
+- **Chain Completion Audit**: When all tasks in a chain finish, `yokay-auditor` runs a completeness audit against the concept doc/PRD before declaring the chain done. Failed audits create remediation tasks and continue the chain.
+- **Test Infrastructure Auto-Detection**: Planner now detects missing test infrastructure (no test config, test files, or test directories) and creates a "Setup test infrastructure" task as the first task, blocking all feature/bug tasks.
+- **Infrastructure-First Ordering**: New reference section in task-breakdown.md documenting infrastructure tasks (test setup, DB schema, auth) that must precede implementation.
+
+### Fixed
+- **Design Task Routing in Unattended Mode**: Design tasks no longer stall unattended chains. Added "unattended" to auto-resolve path when design plugin is missing, and replaced "stop processing" with continue-loop behavior so the work loop continues after design commands complete.
+
 ## [0.11.0] - 2026-02-08
 
 ### Added
