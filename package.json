@@ -1,6 +1,6 @@
 {
   "name": "pokayokay",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
   "keywords": [
     "claude-code",
