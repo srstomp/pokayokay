@@ -824,8 +824,10 @@ def get_design_command(task):
 
    Executing: {design_command}
    ```
-4. Stop processing in `/work` - design command takes over
-5. Log activity:
+4. Invoke the design command for this task
+5. When design command completes, mark task as done via `update_task_status(task_id, "done")`
+6. Continue the work loop (get next task)
+7. Log activity:
    ```
    add_task_activity(task_id, "note", "Routed to {design_command}")
    ```
@@ -856,9 +858,9 @@ def get_design_command(task):
    Continue without design plugin? [y/n]
    ```
 3. Handle response:
-   - **auto mode**: Auto-resolve as **y**. Log decision and continue.
+   - **auto or unattended mode**: Auto-resolve as **y**. Log decision and continue.
      ```
-     add_task_activity(task_id, "decision", "Auto-resolved: continuing without design plugin (auto mode)")
+     add_task_activity(task_id, "decision", "Auto-resolved: continuing without design plugin (auto/unattended mode)")
      ```
    - **y**: Log decision and continue to Brainstorm Gate (Step 3)
    - **n**: Pause session, suggest plugin installation
@@ -1885,6 +1887,57 @@ Bridge.py handles:
 - Incrementing `tasks_completed` on each task completion
 - Incrementing `chain_index` when spawning the next session
 - Deleting the state file when the chain completes or hits the limit
+
+### 4. Chain Completion Audit
+
+When all tasks in scope are done, the chain runs a completeness audit before declaring success.
+
+#### How It Works
+
+1. `session-chain.sh` detects `READY_COUNT == 0` but `CHAIN_AUDITED != true`
+2. Returns `audit_pending` instead of `complete`
+3. `bridge.py` sets `chain_state.audit_pending = true` (does NOT delete chain state)
+4. On next session start (via chain continue), coordinator detects `audit_pending`:
+
+**Coordinator audit logic (run at session start when `--continue` and audit_pending):**
+
+```
+Read chain state → check audit_pending == true
+
+If audit_pending:
+  1. Find the concept doc / PRD:
+     - Check docs/plans/*.md, docs/concepts/*.md
+     - Check epic description if scope is epic
+     - Check PROJECT.md
+  2. Dispatch yokay-auditor:
+     - Pass: concept doc content + scope info
+     - Instruction: "Verify all requirements are implemented. Return PASS or FAIL with gap list."
+  3. Process result:
+     - PASS:
+       - Set chain_state.audit_passed = true
+       - Set chain_state.audit_pending = false
+       - Save chain state
+       - Session ends → session-chain.sh sees CHAIN_AUDITED=true → "complete"
+     - FAIL with gaps:
+       - Create remediation tasks in ohno for each gap
+       - Set chain_state.audit_pending = false (audit ran, even if failed)
+       - Continue working on remediation tasks
+       - When those complete, audit runs again (next chain end)
+```
+
+#### Chain State Fields
+
+The following fields are added to the chain state for audit tracking:
+
+```json
+{
+  "audit_pending": false,
+  "audit_passed": false
+}
+```
+
+- `audit_pending`: Set to `true` by bridge.py when all tasks done but audit not yet run
+- `audit_passed`: Set to `true` by coordinator when audit passes. Passed to session-chain.sh as `CHAIN_AUDITED`
 
 ## Modes Reference
 

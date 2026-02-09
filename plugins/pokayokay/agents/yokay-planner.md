@@ -40,6 +40,8 @@ Use Read, Grep, and Glob to understand:
 - Existing patterns and conventions (routes, components, API endpoints)
 - Test setup and frameworks in use
 - Package manager and build tools
+- Test infrastructure: check for test config (vitest.config.*, jest.config.*, pytest.ini),
+  test files (*.test.*, *.spec.*), test directories (__tests__/, tests/)
 
 ### 3. Design Hierarchy
 
@@ -71,6 +73,26 @@ Identify which tasks block others:
 - API before frontend
 - Auth before protected routes
 - Spikes before dependent features
+
+### 5b. Ensure Test Infrastructure
+
+If the codebase exploration found NO test infrastructure (no test config, no test files, no test directories):
+
+Create a test setup task as the FIRST task in the first story:
+
+```json
+{
+  "title": "Setup test infrastructure",
+  "task_type": "chore",
+  "estimate_hours": 2,
+  "skill": "testing-strategy",
+  "description": "Set up testing framework and utilities:\n- Install and configure test framework matching the tech stack (Vitest for Vite/React, Jest for Node, pytest for Python)\n- Create test utility file with common helpers (render, mock factories)\n- Create mock patterns for external dependencies\n- Add test script to package.json / Makefile\n- Write one smoke test to verify the setup\n\nAcceptance criteria:\n- [ ] Test framework installed and configured\n- [ ] `npm test` (or equivalent) runs successfully\n- [ ] At least one passing test exists\n- [ ] Test utilities file created",
+  "depends_on": []
+}
+```
+
+Add this task to the `depends_on` of ALL implementation tasks (task_type: feature, bug).
+Chore and spike tasks do NOT need to depend on test setup.
 
 ### 6. Detect Spike Opportunities
 

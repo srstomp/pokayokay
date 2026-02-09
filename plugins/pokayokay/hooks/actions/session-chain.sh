@@ -8,6 +8,7 @@
 #   SCOPE_TYPE     - "epic", "story", or "all"
 #   SCOPE_ID       - Epic or story ID (empty for "all")
 #   TASKS_COMPLETED - Tasks completed this chain
+#   CHAIN_AUDITED  - "true" if chain audit already passed
 #   REPORT_MODE    - "on_complete", "on_failure", "always", "never"
 #   NOTIFY_MODE    - "terminal", "none"
 #
@@ -42,8 +43,11 @@ fi
 NEXT_INDEX=$((CHAIN_INDEX + 1))
 
 if [ "$READY_COUNT" -eq 0 ]; then
-    # No more work - chain complete
-    ACTION="complete"
+    if [ "${CHAIN_AUDITED:-false}" = "true" ]; then
+        ACTION="complete"
+    else
+        ACTION="audit_pending"
+    fi
 elif [ "$NEXT_INDEX" -ge "$MAX_CHAINS" ]; then
     # Hit chain limit
     ACTION="limit_reached"
@@ -54,7 +58,7 @@ fi
 
 # Generate report if configured
 REPORT_PATH=""
-if [ "$ACTION" != "continue" ]; then
+if [ "$ACTION" != "continue" ] && [ "$ACTION" != "audit_pending" ]; then
     # Chain is ending - check if we should report
     SHOULD_REPORT=false
     case "$REPORT_MODE" in
