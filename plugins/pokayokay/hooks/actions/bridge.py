@@ -50,6 +50,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "recover": 30,
     "pre-flight": 30,
     "graduate-rules": 10,
+    "curate-memory": 15,
 }
 
 # Rate limiting configuration
@@ -418,14 +419,28 @@ def record_agent_tokens(agent_type: str, description: str, tool_response: dict) 
     save_token_usage(usage)
 
 
-def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> None:
-    """Write chain progress to memory at session end."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+def _get_memory_dir() -> Optional[Path]:
+    """Get the auto memory directory for the current project.
 
-    # Find memory directory (Claude project memory or project-local)
+    Checks Claude's project memory directory first, falls back to project-local.
+    Returns None if neither can be determined.
+    """
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
     project_key = project_dir.replace("/", "-").lstrip("-")
     claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
-    target_dir = claude_memory if claude_memory.exists() else Path(project_dir) / "memory"
+    if claude_memory.exists():
+        return claude_memory
+    local_memory = Path(project_dir) / "memory"
+    if local_memory.exists():
+        return local_memory
+    return None
+
+
+def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> None:
+    """Write chain progress to memory at session end."""
+    target_dir = _get_memory_dir()
+    if target_dir is None:
+        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     learnings_file = target_dir / "chain-learnings.md"
@@ -477,11 +492,9 @@ def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> Non
 
 def _write_spike_result(task_id: str, task_title: str, task_notes: str) -> None:
     """Write spike GO/NO-GO result to memory."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-
-    project_key = project_dir.replace("/", "-").lstrip("-")
-    claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
-    target_dir = claude_memory if claude_memory.exists() else Path(project_dir) / "memory"
+    target_dir = _get_memory_dir()
+    if target_dir is None:
+        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     spike_file = target_dir / "spike-results.md"
@@ -525,6 +538,11 @@ def handle_session_end(input_data: dict) -> dict:
     # Run post-session hooks
     results.append(run_action("sync"))
     results.append(run_action("session-summary"))
+
+    # Curate MEMORY.md - enforce section structure and line budgets
+    memory_dir = _get_memory_dir()
+    if memory_dir:
+        results.append(run_action("curate-memory", env={"MEMORY_DIR": str(memory_dir)}))
 
     # Check for session chaining via state file
     chain_state = load_chain_state()
@@ -921,17 +939,9 @@ def categorize_failure(failure_text: str) -> List[str]:
 
 def write_recurring_failure_to_memory(category: str, count: int, recent_context: str) -> None:
     """Write a recurring failure pattern to memory/recurring-failures.md."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-    memory_dir = Path(project_dir) / "memory"
-
-    # Also check Claude's project memory directory
-    claude_memory_dir = Path.home() / ".claude" / "projects"
-    # Find the right project memory dir by matching project_dir
-    project_key = project_dir.replace("/", "-").lstrip("-")
-    claude_project_memory = claude_memory_dir / project_key / "memory"
-
-    # Use Claude project memory if it exists, otherwise project-local
-    target_dir = claude_project_memory if claude_project_memory.exists() else memory_dir
+    target_dir = _get_memory_dir()
+    if target_dir is None:
+        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     failures_file = target_dir / "recurring-failures.md"
