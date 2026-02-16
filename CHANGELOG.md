@@ -5,6 +5,21 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Memory Orchestration System** — pokayokay now manages Claude Code's native auto memory directory and `.claude/rules/`
+  - **Rule graduation pipeline**: Recurring failure patterns (3+ occurrences) automatically become path-scoped `.claude/rules/pokayokay/*.md` files, natively loaded by Claude Code every session
+  - **MEMORY.md curation**: Enforced section structure with per-section line budgets (200-line total), overflow to topic files, coexistence with Claude's auto memory
+  - **Memory-informed skill routing**: `suggest-skills.sh` reads spike results, failure patterns, and graduated rules to improve recommendations
+
+### Design Decisions
+- **Orchestrate, don't replace** — pokayokay manages the structure of Claude Code's native memory features rather than building parallel systems
+- **Approach A (Rule Engine + Curation) chosen over B (Full Lifecycle) and C (Intelligence Loop)** — A is B's prerequisite; B's unique features (pre-session injection, memory decay agent, decision promotion) are speculative until A provides data on which memory entries actually get used. Decision promotion (ohno → auto memory) identified as the most valuable B feature to pull forward later.
+- **Path-scoped rules via native frontmatter** — leverages Claude Code's `paths:` glob support rather than custom scoping logic
+- **pokayokay owns MEMORY.md structure, Claude fills content** — sections marked with `<!-- pokayokay: -->` comments are managed by hooks; everything else is Claude's auto memory territory
+- **No new agents** — all memory management runs in existing hooks (SessionEnd, post-review), avoiding the overhead of a yokay-memory-curator agent
+
 ## [0.12.0] - 2026-02-09
 
 ### Added
