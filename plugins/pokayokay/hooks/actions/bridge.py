@@ -49,6 +49,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "post-review-fail": 30,
     "recover": 30,
     "pre-flight": 30,
+    "graduate-rules": 10,
 }
 
 # Rate limiting configuration
@@ -862,6 +863,18 @@ FAILURE_CATEGORIES = [
     ("missing_types", ["type", "typing", "type safety", "any type"]),
 ]
 
+# Map failure categories to likely affected file paths for rule scoping
+CATEGORY_PATH_SCOPES: Dict[str, str] = {
+    "missing_error_handling": "",  # Project-wide
+    "missing_tests": "",  # Project-wide
+    "scope_creep": "",  # Project-wide
+    "missing_validation": "",  # Project-wide
+    "missing_auth": "src/**/*.{ts,py}",
+    "missing_edge_cases": "",  # Project-wide
+    "naming_conventions": "",  # Project-wide
+    "missing_types": "**/*.{ts,tsx}",
+}
+
 
 def _failure_tracking_path() -> Path:
     """Get path to the review failure tracking file."""
@@ -982,6 +995,23 @@ def write_recurring_failure_to_memory(category: str, count: int, recent_context:
         pass  # Best-effort
 
 
+def _graduate_rule(category: str, context: str, count: int) -> None:
+    """Graduate a recurring failure to a .claude/rules/ file."""
+    display_name = category.replace("_", " ").title()
+    description = f"Review failures for {display_name.lower()}: {context[:150]}"
+
+    affected_paths = CATEGORY_PATH_SCOPES.get(category, "")
+
+    env = {
+        "CATEGORY": category,
+        "PATTERN_DESCRIPTION": description,
+        "AFFECTED_PATHS": affected_paths,
+        "FAILURE_COUNT": str(count),
+    }
+
+    run_action("graduate-rules", env=env)
+
+
 def track_review_failure(failure_text: str, task_id: str) -> List[str]:
     """Track a review failure and write to memory if threshold reached.
 
@@ -1001,12 +1031,14 @@ def track_review_failure(failure_text: str, task_id: str) -> List[str]:
 
         if cat_data["count"] >= REVIEW_FAILURE_THRESHOLD and not cat_data.get("written"):
             write_recurring_failure_to_memory(category, cat_data["count"], cat_data["last_context"])
+            _graduate_rule(category, cat_data["last_context"], cat_data["count"])
             cat_data["written"] = True
             newly_recorded.append(category)
 
         # Update count even after written (for re-recording at higher thresholds)
         if cat_data.get("written") and cat_data["count"] % REVIEW_FAILURE_THRESHOLD == 0:
             write_recurring_failure_to_memory(category, cat_data["count"], cat_data["last_context"])
+            _graduate_rule(category, cat_data["last_context"], cat_data["count"])
 
     save_failure_tracking(tracking)
     return newly_recorded
