@@ -12,7 +12,13 @@ PATTERN="${PATTERN_DESCRIPTION:-}"
 PATHS="${AFFECTED_PATHS:-}"
 COUNT="${FAILURE_COUNT:-0}"
 
-if [ -z "$CATEGORY" ] || [ -z "$PATTERN" ]; then
+# Sanitize category to prevent path traversal
+CATEGORY=$(basename "$CATEGORY" | sed 's/[^a-zA-Z0-9_-]//g')
+if [ -z "$CATEGORY" ]; then
+  exit 0
+fi
+
+if [ -z "$PATTERN" ]; then
   exit 0
 fi
 
@@ -34,6 +40,7 @@ if [ -f "$RULE_FILE" ]; then
   fi
   echo "" >> "$RULE_FILE"
   echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)" >> "$RULE_FILE"
+  echo "Graduated pattern to $FILENAME.md"
 else
   # Create new rule file
   DISPLAY_NAME=$(echo "$CATEGORY" | tr '_' ' ' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
@@ -60,4 +67,5 @@ else
       echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)"
     } > "$RULE_FILE"
   fi
+  echo "Graduated pattern to $FILENAME.md"
 fi

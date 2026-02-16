@@ -97,5 +97,29 @@ else
   exit 1
 fi
 
+# Test 6: Path traversal in CATEGORY is blocked
+echo "Test 6: Path traversal in CATEGORY is sanitized"
+export CLAUDE_PROJECT_DIR="$TEST_DIR"
+export CATEGORY="../../../tmp/evil"
+export PATTERN_DESCRIPTION="Malicious pattern"
+export AFFECTED_PATHS=""
+export FAILURE_COUNT="3"
+
+OUTPUT=$(bash "$SCRIPT" 2>&1)
+
+# Should NOT create file outside rules directory
+if [ -f "$TEST_DIR/../../../tmp/evil.md" ] || [ -f "/tmp/evil.md" ]; then
+  echo "  FAIL: Path traversal not blocked!"
+  exit 1
+fi
+
+# If a file was created, it should be in the rules dir with sanitized name
+if ls "$TEST_DIR/.claude/rules/pokayokay/"*evil* 2>/dev/null; then
+  echo "  PASS: Category sanitized, file created safely"
+else
+  # Script may have exited due to empty category after sanitization - that's fine
+  echo "  PASS: Path traversal blocked (no file created)"
+fi
+
 echo ""
 echo "All tests passed!"
