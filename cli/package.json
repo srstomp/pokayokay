@@ -1,6 +1,6 @@
 {
   "name": "pokayokay",
-  "version": "0.1.0",
+  "version": "0.13.0",
   "description": "Setup wizard for pokayokay - AI-assisted development orchestration",
   "bin": {
     "pokayokay": "./bin/cli.js"
