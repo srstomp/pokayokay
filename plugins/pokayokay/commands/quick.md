@@ -7,6 +7,8 @@ argument-hint: <task-description>
 
 Create and immediately work on: `$ARGUMENTS`
 
+**DO NOT dispatch agents. DO NOT read skill references or subagent-dispatch docs. Work inline in this conversation.**
+
 ## When to Use
 
 - Bug fixes not in the backlog
@@ -23,32 +25,32 @@ From `$ARGUMENTS`, extract:
 - **Type**: Infer (bug, feature, chore)
 - **Priority**: Default P2 unless urgent language detected
 
-### 2. Check Project Context
-If `.claude/PROJECT.md` exists:
-- Read current epic/story context
-- Link task to current epic if related
-- Otherwise create as standalone
-
-### 3. Create Task
+### 2. Create Task (if ohno available)
+Use MCP `mcp__ohno__create_task` or:
 ```bash
 npx @stevestomp/ohno-cli create "$TASK_TITLE" -t $TYPE
-```
-
-### 4. Start Task
-```bash
 npx @stevestomp/ohno-cli start <task-id>
 ```
+If ohno is not configured, skip task tracking and just do the work.
 
-### 5. Work on Task
-- Route to appropriate skill if task type suggests it:
-  - Database work → Load `database-design`
-  - API work → Load `api-design`
-  - UI work → Load `aesthetic-ui-designer`
-  - Testing → Load `testing-strategy`
-- Work in supervised mode by default
-- Commit incrementally
+### 3. Complexity Check
+Before starting, estimate scope. If the work will likely touch **more than 3 files** or require **architectural decisions**, stop and suggest:
+> "This looks complex enough for `/fix` (bug) or `/work` (feature). Want to switch?"
 
-### 6. Complete Task
+If user says continue, proceed inline.
+
+### 4. Work Inline
+Do the work directly. Follow this checklist:
+
+- [ ] Write a test first if behavior is changing
+- [ ] Implement the change
+- [ ] Run tests to verify nothing broke
+- [ ] Self-review the diff (`git diff`) — is it minimal and correct?
+- [ ] No scope creep — only do what was asked
+- [ ] Commit with conventional message
+
+### 5. Complete Task
+If ohno task was created:
 ```bash
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
@@ -56,38 +58,15 @@ npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ## Output
 
 ```markdown
-## Quick Task Created
+## Quick Task Done
 
-**Task**: [task-id] - [title]
-**Type**: [bug|feature|chore]
-**Linked to**: [epic-id or "standalone"]
-
-Starting work now...
+**Task**: [task-id or "untracked"] - [title]
+**Files Changed**: [list]
+**Test**: [test added/updated or "no behavior change"]
+**Commit**: [hash] [message]
 ```
 
 ## Options
 
 - `--no-start`: Create task but don't start immediately
 - `--epic <epic-id>`: Link to specific epic
-
-## Examples
-
-```
-/pokayokay:quick Fix the login button alignment
-/pokayokay:quick Add loading spinner to dashboard
-/pokayokay:quick Update the README with new setup steps
-```
-
-## Related Commands
-
-- `/pokayokay:work` - Continue work session after quick task
-- `/pokayokay:fix` - Bug-specific workflow with diagnosis
-- `/pokayokay:handoff` - End session with context
-
-## Comparison
-
-| Workflow | Use When |
-|----------|----------|
-| `/pokayokay:quick` | Small ad-hoc work |
-| `/pokayokay:fix` | Bug with diagnosis needed |
-| `/pokayokay:plan` + `/pokayokay:work` | Planned feature work |
