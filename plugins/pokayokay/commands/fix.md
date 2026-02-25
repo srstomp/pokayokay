@@ -8,6 +8,12 @@ skill: error-handling
 
 Fix bug: `$ARGUMENTS`
 
+## Mode Selection
+
+Check `$ARGUMENTS` for `--thorough` flag:
+- **Default (light pipeline)**: Implementer agent only, coordinator self-reviews.
+- **`--thorough`**: Full agent pipeline. Read and follow `skills/work-session/references/bug-fix-pipeline.md` instead of this command. Stop reading here.
+
 ## Bug Fix Philosophy
 
 1. **Reproduce first**: Confirm the bug exists and understand conditions
@@ -60,38 +66,76 @@ Before coding:
 - Consider side effects
 - Plan regression test
 
-### 5. Dispatch Agent Pipeline
+### 5. Dispatch Implementer
 
-**Do not implement the fix inline. Hand off to the agent pipeline.**
+Read `agents/templates/implementer-prompt.md` and fill these variables:
 
-The diagnostic work from Steps 2-4 (root cause, reproduction steps, fix strategy) becomes context for the agents.
+| Variable | Value |
+|----------|-------|
+| `{TASK_ID}` | Task ID from Step 1 |
+| `{TASK_TITLE}` | Task title from Step 1 |
+| `{TASK_DESCRIPTION}` | Root cause + reproduction steps + fix strategy from Steps 2-4 |
+| `{ACCEPTANCE_CRITERIA}` | See below |
+| `{CONTEXT}` | Bug fix context block (see below) |
+| `{RELEVANT_SKILL}` | `error-handling` |
+| `{WORKING_DIRECTORY}` | Project root |
+| `{RESUME_CONTEXT}` | Empty |
 
-Read and follow `skills/work-session/references/bug-fix-pipeline.md` with these settings:
-- **Mode**: `/fix` (max 3 fixer retries, max 3 review cycles, standard quality threshold)
-- **Root cause**: from Step 3
-- **Reproduction steps**: from Step 2
-- **Files to change**: from Step 4
-- **Fix strategy**: from Step 4
+**Acceptance criteria to use:**
+```
+- [ ] Bug described in root cause is fixed
+- [ ] Regression test exists (fails without fix, passes with fix)
+- [ ] All existing tests pass
+- [ ] Fix is minimal — no refactoring, no "while I'm here" changes
+- [ ] Commit message follows: fix: [description]
+```
 
-The pipeline will:
-1. Dispatch `yokay-implementer` with bug fix context + mandatory regression test
-2. Auto-fix test failures if needed (`yokay-fixer`, max 3 attempts)
-3. Verify regression test exists (re-dispatch if missing)
-4. Run two-stage review (`yokay-spec-reviewer` + `yokay-quality-reviewer`)
+**Context block to use:**
+```
+## Bug Fix Context
 
-Wait for pipeline result before proceeding.
+### Root Cause
+{from Step 3}
 
-### 6. Review Pipeline Result
+### Reproduction Steps
+{from Step 2}
 
-**If PASS**:
-- Implementation committed with regression test
-- Spec and quality reviews passed
-- Proceed to Step 7
+### Files to Change
+{from Step 4}
 
-**If FAIL**:
-- Task is blocked with reason in ohno
-- Review the blocker: `npx @stevestomp/ohno-cli get <task-id>`
-- Either resolve manually or re-run `/fix` with additional context
+### Fix Strategy
+{from Step 4}
+
+### MANDATORY: Regression Test
+Write a test that reproduces the original bug condition, FAILS without the fix, and PASSES with the fix.
+```
+
+Dispatch:
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
+  description: "Fix: {task title}"
+  prompt: [filled implementer-prompt.md]
+```
+
+### 6. Verify Result
+
+**Do NOT dispatch review agents. Verify the result yourself:**
+
+1. **Check the implementer's report:**
+   - Did it commit? If not, the fix failed — block task and stop.
+   - Did it add a regression test? If not, re-dispatch once:
+     "Implementation is missing a MANDATORY regression test. Add a test that reproduces the original bug and verifies the fix."
+
+2. **Run the test suite:**
+   - If tests pass: proceed to self-review.
+   - If tests fail: dispatch `yokay-fixer` with test output. Max 2 attempts.
+   - If fixer exhausts retries: block task in ohno and stop.
+
+3. **Self-review the diff:**
+   - Does the change match the root cause from Step 3?
+   - Is it minimal? No unrelated changes?
+   - Is the regression test meaningful (not a trivial assertion)?
 
 ### 7. Complete Task
 ```bash
@@ -108,7 +152,6 @@ npx @stevestomp/ohno-cli done <task-id> --notes "Root cause: X. Fixed by: Y. Tes
 **Fix**: [summary of changes]
 **Regression Test**: [test file/name]
 **Files Changed**: [list]
-**Pipeline**: Implementer + Fixer([attempts]) + Spec Review + Quality Review
 
 Commit: [hash] fix: [message]
 ```
@@ -120,16 +163,6 @@ Commit: [hash] fix: [message]
 3. **Scope creep**: "While I'm here..." - create separate task
 4. **No test**: Bug may recur without regression test
 
-## Related Commands
+## Options
 
-- `/pokayokay:quick` - Simpler ad-hoc work
-- `/pokayokay:hotfix` - Production emergencies
-- `/pokayokay:work` - Continue with other tasks
-
-## Examples
-
-```
-/pokayokay:fix Login fails when email has plus sign
-/pokayokay:fix Dashboard crashes on empty data
-/pokayokay:fix T045
-```
+- `--thorough`: Use full agent pipeline (implementer + spec review + quality review). Reads `bug-fix-pipeline.md`. Higher context cost.
