@@ -33,8 +33,9 @@ npx @stevestomp/ohno-cli init
 ## Ad-Hoc Commands
 | Command | Purpose |
 |---------|---------|
-| `/pokayokay:quick <task>` | Quick task + immediate work |
-| `/pokayokay:fix <bug>` | Bug diagnosis workflow |
+| `/pokayokay:quick <task>` | Quick task, works inline (no agents) |
+| `/pokayokay:fix <bug>` | Bug diagnosis + implementer agent |
+| `/pokayokay:fix --thorough <bug>` | Full agent pipeline for complex bugs |
 | `/pokayokay:spike <question>` | Time-boxed investigation |
 | `/pokayokay:hotfix <issue>` | Production incident |
 
@@ -59,7 +60,7 @@ npx @stevestomp/ohno-cli init
 |------|------|-------|------|
 | supervised | PAUSE | PAUSE | PAUSE |
 | semi-auto | log | PAUSE | PAUSE |
-| auto | log | log | PAUSE |
+| auto | skip | log | PAUSE |
 | unattended | skip | skip | skip |
 
 ## Completeness Levels (L0-L5)

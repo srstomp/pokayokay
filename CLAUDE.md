@@ -64,7 +64,7 @@ Hook configuration is in `.claude/settings.local.json` under the `hooks` key.
 
 ### Subagent Architecture
 
-The `/work` command uses a coordinator pattern that dispatches specialized agents:
+The `/work`, `/fix`, and `/hotfix` commands use a coordinator pattern that dispatches specialized agents. `/quick` works inline without agents. `/fix` uses a light pipeline (implementer only) by default; `/fix --thorough` engages the full pipeline.
 
 1. **yokay-brainstormer** - Refines ambiguous tasks before implementation
 2. **yokay-browser-verifier** - Verifies UI changes in a real browser
