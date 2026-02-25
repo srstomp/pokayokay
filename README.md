@@ -125,8 +125,8 @@ npx @stevestomp/ohno-cli serve
 
 | Command | Description |
 |---------|-------------|
-| `/pokayokay:quick <task>` | Create task and immediately start working |
-| `/pokayokay:fix <bug>` | Bug fix with diagnosis workflow |
+| `/pokayokay:quick <task>` | Create task and work inline (no agents) |
+| `/pokayokay:fix [--thorough] <bug>` | Bug fix with diagnosis + light pipeline (`--thorough` for full) |
 | `/pokayokay:spike <question>` | Time-boxed technical investigation |
 | `/pokayokay:hotfix <incident>` | Production incident response |
 

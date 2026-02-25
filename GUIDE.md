@@ -83,8 +83,9 @@ Creates task, starts work immediately, marks done when complete.
 ```bash
 /pokayokay:fix "login fails with special characters"
 /pokayokay:fix T045  # Fix existing bug task
+/pokayokay:fix --thorough "complex auth race condition"  # Full agent pipeline
 ```
-Structured diagnosis → fix → test workflow.
+Structured diagnosis → implementer agent → coordinator self-review. Use `--thorough` for the full agent pipeline (spec + quality review) on complex bugs.
 
 ### Production Incidents
 ```bash
@@ -706,6 +707,47 @@ Audits feature completeness by scanning the codebase and comparing against requi
 /pokayokay:audit --full             # All 5 dimensions
 ```
 
+### /pokayokay:quick
+
+Creates a task and immediately works on it inline — no agent dispatch, no skill reference loading.
+
+**What it does:**
+1. Parses task description, creates task in ohno
+2. Checks complexity — suggests `/fix` or `/work` if >3 files
+3. Works inline: test → implement → self-review → commit
+4. Completes task in ohno
+
+**Flags:**
+- `--no-start` - Create task but don't start immediately
+- `--epic <id>` - Link to specific epic
+
+**Examples:**
+```bash
+/pokayokay:quick "fix the login button alignment"
+/pokayokay:quick "add loading spinner to dashboard"
+```
+
+### /pokayokay:fix
+
+Diagnoses and fixes bugs with structured root cause analysis. Uses a light pipeline by default (implementer agent only, coordinator self-reviews).
+
+**What it does:**
+1. Creates/gets bug task in ohno
+2. Reproduces the bug and documents conditions
+3. Diagnoses root cause
+4. Plans the fix and dispatches implementer agent
+5. Coordinator verifies result: regression test exists, tests pass, diff is minimal
+
+**Flags:**
+- `--thorough` - Full agent pipeline (implementer + spec review + quality review). Higher context cost, use for complex bugs.
+
+**Examples:**
+```bash
+/pokayokay:fix "login fails with special characters"
+/pokayokay:fix T045
+/pokayokay:fix --thorough "complex auth race condition"
+```
+
 ### /pokayokay:spike
 
 Time-boxed technical investigation with mandatory decision output.
@@ -787,7 +829,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 |------|--------------|----------------|---------------|
 | supervised | PAUSE | PAUSE | PAUSE |
 | semi-auto | log | PAUSE | PAUSE |
-| auto | log | log | PAUSE |
+| auto | skip | log | PAUSE |
 | unattended | skip | skip | skip |
 
 ---

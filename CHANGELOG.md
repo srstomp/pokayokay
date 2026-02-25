@@ -5,6 +5,15 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-02-26
+
+### Changed
+- **Graduated Pipeline** — `/quick` and `/fix` no longer use the full agent pipeline, reducing context consumption by 76-95%
+  - `/quick` now works inline (no agent dispatch, no skill reference loading). ~200 lines context vs ~1,400 previously.
+  - `/fix` now uses a light pipeline by default (implementer agent only, coordinator self-reviews). ~500 lines context vs ~1,400+ previously.
+  - `/fix --thorough` engages the full agent pipeline (implementer + spec review + quality review) for complex bugs.
+  - `/work` and `/hotfix` are unchanged (full pipeline).
+
 ## [0.13.0] - 2026-02-16
 
 ### Added

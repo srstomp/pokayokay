@@ -1,6 +1,6 @@
 # Bug Fix Agent Pipeline
 
-Shared pipeline for `/fix` and `/hotfix` commands. The coordinator has already completed diagnosis (reproduction, root cause analysis). This pipeline handles implementation, testing, and review via agents.
+Shared pipeline for `/fix --thorough` and `/hotfix` commands. The coordinator has already completed diagnosis (reproduction, root cause analysis). This pipeline handles implementation, testing, and review via agents.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Before entering this pipeline, the coordinator MUST have:
 
 ## Pipeline Configuration
 
-| Setting | `/fix` | `/hotfix` |
+| Setting | `/fix --thorough` | `/hotfix` |
 |---------|--------|-----------|
 | Max fixer retries | 3 (default) | 2 |
 | Max review cycles | 3 (default) | 1 |
