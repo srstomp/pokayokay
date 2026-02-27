@@ -3,6 +3,7 @@ name: yokay-fixer
 description: Lightweight test failure fixer. Parses test output, makes targeted edits to fix failures, re-runs tests. Attempt limit set by coordinator (default 3).
 tools: Read, Edit, Grep, Glob, Bash
 model: sonnet
+permissionMode: bypassPermissions
 ---
 
 # Test Failure Fixer

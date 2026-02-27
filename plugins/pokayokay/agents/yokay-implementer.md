@@ -3,6 +3,7 @@ name: yokay-implementer
 description: Implements a single task with fresh context. Receives full task details from coordinator, implements following TDD, self-reviews, commits, and reports back.
 tools: Read, Write, Edit, Grep, Glob, Bash, NotebookEdit
 model: sonnet
+permissionMode: bypassPermissions
 ---
 
 # Task Implementer

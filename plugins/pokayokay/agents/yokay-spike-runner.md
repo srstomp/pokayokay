@@ -3,6 +3,7 @@ name: yokay-spike-runner
 description: Time-boxed technical investigation with structured output. Use for feasibility studies, architecture exploration, integration assessment, or when you need to answer a bounded technical question.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
+permissionMode: bypassPermissions
 ---
 
 # Spike Runner
