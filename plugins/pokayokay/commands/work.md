@@ -349,6 +349,7 @@ When `--continue` flag is set, resume from previous WIP instead of starting fres
 ```
 Task tool (yokay-implementer):
   description: "Resume: {task.title}"
+  mode: "bypassPermissions"
   prompt: [Fill implementer template with ADDITIONAL section:]
 
   ## Resuming from Previous Session
@@ -598,10 +599,12 @@ Coordinator maintains N concurrent implementers:
    ```
    Task tool (yokay-implementer):
      description: "Implement: {task1.title}"
+     mode: "bypassPermissions"
      prompt: [template for task1]
 
    Task tool (yokay-implementer):
      description: "Implement: {task2.title}"
+     mode: "bypassPermissions"
      prompt: [template for task2]
 
    ... up to N tasks
@@ -1059,6 +1062,7 @@ If task was just brainstormed (Step 3) and still has BLOCK issues, something wen
    ```
    Task tool (yokay-implementer):
      description: "Implement: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Fill template from agents/templates/implementer-prompt.md]
    ```
 
@@ -1120,6 +1124,7 @@ After implementer completes:
    ```
    Task tool (yokay-fixer):
      description: "Fix test failure: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Include task details, test output, "Max attempts: 3"]
    ```
 

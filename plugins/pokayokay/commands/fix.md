@@ -116,6 +116,7 @@ Task tool:
   subagent_type: "pokayokay:yokay-implementer"
   description: "Fix: {task title}"
   prompt: [filled implementer-prompt.md]
+  mode: "bypassPermissions"
 ```
 
 ### 6. Verify Result

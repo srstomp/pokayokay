@@ -423,8 +423,9 @@ Dispatch using the Task tool with `yokay-implementer` agent type:
 
 | Parameter | Value |
 |-----------|-------|
-| `agent_type` | `yokay-implementer` |
+| `subagent_type` | `pokayokay:yokay-implementer` |
 | `prompt` | Filled implementer-prompt.md content |
+| `mode` | `bypassPermissions` |
 
 ### After Dispatch
 

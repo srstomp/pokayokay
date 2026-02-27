@@ -8,6 +8,7 @@ When dispatching multiple implementers in parallel, use a SINGLE message with mu
 <task1>
 Task tool (yokay-implementer):
   description: "Implement: Create user authentication"
+  mode: "bypassPermissions"
   prompt: |
     # Task Implementation Assignment
 
@@ -20,6 +21,7 @@ Task tool (yokay-implementer):
 <task2>
 Task tool (yokay-implementer):
   description: "Implement: Add password hashing"
+  mode: "bypassPermissions"
   prompt: |
     # Task Implementation Assignment
 
@@ -32,6 +34,7 @@ Task tool (yokay-implementer):
 <task3>
 Task tool (yokay-implementer):
   description: "Implement: Create login endpoint"
+  mode: "bypassPermissions"
   prompt: |
     # Task Implementation Assignment
 

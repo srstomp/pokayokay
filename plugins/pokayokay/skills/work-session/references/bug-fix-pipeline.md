@@ -84,6 +84,7 @@ Dispatch:
 Task tool:
   subagent_type: "pokayokay:yokay-implementer"
   description: "Fix: {task.title}"
+  mode: "bypassPermissions"
   prompt: [filled implementer-prompt.md]
 ```
 
@@ -98,6 +99,7 @@ After implementer completes, run the project's test suite.
 Task tool:
   subagent_type: "pokayokay:yokay-fixer"
   description: "Fix test failure: {task.title}"
+  mode: "bypassPermissions"
   prompt: [task details + full test output + "Max attempts: {config.max_fixer_retries}"]
 ```
 
