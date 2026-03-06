@@ -51,69 +51,74 @@ git branch --show-current
 - The worktree is a complete working copy
 - Dependencies should already be installed
 
-## TDD Workflow
+## AC-First TDD Workflow
 
-Follow this sequence strictly:
+Follow this sequence strictly. Tests come from acceptance criteria, NOT from your implementation.
 
-### 1. Write Test First
+### 1. Parse Acceptance Criteria
 
-```
-Write a failing test that defines the expected behavior.
-```
+Read the task's acceptance criteria. Identify all MUST criteria — these drive your tests.
 
+### 2. Write Failing Tests for ALL MUST Criteria
+
+Before writing ANY implementation code, create a test for each MUST criterion:
+
+- Test name should mirror the criterion text
 - Test should be specific and focused
-- Test should fail for the right reason
-- Test should be in the appropriate test file/location
+- Write ALL MUST tests before implementing anything
 
-### 2. Verify Test Fails
+### 3. Verify Tests Fail
 
 ```bash
-# Run the specific test
+# Run the test suite
 npm test -- --testPathPattern="[test-file]"
 # or equivalent for your test runner
 ```
 
-- Confirm the test fails
-- Confirm it fails because the feature doesn't exist (not syntax error)
+- ALL MUST tests should fail
+- They should fail because the feature doesn't exist (not syntax errors)
+- This proves your tests are actually testing something
 
-### 3. Implement Minimum Code
+### 4. Implement Until MUST Tests Pass
 
-```
-Write just enough code to make the test pass.
-```
-
+Write code to make each failing test pass:
 - No premature optimization
-- No extra features
-- Just make the test green
+- No extra features beyond what MUST criteria require
+- Just make the tests green
 
-### 4. Verify Test Passes
+### 5. Verify ALL MUST Tests Pass
 
 ```bash
-# Run the test again
 npm test -- --testPathPattern="[test-file]"
 ```
 
-- Test must pass
-- No other tests should break
+- Every MUST criterion test must pass
+- No other existing tests should break
 
-### 5. Refactor (if needed)
+### 6. Add SHOULD Criteria
 
-```
-Clean up the implementation while keeping tests green.
-```
+For each SHOULD criterion:
+- Write a failing test
+- Implement to make it pass
+- If deferring: document WHY in a code comment and the commit message
 
-- Improve naming
-- Extract shared logic
-- Remove duplication
+### 7. COULD Criteria (Optional)
+
+Only if time permits. Skip without justification needed.
+
+### 8. Refactor (if needed)
+
+Clean up while keeping all tests green.
 
 ## Self-Review Checklist
 
 Before committing, verify:
 
-### Completeness
-- [ ] All acceptance criteria met
-- [ ] Edge cases handled
-- [ ] Error states covered
+### Acceptance Criteria Verification
+- [ ] Every MUST criterion has a corresponding passing test
+- [ ] Test names reference the criterion they verify
+- [ ] SHOULD criteria either have tests or documented justification for deferral
+- [ ] No implementation exists without a corresponding criterion (no scope creep)
 
 ### Quality
 - [ ] Code follows project conventions
