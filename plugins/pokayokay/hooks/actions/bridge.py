@@ -51,6 +51,7 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "pre-flight": 30,
     "graduate-rules": 10,
     "curate-memory": 15,
+    "story-integration": 120,
 }
 
 # Rate limiting configuration
@@ -709,6 +710,7 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     if story_completed:
         hooks_run.append("post-story")
         results.append(run_action("test", env=env))
+        results.append(run_action("story-integration", env=env))
         # Run audit-gate for story boundary
         story_env = {**env, "BOUNDARY_TYPE": "story"}
         results.append(run_action("audit-gate", env=story_env))
