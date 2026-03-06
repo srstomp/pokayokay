@@ -1,0 +1,176 @@
+{
+  "metadata": {
+    "skill_name": "work-session",
+    "skill_path": "/Users/steve/Projects/stevestomp/pokayokay/plugins/pokayokay/skills/work-session",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-06T08:30:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "fresh-session",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Calls get_session_context() MCP tool", "passed": true, "evidence": "Explicitly calls get_session_context() per session-protocol.md"},
+        {"text": "Calls get_next_task() to find first task", "passed": true, "evidence": "Calls get_next_task() after session init"},
+        {"text": "References semi-auto mode behavior", "passed": true, "evidence": "Correctly describes pause at story boundaries, skip task boundaries"},
+        {"text": "Mentions worktree setup or isolation", "passed": true, "evidence": "Sets up worktree per worktree-management.md guidance"},
+        {"text": "Dispatches implementer subagent", "passed": true, "evidence": "Dispatches yokay-implementer per subagent-dispatch.md"},
+        {"text": "Describes checkpoint behavior for story completion", "passed": true, "evidence": "Describes PAUSE checkpoint with story summary"}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "fresh-session",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.67,
+        "passed": 4,
+        "failed": 2,
+        "total": 6,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Calls get_session_context() MCP tool", "passed": true, "evidence": "Calls get_session_context() from general ohno knowledge"},
+        {"text": "Calls get_next_task() to find first task", "passed": true, "evidence": "Calls get_next_task()"},
+        {"text": "References semi-auto mode behavior", "passed": true, "evidence": "Describes semi-auto as pausing at story boundaries"},
+        {"text": "Mentions worktree setup or isolation", "passed": false, "evidence": "No worktree management. Would work in-place."},
+        {"text": "Dispatches implementer subagent", "passed": false, "evidence": "Would implement directly in conversation, no subagent dispatch"},
+        {"text": "Describes checkpoint behavior for story completion", "passed": true, "evidence": "Describes story completion pause with summary"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "resume-session",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Calls get_session_context() for previous state", "passed": true, "evidence": "First step is get_session_context()"},
+        {"text": "Looks for handoff notes or in-progress tasks", "passed": true, "evidence": "Checks handoff notes per session-protocol.md"},
+        {"text": "Does not re-execute completed tasks", "passed": true, "evidence": "Skips completed tasks, resumes from in-progress"},
+        {"text": "References auto mode behavior", "passed": true, "evidence": "Correctly describes auto mode checkpoint behavior"},
+        {"text": "Resumes from specific in-progress task", "passed": true, "evidence": "Identifies and resumes the in-progress task"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "resume-session",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Calls get_session_context() for previous state", "passed": true, "evidence": "Calls get_session_context() from general ohno knowledge"},
+        {"text": "Looks for handoff notes or in-progress tasks", "passed": true, "evidence": "Checks for in-progress tasks"},
+        {"text": "Does not re-execute completed tasks", "passed": true, "evidence": "Skips completed tasks"},
+        {"text": "References auto mode behavior", "passed": true, "evidence": "Describes auto mode correctly"},
+        {"text": "Resumes from specific in-progress task", "passed": true, "evidence": "Identifies in-progress task"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "overnight-unattended",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "References unattended mode (no pauses)", "passed": true, "evidence": "Correctly describes unattended as no pauses at any boundary"},
+        {"text": "Configures parallel execution", "passed": true, "evidence": "Sets up 3 parallel agents per parallel-execution.md"},
+        {"text": "Pre-flight checks before starting", "passed": true, "evidence": "Runs pre-flight checks per pre-flight-checks.md"},
+        {"text": "Parallel tasks avoid dependencies/conflicts", "passed": true, "evidence": "Describes dependency serialization and worktree isolation"},
+        {"text": "Plans session summary or handoff notes", "passed": true, "evidence": "Describes session-summary.sh hook and handoff notes"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "overnight-unattended",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "References unattended mode (no pauses)", "passed": true, "evidence": "Describes unattended as no pauses"},
+        {"text": "Configures parallel execution", "passed": true, "evidence": "Uses -n 3 flag"},
+        {"text": "Pre-flight checks before starting", "passed": false, "evidence": "No mention of pre-flight checks anywhere"},
+        {"text": "Parallel tasks avoid dependencies/conflicts", "passed": true, "evidence": "Describes dependency serialization"},
+        {"text": "Plans session summary or handoff notes", "passed": true, "evidence": "Mentions reviewing session summary output"}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 0, "stddev": 0, "min": 0, "max": 0},
+      "tokens": {"mean": 0, "stddev": 0, "min": 0, "max": 0}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.82, "stddev": 0.14, "min": 0.67, "max": 1.0},
+      "time_seconds": {"mean": 0, "stddev": 0, "min": 0, "max": 0},
+      "tokens": {"mean": 0, "stddev": 0, "min": 0, "max": 0}
+    },
+    "delta": {
+      "pass_rate": "+0.18",
+      "time_seconds": "0",
+      "tokens": "0"
+    }
+  },
+  "notes": [
+    "Resume-session eval passes 100% in both configurations — assertions may not be discriminating enough for this test case. Consider adding assertions for skill-specific behaviors (subagent dispatch, worktree isolation, structured handoff notes format).",
+    "The skill's unique value is in worktree isolation, subagent dispatch, and pre-flight checks — none of which the baseline knows about.",
+    "Without timing/token data (simulated runs), time and token comparisons are not meaningful.",
+    "The baseline performs surprisingly well on mode behavior (semi-auto, auto, unattended) — likely because ohno's MCP tool names are descriptive enough for Claude to infer correct behavior."
+  ]
+}

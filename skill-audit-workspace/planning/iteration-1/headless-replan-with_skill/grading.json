@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Recognizes headless mode request",
+      "passed": true,
+      "evidence": "Argument Parsing section explicitly parses '--headless' and sets 'Mode: headless (autonomous, no interactive prompts)'. Mode routing states: 'Run Steps 1-7 with all prompts auto-decided. Skip review at the end per user instruction.' The planner dispatch includes 'MODE: headless'."
+    },
+    {
+      "text": "Documents/logs auto-decisions on ambiguities",
+      "passed": true,
+      "evidence": "Headless Auto-Decisions section documents 7 numbered decisions logged via mcp__ohno__add_task_activity with type 'decision'. Categories used: SPIKE (2), DEPENDENCY (2), PRIORITY (1), SCOPE (1), SPLIT (1). Each decision includes rationale explaining why the auto-decision was made. Compliance checklist confirms 'All auto-decisions logged via add_task_activity with type decision -- PASS'."
+    },
+    {
+      "text": "Dispatches yokay-planner agent or follows planner workflow",
+      "passed": true,
+      "evidence": "Step 2 explicitly dispatches yokay-planner via Task tool with description 'Plan: api-v3-migration.md' and prompt including PRD_PATH, PROJECT_CONTEXT, DESIGN_PLUGIN_AVAILABLE, and MODE: headless. The planner returns structured JSON with 4 epics, 4 stories, 13 tasks, and 2 spikes."
+    },
+    {
+      "text": "Creates tasks in ohno programmatically",
+      "passed": true,
+      "evidence": "Step 4 shows explicit MCP calls: 4 mcp__ohno__create_epic calls, 4 mcp__ohno__create_story calls, 13 task entries in the task table (task-001 through task-013), and 12 mcp__ohno__add_dependency calls. Step 7 shows sync command. All with concrete IDs and descriptions."
+    },
+    {
+      "text": "Skips the interactive plan review session",
+      "passed": true,
+      "evidence": "Post-Completion Summary explicitly states 'Review skipped per user request. Run /plan --review later to walk through decisions.' Compliance checklist confirms 'Review skipped per user instruction -- PASS'. No interactive prompts are issued at any point."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

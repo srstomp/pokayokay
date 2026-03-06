@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Addresses database isolation",
+      "passed": true,
+      "evidence": "Dedicated section 'Fixing Database State Issues' covers: isolating test data per test (unique users with Date.now()), resetting database state between tests (truncate tables or transaction rollback), using separate databases for parallel workers (per-worker database creation in globalSetup), and ensuring deterministic ordering with explicit ORDER BY."
+    },
+    {
+      "text": "Recommends replacing waits with waitFor",
+      "passed": true,
+      "evidence": "Section 'Replace Fixed Waits with Assertions' shows WRONG (page.waitForTimeout(2000)) vs correct (page.locator('#submit').waitFor({ state: 'visible' })). 'Use Web-First Assertions' section shows auto-retrying expect vs single-check pattern. Also covers waitForResponse for network-dependent actions."
+    },
+    {
+      "text": "Suggests retry as diagnostic not fix",
+      "passed": true,
+      "evidence": "Section titled 'Use Retries Strategically (Not as a Fix)' explicitly states: 'Retries mask problems. Use them as a safety net, not a solution.' Adds: 'If a test needs retries to pass, it should also be flagged for investigation. Track your retry rate -- if it's above 5%, you have underlying problems.'"
+    },
+    {
+      "text": "Addresses CI vs local differences",
+      "passed": true,
+      "evidence": "Dedicated 'CI-Specific Fixes' section covering: resource constraints (limited CPU/memory, --disable-dev-shm-usage for Docker), limiting parallelism (workers: 2 in CI), browser launch args (--disable-gpu), and running flaky tests in a separate CI job with @flaky tags. Also covers increased action/expect timeouts for CI."
+    },
+    {
+      "text": "Provides systematic diagnosis approach",
+      "passed": true,
+      "evidence": "Step-by-step diagnosis: Step 1 categorize failures into four buckets (timing, database state, resource contention, environment differences), Step 2 enable Playwright traces/screenshots/video with config and artifact upload, Step 3 check parallel execution issues (run with workers=1 to isolate shared state). Recommended Investigation Order at the end provides 6 ordered steps. Common patterns table maps problems to fixes."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "eval_id": 3, "eval_name": "flaky-tests",
+  "prompt": "CI pipeline fails 20% of the time due to flaky E2E Playwright tests. Pass locally, fail intermittently in CI. Timing and database state issues.",
+  "assertions": [
+    {"text": "Addresses database isolation between test runs"},
+    {"text": "Recommends replacing arbitrary waits with explicit waitFor patterns"},
+    {"text": "Suggests test retry configuration as a diagnostic (not a fix)"},
+    {"text": "Addresses CI vs local environment differences"},
+    {"text": "Provides a systematic diagnosis approach (not just a list of tips)"}
+  ]
+}

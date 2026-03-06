@@ -1,0 +1,1 @@
+{"eval_id": 1, "eval_name": "prd-breakdown", "prompt": "I have a PRD for a new multi-tenant billing system at docs/prds/billing-v2.md. It covers subscription management, metered billing, invoicing, and payment processing. Analyze it and create a full implementation plan with epics, stories, and tasks. I need dependency ordering and estimates.", "assertions": []}

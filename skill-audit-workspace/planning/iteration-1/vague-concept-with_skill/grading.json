@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Identifies input as vague/high-level requiring clarification",
+      "passed": true,
+      "evidence": "Document Classification section explicitly identifies input as 'Type: Concept Brief (Vague/High-Level)' with characteristics: 'Vision without details, No technical context, No prioritization, No success metrics, No constraints documented.' Recommendation section states: 'This concept is NOT ready for task breakdown.'"
+    },
+    {
+      "text": "Flags specific missing requirements",
+      "passed": true,
+      "evidence": "Extensive gap analysis across 4 categories: Business Model Gaps (7 items including revenue model, payment processing, shipping), Feature Gaps (9 items including search, reviews scope, messaging), Technical Gaps (7 items including tech stack, scale, compliance), Non-Functional Gaps (5 items including security, performance, accessibility). Each gap is a specific checkbox item."
+    },
+    {
+      "text": "Either asks clarifying questions or documents assumptions",
+      "passed": true,
+      "evidence": "Both are provided. Questions for Stakeholder section has 16 questions organized by priority: 6 'Must Answer Before Planning (Blockers)', 6 'Should Answer Before Planning (Important)', 4 'Can Answer During Implementation'. Assumptions table has 10 numbered assumptions (A1-A10) each with risk-if-wrong assessment and validation priority."
+    },
+    {
+      "text": "Still produces a structured breakdown despite ambiguity",
+      "passed": true,
+      "evidence": "Proposed Scope section has In Scope (12 features with priority P0/P1), Out of Scope (8 items), and Deferred (8 items). Preliminary Epic Structure table has 7 epics (E1-E7) with scope, priority, estimated duration, and primary skill. Infrastructure-First Tasks (4 items) and Recommended Spikes (2 items) are also provided."
+    },
+    {
+      "text": "Marks uncertain areas or assumptions in the plan",
+      "passed": true,
+      "evidence": "Multiple uncertainty markers throughout: Assumptions table explicitly states 'Each wrong assumption could invalidate weeks of work.' Preliminary Epic Structure is prefixed with 'Do not treat these as final -- they will be refined after stakeholder answers are received.' Complexity Assessment scores Uncertainty at 5/5. Risks & Mitigations table includes 'Wrong assumptions in this analysis' as High likelihood/High impact. Recommended Next Steps explicitly say 'Do not write code until steps 1-3 are complete.'"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

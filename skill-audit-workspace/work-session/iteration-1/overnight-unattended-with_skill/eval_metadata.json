@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "overnight-unattended",
+  "prompt": "Run through all remaining tasks in the notifications epic overnight. Unattended mode, parallel with 3 agents. I'll review in the morning.",
+  "assertions": [
+    {"text": "References unattended mode (no pauses at any boundary)"},
+    {"text": "Configures parallel execution with multiple agents"},
+    {"text": "Mentions or performs pre-flight checks before starting"},
+    {"text": "Describes how parallel tasks avoid dependencies or conflicts"},
+    {"text": "Plans for session summary or handoff notes at the end"}
+  ]
+}

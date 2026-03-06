@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "skill_name": "testing-strategy",
+    "skill_path": "/Users/steve/Projects/stevestomp/pokayokay/plugins/pokayokay/skills/testing-strategy",
+    "executor_model": "claude-opus-4-6",
+    "timestamp": "2026-03-06T16:00:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {"eval_id": 1, "eval_name": "test-design", "configuration": "with_skill", "run_number": 1,
+     "result": {"pass_rate": 1.0, "passed": 6, "failed": 0, "total": 6, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Applies test pyramid framework", "passed": true, "evidence": "Full pyramid with proportions"},
+       {"text": "Recommends mocking Stripe API calls", "passed": true, "evidence": "MSW for Stripe mocking"},
+       {"text": "Addresses webhook handler testing", "passed": true, "evidence": "Webhook-specific test section"},
+       {"text": "Addresses idempotency testing", "passed": true, "evidence": "Idempotency key tests"},
+       {"text": "Suggests test file organization", "passed": true, "evidence": "Folder structure mirroring source"},
+       {"text": "Prioritizes which tests to write first", "passed": true, "evidence": "Priority ordering provided"}
+     ]},
+    {"eval_id": 1, "eval_name": "test-design", "configuration": "without_skill", "run_number": 1,
+     "result": {"pass_rate": 1.0, "passed": 6, "failed": 0, "total": 6, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Applies test pyramid framework", "passed": true, "evidence": "Pyramid with proportions"},
+       {"text": "Recommends mocking Stripe API calls", "passed": true, "evidence": "Stripe mock patterns"},
+       {"text": "Addresses webhook handler testing", "passed": true, "evidence": "Webhook test section"},
+       {"text": "Addresses idempotency testing", "passed": true, "evidence": "Idempotency coverage"},
+       {"text": "Suggests test file organization", "passed": true, "evidence": "File structure suggested"},
+       {"text": "Prioritizes which tests to write first", "passed": true, "evidence": "Prioritization present"}
+     ]},
+    {"eval_id": 2, "eval_name": "coverage-gaps", "configuration": "with_skill", "run_number": 1,
+     "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Distinguishes line vs branch coverage", "passed": true, "evidence": "Branch coverage emphasized"},
+       {"text": "Identifies error handling as likely gaps", "passed": true, "evidence": "Error paths flagged"},
+       {"text": "Suggests specific tools for coverage analysis", "passed": true, "evidence": "c8/v8 coverage tools"},
+       {"text": "Prioritizes gaps by risk", "passed": true, "evidence": "Risk-based prioritization"},
+       {"text": "Provides concrete test examples", "passed": true, "evidence": "Code examples for gaps"}
+     ]},
+    {"eval_id": 2, "eval_name": "coverage-gaps", "configuration": "without_skill", "run_number": 1,
+     "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Distinguishes line vs branch coverage", "passed": true, "evidence": "Branch vs line distinguished"},
+       {"text": "Identifies error handling as likely gaps", "passed": true, "evidence": "Error handling gaps identified"},
+       {"text": "Suggests specific tools for coverage analysis", "passed": true, "evidence": "Tools suggested"},
+       {"text": "Prioritizes gaps by risk", "passed": true, "evidence": "Risk prioritization present"},
+       {"text": "Provides concrete test examples", "passed": true, "evidence": "Concrete examples provided"}
+     ]},
+    {"eval_id": 3, "eval_name": "flaky-tests", "configuration": "with_skill", "run_number": 1,
+     "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Addresses database isolation", "passed": true, "evidence": "DB isolation patterns"},
+       {"text": "Recommends replacing waits with waitFor", "passed": true, "evidence": "waitFor patterns"},
+       {"text": "Suggests retry as diagnostic not fix", "passed": false, "evidence": "Configures retries but doesn't warn they mask problems"},
+       {"text": "Addresses CI vs local differences", "passed": true, "evidence": "CI environment differences covered"},
+       {"text": "Provides systematic diagnosis approach", "passed": true, "evidence": "Step-by-step diagnosis"}
+     ]},
+    {"eval_id": 3, "eval_name": "flaky-tests", "configuration": "without_skill", "run_number": 1,
+     "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 0, "tokens": 0, "tool_calls": 0, "errors": 0},
+     "expectations": [
+       {"text": "Addresses database isolation", "passed": true, "evidence": "DB isolation addressed"},
+       {"text": "Recommends replacing waits with waitFor", "passed": true, "evidence": "Explicit waitFor recommendation"},
+       {"text": "Suggests retry as diagnostic not fix", "passed": true, "evidence": "Use Retries Strategically (Not as a Fix) section"},
+       {"text": "Addresses CI vs local differences", "passed": true, "evidence": "CI vs local section"},
+       {"text": "Provides systematic diagnosis approach", "passed": true, "evidence": "Systematic approach provided"}
+     ]}
+  ],
+  "run_summary": {
+    "with_skill": {"pass_rate": {"mean": 0.93, "stddev": 0.09, "min": 0.80, "max": 1.0}},
+    "without_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}},
+    "delta": {"pass_rate": "-0.07"}
+  },
+  "notes": [
+    "Testing-strategy skill provides NO measurable advantage over baseline. Claude's general testing knowledge matches the skill's guidance across all 3 test cases.",
+    "The skill actually scored WORSE on flaky tests — missed the 'retry as diagnostic not fix' nuance that baseline caught.",
+    "This suggests testing-strategy is a pure domain knowledge skill where Claude's training data already covers the content well.",
+    "The skill's value may be in CONSISTENCY (always following the same patterns) rather than QUALITY (producing better output). This is hard to measure with single-run evals.",
+    "Consider whether this skill should be simplified or its references used primarily by the implementer agent's TDD workflow rather than as standalone guidance."
+  ]
+}

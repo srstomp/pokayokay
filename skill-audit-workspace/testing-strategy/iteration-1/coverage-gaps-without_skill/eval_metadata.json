@@ -1,0 +1,1 @@
+{"eval_id": 2, "eval_name": "coverage-gaps", "prompt": "Our project has 45% line coverage but mostly happy-path tests. Help me audit coverage and identify critical gaps.", "assertions": []}

@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Distinguishes line vs branch coverage",
+      "passed": true,
+      "evidence": "Step 1 explicitly states 'Line coverage is the weakest coverage metric' and 'Branch coverage is the number that exposes happy-path-only testing. If your line coverage is 45% but branch coverage is 20-30%, your tests are almost exclusively exercising the success path through conditionals.'"
+    },
+    {
+      "text": "Identifies error handling as likely gaps",
+      "passed": true,
+      "evidence": "Seven gap categories include: Gap 1 Validation Errors ('Almost Certainly Untested'), Gap 2 Auth paths, Gap 3 Database/Prisma Error Handling (unique constraints, FK violations, not found, connection failures, transaction rollback), Gap 4 Error Response Format Consistency, Gap 6 External Dependency Failures. The summary explicitly states error paths are 'Likely 0% covered.'"
+    },
+    {
+      "text": "Suggests specific tools for coverage analysis",
+      "passed": true,
+      "evidence": "Recommends Jest --coverage with --coverageReporters=text and json-summary, Vitest --coverage, grep to find files below 50%, HTML report for visual inspection, and Stryker for mutation testing ('npx stryker run'). Also shows Jest config for per-directory thresholds and CI gate with jq parsing."
+    },
+    {
+      "text": "Prioritizes gaps by risk",
+      "passed": true,
+      "evidence": "Explicit four-phase prioritized action plan: Phase 1 'Critical Path Coverage' (global error handler, auth middleware, validation errors), Phase 2 'Error Path Coverage' (database constraints, external dependency failures, error format consistency), Phase 3 'Edge Case Coverage' (boundary values, concurrency, state transitions), Phase 4 'Quality Validation' (mutation testing)."
+    },
+    {
+      "text": "Provides concrete test examples",
+      "passed": true,
+      "evidence": "Code examples for each of the seven gap categories: validation error tests (POST with empty body, invalid email), auth tests (no token, expired token, wrong owner), Prisma error tests (duplicate email 409, not-found 404), error format consistency with test.each, edge case tests (unicode, oversized body, page=0, concurrent stock decrements), external dependency failures (email service down, payment gateway timeout)."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

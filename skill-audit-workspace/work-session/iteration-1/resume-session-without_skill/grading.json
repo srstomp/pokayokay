@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Calls get_session_context() to retrieve previous session state",
+      "passed": true,
+      "evidence": "Line 11: 'Claude would call mcp__ohno__get_session_context() to retrieve: Previous session notes, In-progress tasks, Current blockers'. Also line 99: 'Call get_session_context() and get_epics() — correct'."
+    },
+    {
+      "text": "Looks for handoff notes or in-progress tasks from previous session",
+      "passed": true,
+      "evidence": "Lines 12-14: Session context retrieves 'Previous session notes, In-progress tasks, Current blockers'. Line 35: 'check for any tasks with WIP (work-in-progress) data from the interrupted session'. Line 55: 'Previous session notes: [from get_session_context]'."
+    },
+    {
+      "text": "Does not re-execute already completed tasks",
+      "passed": true,
+      "evidence": "Lines 25-26: Checks story statuses (done vs in_progress). Lines 29-30: 'Which tasks are done, Which task is in_progress or next up'. Line 64: 'Find where story-2 left off — locate the next incomplete task'."
+    },
+    {
+      "text": "References auto mode behavior (skip task and story checkpoints, pause at epic boundary)",
+      "passed": true,
+      "evidence": "Line 57: 'Proceeding in auto mode — will pause only at epic boundary.' Lines 67-69: 'At task boundaries: skip checkpoint (auto mode), At story boundaries: log and continue (auto mode), At epic boundary: PAUSE for human review'."
+    },
+    {
+      "text": "Resumes from the specific in-progress task",
+      "passed": true,
+      "evidence": "Line 54: 'Resuming from: [task title] ([task ID])'. Line 64: 'Find where story-2 left off — locate the next incomplete task'. Line 101: 'Find the next task in story-2 — correct'."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

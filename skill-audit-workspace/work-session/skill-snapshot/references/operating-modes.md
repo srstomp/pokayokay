@@ -1,0 +1,50 @@
+# Operating Modes
+
+## SUPERVISED Mode (Default)
+
+Human reviews after every task. Maximum control, slower pace.
+
+**Checkpoint behavior:**
+- Task complete → PAUSE
+- Story complete → PAUSE
+- Epic complete → PAUSE
+
+**Use when**: Starting new projects, unfamiliar domains, critical code.
+
+## SEMI-AUTO Mode
+
+Human reviews at story/epic boundaries. Good balance.
+
+**Checkpoint behavior:**
+- Task complete → Log and continue
+- Story complete → PAUSE
+- Epic complete → PAUSE
+
+**Use when**: Established patterns, routine implementation.
+
+## AUTO Mode
+
+Human reviews at epic boundaries only. Maximum speed.
+
+**Checkpoint behavior:**
+- Task complete → Skip
+- Story complete → Log and continue
+- Epic complete → PAUSE
+
+**Use when**: Well-defined specs, trusted patterns, time pressure.
+
+## UNATTENDED Mode
+
+No human checkpoints at all. For overnight/headless runs.
+
+**Checkpoint behavior:**
+- Task complete → Skip
+- Story complete → Skip
+- Epic complete → Skip
+
+**Use when**: Overnight batch runs, CI/CD pipelines, trusted epics.
+
+**Requirements:**
+- Must specify scope (`--epic`, `--story`, or `--all`)
+- For true unattended: `claude --headless --dangerously-skip-permissions`
+- Session chains automatically on context pressure

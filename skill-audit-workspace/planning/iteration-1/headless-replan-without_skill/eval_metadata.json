@@ -1,0 +1,1 @@
+{"eval_id": 3, "eval_name": "headless-replan", "prompt": "I want to do a headless planning session on the API migration PRD at docs/prds/api-v3-migration.md. Auto-decide on ambiguities, skip the review, just generate the full plan and task breakdown into ohno.", "assertions": []}

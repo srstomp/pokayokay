@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "prd-breakdown",
+  "prompt": "I have a PRD for a new multi-tenant billing system at docs/prds/billing-v2.md. It covers subscription management, metered billing, invoicing, and payment processing. Analyze it and create a full implementation plan with epics, stories, and tasks. I need dependency ordering and estimates.",
+  "assertions": [
+    {"text": "Reads and analyzes the PRD document"},
+    {"text": "Classifies features by priority (P0-P3)"},
+    {"text": "Creates epic/story/task hierarchy with estimates"},
+    {"text": "Assigns appropriate skills to features (api-design, database-design, etc.)"},
+    {"text": "Flags ambiguities or unclear requirements before planning"},
+    {"text": "Generates PROJECT.md or equivalent output"}
+  ]
+}

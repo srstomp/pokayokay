@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I need to figure out if WebSockets will work for our real-time collaboration feature. Can you investigate - prototype a basic implementation, test with 100 concurrent connections, and tell me if we should go with WebSockets or SSE? Give it about 2 hours.",
+    "should_trigger": true
+  },
+  {
+    "query": "we're considering migrating from MongoDB to PostgreSQL for our user data. before we commit, I want to understand the performance implications. can you do a quick investigation - test some representative queries with our data shape and see if postgres can handle it?",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm not sure if our current auth architecture can support the new multi-tenant requirements. Can you investigate whether we need to restructure the token system or if we can extend what we have? Time-box it to 3 hours.",
+    "should_trigger": true
+  },
+  {
+    "query": "can you evaluate whether Redis Streams would work for our event sourcing needs? I need to know throughput characteristics, persistence guarantees, and whether it can replace our current RabbitMQ setup. give me a GO/NO-GO decision",
+    "should_trigger": true
+  },
+  {
+    "query": "we want to add full-text search. elasticsearch vs postgres tsvector vs meilisearch - which one fits our use case? we have about 2M documents, need sub-100ms response times, and want typo tolerance. investigate and recommend.",
+    "should_trigger": true
+  },
+  {
+    "query": "the team is debating whether to use GraphQL or REST for our new mobile API. before we decide, I want to prototype both approaches for our product catalog endpoint and compare developer experience, performance, and caching behavior",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to assess whether our current PostgreSQL setup can handle the projected 10x increase in write volume when we launch the marketplace. run some load tests and tell me if we need to shard or if read replicas are enough",
+    "should_trigger": true
+  },
+  {
+    "query": "can you check if the Stripe Connect API supports our split payment requirements? we need to route payments to multiple vendors with variable platform fees. I need a feasibility assessment, not a full implementation",
+    "should_trigger": true
+  },
+  {
+    "query": "investigate whether we can use Cloudflare Workers instead of AWS Lambda for our edge functions. main concerns are cold start latency, KV store limitations, and whether the 10ms CPU time limit is enough for our image processing",
+    "should_trigger": true
+  },
+  {
+    "query": "we're seeing intermittent timeouts on our payment webhook handler. before I start refactoring, I want to understand if the issue is our code, the database, or network. can you do a focused investigation and identify the root cause?",
+    "should_trigger": true
+  },
+  {
+    "query": "I have a PRD for the new billing system. Can you break it down into epics, stories, and tasks with dependency ordering and estimates?",
+    "should_trigger": false
+  },
+  {
+    "query": "I've got tasks loaded in ohno and I want to start working through them in semi-auto mode. Let's get started.",
+    "should_trigger": false
+  },
+  {
+    "query": "there's a bug where users can't log in after password reset. the error is in AuthService.ts line 87. can you fix it?",
+    "should_trigger": false
+  },
+  {
+    "query": "design the REST API for our inventory management service with CRUD endpoints, pagination, and filtering",
+    "should_trigger": false
+  },
+  {
+    "query": "help me design the database schema for multi-tenant billing with row-level security on PostgreSQL",
+    "should_trigger": false
+  },
+  {
+    "query": "review the architecture of our auth module and suggest refactoring approaches for the scattered token refresh logic",
+    "should_trigger": false
+  },
+  {
+    "query": "set up comprehensive unit and integration tests for the payment processing module. our coverage is at 30%",
+    "should_trigger": false
+  },
+  {
+    "query": "we need to do a thorough technology evaluation of authentication providers - Auth0 vs Clerk vs Supabase Auth vs custom. This will take several days of research with a stakeholder report at the end",
+    "should_trigger": false
+  },
+  {
+    "query": "add structured logging to the order service using pino with correlation IDs and latency metrics",
+    "should_trigger": false
+  },
+  {
+    "query": "check our user registration endpoint for SQL injection and XSS vulnerabilities",
+    "should_trigger": false
+  }
+]

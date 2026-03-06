@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Reads and analyzes the PRD document",
+      "passed": true,
+      "evidence": "Step 2a explicitly describes reading and parsing the PRD with a three-pass strategy (structure recognition, information extraction, gap analysis). Extracts vision, users, features, constraints, dependencies, unknowns from docs/prds/billing-v2.md."
+    },
+    {
+      "text": "Classifies features by priority P0-P3",
+      "passed": true,
+      "evidence": "Feature Classification table uses P0-P2 with rationale for each: Subscription Management (P0, core capability), Metered Billing (P0, core value proposition), Reporting/Analytics (P2, nice to have). Billing Operations epic set to P1. Uses MoSCoW priority matrix from prd-analysis.md."
+    },
+    {
+      "text": "Creates epic/story/task hierarchy with estimates",
+      "passed": true,
+      "evidence": "Full hierarchy created: 6 epics, 10 stories, 14 tasks + 2 spikes. All tasks have hour estimates (2-8h range). Stories have Given/When/Then acceptance criteria. Epics have descriptions and priorities. MCP calls shown for create_epic, create_story, create_task, add_dependency."
+    },
+    {
+      "text": "Assigns appropriate skills to features",
+      "passed": true,
+      "evidence": "Skill routing table maps features to skills: database-design for schema/migrations, api-design for all API endpoints, security-audit implicit for tenant isolation. Each task in the JSON plan has a 'skill' field. Skill Assignments section in PROJECT.md summarizes routing."
+    },
+    {
+      "text": "Flags ambiguities or unclear requirements",
+      "passed": true,
+      "evidence": "Third Pass (Gap Analysis) identifies missing items: tax jurisdiction handling, dunning/retry policy details, revenue recognition requirements. Assumptions documented (single currency, Stripe, PostgreSQL). Open Questions Flagged section at end lists tax calculation, currency handling, accounting integration. Two spikes created for high-uncertainty items."
+    },
+    {
+      "text": "Generates PROJECT.md or equivalent output",
+      "passed": true,
+      "evidence": "Full .claude/PROJECT.md generated with project overview, status, metrics table (6 epics, 10 stories, 14 tasks, 2 spikes, ~78 hours), tech stack, feature overview table, skill assignments, critical path, current gaps, next actions, key files, and session log."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

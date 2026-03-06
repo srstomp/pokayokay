@@ -1,0 +1,12 @@
+{
+  "eval_id": 1, "eval_name": "test-design",
+  "prompt": "We're building a new payment processing service with Stripe integration. It has webhook handlers, idempotency logic, and retry mechanisms. Our test coverage is currently 0%. Help me design a comprehensive testing strategy.",
+  "assertions": [
+    {"text": "Applies the test pyramid framework (unit > integration > E2E proportions)"},
+    {"text": "Recommends mocking Stripe API calls (MSW or similar)"},
+    {"text": "Addresses webhook handler testing specifically"},
+    {"text": "Addresses idempotency testing specifically"},
+    {"text": "Suggests a test file organization structure"},
+    {"text": "Prioritizes which tests to write first (critical paths)"}
+  ]
+}

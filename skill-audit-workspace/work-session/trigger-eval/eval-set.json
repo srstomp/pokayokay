@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I've got about 12 tasks loaded in ohno from the user-management epic and I want to start working through them. semi-auto mode so I can review at story boundaries but don't need to approve every single task",
+    "should_trigger": true
+  },
+  {
+    "query": "hey im back from lunch. I was in the middle of working on story-8f2a (the payment webhooks story) when I had to step away. pick up where we left off, check the handoff notes",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to run through the remaining tasks tonight while I sleep. set it to unattended mode and work through everything in the notifications epic. use --all flag",
+    "should_trigger": true
+  },
+  {
+    "query": "start a supervised session on the dashboard feature - this is a sensitive area and I want to review every change before it gets committed",
+    "should_trigger": true
+  },
+  {
+    "query": "we've been going for a while on this epic. what's our progress? show me the kanban board and let's figure out what to tackle next in this session",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to work on the auth refactor but in auto mode - just pause me when we finish the whole epic, don't need to stop at every story boundary",
+    "should_trigger": true
+  },
+  {
+    "query": "continue the work session from yesterday. I think we got through 3 of the 7 stories in the API migration epic. the session context in ohno should have the details",
+    "should_trigger": true
+  },
+  {
+    "query": "ok let's get started on implementing the features from the PRD we planned last week. the tasks are already broken down in ohno, just need to start executing them one by one",
+    "should_trigger": true
+  },
+  {
+    "query": "I've got a few hours this afternoon to crank through the backlog. can you orchestrate working through the highest priority tasks? let me review at story boundaries",
+    "should_trigger": true
+  },
+  {
+    "query": "let's set up a work session for the new checkout flow feature. I want parallel execution with 3 agents working on independent tasks simultaneously",
+    "should_trigger": true
+  },
+  {
+    "query": "I have this PRD document for a new notifications system (it's in docs/prds/notifications-v2.md). Can you analyze it and break it down into epics, stories and tasks with estimates and dependencies?",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to investigate whether we can use server-sent events instead of WebSockets for our real-time dashboard updates. Give me about 2 hours to prototype both approaches and compare latency",
+    "should_trigger": false
+  },
+  {
+    "query": "there's a bug where the checkout page crashes when a user has more than 50 items in their cart. the error is a TypeError in CartSummary.tsx line 142. can you diagnose and fix it?",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to design the REST API for our new inventory management service. We need CRUD endpoints for products, categories, and suppliers with proper pagination and filtering",
+    "should_trigger": false
+  },
+  {
+    "query": "our test suite takes 8 minutes to run and we have no integration tests for the payment flow. help me design a testing strategy that covers the critical paths without slowing down CI",
+    "should_trigger": false
+  },
+  {
+    "query": "review the architecture of our auth module - I think the token refresh logic is scattered across 4 different files and the middleware chain is getting unwieldy. suggest how to refactor it",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to add structured logging to the order processing service using pino. we want request correlation IDs, error context, and latency metrics for each step in the pipeline",
+    "should_trigger": false
+  },
+  {
+    "query": "can you check our user registration endpoint for security issues? specifically worried about the password hashing (we're using bcrypt with cost factor 10) and the email verification token generation",
+    "should_trigger": false
+  },
+  {
+    "query": "help me design the database schema for our multi-tenant SaaS. each tenant needs isolated data, we're on PostgreSQL, and I'm thinking row-level security vs separate schemas",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to create comprehensive API documentation for the payments module. we have OpenAPI specs but they're outdated and there's no getting-started guide for third-party integrators",
+    "should_trigger": false
+  }
+]

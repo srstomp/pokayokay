@@ -1,0 +1,6 @@
+{
+  "eval_id": 3,
+  "eval_name": "overnight-unattended",
+  "prompt": "Run through all remaining tasks in the notifications epic overnight. Unattended mode, parallel with 3 agents. I'll review in the morning.",
+  "assertions": []
+}

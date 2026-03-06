@@ -1,0 +1,83 @@
+{
+  "expectations": [
+    {
+      "text": "Calls get_session_context() MCP tool to check for existing session state",
+      "passed": true,
+      "evidence": "Line 37: '**MCP call**: `mcp__ohno__get_session_context()`' — explicitly called during Phase 2 Session Initialization. Line 39 describes the return value: 'This returns previous session notes, current blockers, and any in-progress tasks.' Also listed in the MCP Tools summary table at line 529."
+    },
+    {
+      "text": "Calls get_next_task() to find the first available task",
+      "passed": true,
+      "evidence": "Line 68: '**MCP call**: `mcp__ohno__get_next_task()`' — called during Step 5 of session initialization. Line 70: 'ohno returns the highest-priority unblocked task.' Also called again at line 320 for task-002, showing correct loop behavior."
+    },
+    {
+      "text": "References semi-auto mode behavior (pause at story boundaries, skip task boundaries)",
+      "passed": true,
+      "evidence": "Line 306: 'Semi-auto behavior on task_complete: Log and continue (no pause).' Lines 369-412: Full story-complete PAUSE checkpoint with user options. Lines 495-503: Summary table explicitly showing Task complete = 'Log one-liner, continue automatically', Story complete = 'PAUSE -- wait for user input', Epic complete = 'PAUSE -- wait for user input'."
+    },
+    {
+      "text": "Mentions worktree setup or isolation for the task",
+      "passed": true,
+      "evidence": "Lines 120-156: Detailed worktree setup section including checking for existing story worktree, git worktree add command with story-based branch naming (story-001-user-registration), dependency installation, and announcement. Line 326: 'Same story (story-001) -- reuse existing worktree' for task-002. Lines 507-510: Worktree lifecycle summary covering story-scoped worktrees and in-place work for chore/docs."
+    },
+    {
+      "text": "Dispatches an implementer subagent for the first task",
+      "passed": true,
+      "evidence": "Lines 190-228: Full dispatch section titled 'Step 4: Dispatch Implementer Subagent' showing template variable assembly (TASK_ID, TASK_TITLE, etc.), Task tool dispatch with 'subagent_type: \"pokayokay:yokay-implementer\"', mode: 'bypassPermissions', and description of the implementer's TDD workflow (read codebase, write tests first, implement, self-review, commit)."
+    },
+    {
+      "text": "Describes the checkpoint behavior for story completion",
+      "passed": true,
+      "evidence": "Lines 367-412: Full 'Checkpoint: Story Boundary (PAUSE)' section. States 'Semi-auto mode pauses at story boundaries.' Presents detailed checkpoint UI with story summary, worktree disposition options (merge/PR/keep/discard), next story preview, and user action choices (Continue/Review/Modify/Switch/End). Also lines 433-455 describe epic-complete checkpoint behavior."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "claims": [
+    {
+      "claim": "The implementer prompt template exists at agents/templates/implementer-prompt.md with variables like {TASK_ID}, {RELEVANT_SKILL}, {WORKING_DIRECTORY}",
+      "verified": true,
+      "notes": "File exists at plugins/pokayokay/agents/templates/implementer-prompt.md. Variable names plausible per CLAUDE.md architecture description."
+    },
+    {
+      "claim": "api-design skill exists and would be routed to for an API endpoint task",
+      "verified": true,
+      "notes": "File exists at plugins/pokayokay/skills/api-design/SKILL.md. Routing logic is plausible given skill-routing architecture."
+    },
+    {
+      "claim": "Two-stage review uses yokay-spec-reviewer then yokay-quality-reviewer",
+      "verified": true,
+      "notes": "Both agent files exist. CLAUDE.md confirms: 'yokay-spec-reviewer - Adversarial spec compliance review' and 'yokay-quality-reviewer - Code quality review (runs after spec review passes)'. Memory confirms: 'Split yokay-task-reviewer back into adversarial spec compliance + code quality.'"
+    },
+    {
+      "claim": "yokay-browser-verifier is dispatched conditionally when UI files are changed",
+      "verified": true,
+      "notes": "Agent file exists. Response correctly skips it for API-only task-001 (line 249) and triggers it for form component task-002 (line 347)."
+    },
+    {
+      "claim": "Post-session hooks include sync.sh, session-summary.sh, and curate-memory.sh",
+      "verified": true,
+      "notes": "Both session-summary.sh and curate-memory.sh exist in hooks/actions/. CLAUDE.md confirms SessionEnd triggers sync and session-summary. Memory confirms curate-memory.sh enforces MEMORY.md budgets on SessionEnd."
+    },
+    {
+      "claim": "Story tasks reuse the same worktree for related changes",
+      "verified": true,
+      "notes": "CLAUDE.md states: 'Story tasks reuse the same worktree for related changes.' Response correctly shows task-002 and task-003 reusing the story-001 worktree."
+    },
+    {
+      "claim": "bypassPermissions mode is used for agent dispatch",
+      "verified": true,
+      "notes": "Memory documents this as a bug fix (v0.15.2): 'added permissionMode: bypassPermissions to agent frontmatter' and 'mode: \"bypassPermissions\"' in dispatch instructions."
+    },
+    {
+      "claim": "Semi-auto mode does not require scope validation (only auto/unattended do)",
+      "verified": "not_verified",
+      "notes": "Line 17 claims 'No scope validation required (semi-auto does not require scope -- that's only enforced for auto/unattended/--continue)'. This is plausible per Memory ('--all: scope required for chaining') but would need skill/command source to fully verify."
+    }
+  ],
+  "eval_feedback": "Excellent response. All 6 expectations are clearly met with explicit, detailed evidence. The response demonstrates deep understanding of the work-session skill by walking through the complete lifecycle: session init with get_session_context(), task acquisition with get_next_task(), worktree setup with story-scoped branching, implementer dispatch with template variables, semi-auto checkpoint behavior at task/story/epic boundaries, and post-session hooks. The response goes well beyond minimum expectations by covering skill routing, brainstorm gates, two-stage review, browser verification, auto-fix retry loops, worktree lifecycle management, and the full 9-task multi-story epic flow. All implicit claims verified against the actual codebase — referenced files (agents, templates, skills, hooks) all exist. The only minor note is that scope validation rules for semi-auto could not be fully verified without reading command source, but the claim is consistent with documented behavior."
+}

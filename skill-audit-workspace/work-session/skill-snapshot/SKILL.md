@@ -49,4 +49,3 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 | [error-recovery.md](references/error-recovery.md) | Build failures, blocked tasks |
 | [anti-patterns.md](references/anti-patterns.md) | Common mistakes and fixes |
 | [bug-fix-pipeline.md](references/bug-fix-pipeline.md) | Agent pipeline for `/fix --thorough` and `/hotfix` commands |
-| [pre-flight-checks.md](references/pre-flight-checks.md) | Checks run before unattended/headless sessions |

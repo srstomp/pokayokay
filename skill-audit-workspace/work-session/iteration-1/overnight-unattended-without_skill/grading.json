@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "References unattended mode (no pauses at any boundary)",
+      "passed": true,
+      "evidence": "Response explicitly states: 'Unattended mode: No pauses at task, story, or epic boundaries -- it will run straight through without waiting for human input.'"
+    },
+    {
+      "text": "Configures parallel execution with multiple agents",
+      "passed": true,
+      "evidence": "Uses '-n 3' flag in the command and explains: 'Dispatches up to 3 implementer subagents simultaneously for independent tasks.'"
+    },
+    {
+      "text": "Mentions or performs pre-flight checks before starting",
+      "passed": false,
+      "evidence": "No mention of pre-flight checks anywhere in the response. The response queries for epic/tasks (task discovery) but does not reference the pre-flight.sh hook, environment validation, git clean checks, disk space, or any other pre-flight validation. The response's own self-analysis confirms: 'Does not mention pre-flight checks at all.'"
+    },
+    {
+      "text": "Describes how parallel tasks avoid dependencies or conflicts",
+      "passed": true,
+      "evidence": "Response states: 'Tasks with dependency relationships (via ohno's blockedBy graph) will be serialized automatically -- only independent tasks run in parallel.' However, it omits worktree isolation as a mechanism for avoiding file-level conflicts between parallel agents."
+    },
+    {
+      "text": "Plans for session summary or handoff notes at the end",
+      "passed": true,
+      "evidence": "Response mentions reviewing 'Any session summary output generated at session end' and 'The ohno task activity log for each completed task' as morning review items. However, the description is superficial -- it does not describe the structured session-summary.sh hook output format (token costs, tasks completed, chain metadata) or explicit handoff notes."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 1,
+    "total": 5,
+    "pass_rate": 0.8
+  }
+}
