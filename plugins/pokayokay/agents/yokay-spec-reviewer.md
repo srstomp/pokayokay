@@ -27,6 +27,12 @@ For each criterion in the task spec:
 - Is it implemented correctly? (Does it do what the criterion says?)
 - Is there evidence? (Test, code, or configuration proving it works)
 
+**For each criterion, you MUST provide:**
+- The criterion text (copied from task)
+- A verdict: PASS, FAIL, or SKIP (SKIP only for SHOULD/COULD)
+- Evidence: specific file:line for both test AND implementation
+- PASS without file:line evidence = FAIL (you're trusting the implementer's word)
+
 ### 2. Missing Requirements
 
 - Are there requirements implied by the description but not in criteria?
@@ -54,17 +60,39 @@ git diff HEAD~1
 
 ## Output Format
 
+### Evidence Table (Required)
+
+For EVERY acceptance criterion in the task, produce an evidence row:
+
+```markdown
+## Spec Review: task-{id}
+
+| # | Priority | Type | Criterion | Verdict | Evidence |
+|---|----------|------|-----------|---------|----------|
+| 1 | MUST | functional | [criterion text] | PASS | test at file.test.ts:42, impl at file.ts:89 |
+| 2 | MUST | error | [criterion text] | FAIL | No test found. Implementation exists but untested. |
+| 3 | SHOULD | edge-case | [criterion text] | SKIP | Not implemented. Justification: "deferred to i18n story" |
+
+### Verdict: PASS / FAIL
+
+**Rules:**
+- MUST criterion with FAIL → overall FAIL
+- SHOULD criterion with SKIP but no justification → overall FAIL
+- COULD criteria don't affect verdict
+```
+
 ### PASS
 
 ```markdown
 ## Spec Review: PASS
 
-**Task**: {task_title}
+All MUST criteria met with evidence. No unjustified SHOULD skips.
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| [criterion 1] | Met | [file:line or test name] |
-| [criterion 2] | Met | [file:line or test name] |
+| # | Priority | Type | Criterion | Verdict | Evidence |
+|---|----------|------|-----------|---------|----------|
+| 1 | MUST | functional | Email validation rejects invalid formats | PASS | test: auth.test.ts:42, impl: auth.ts:15 |
+| 2 | MUST | error | Duplicate email returns 409 | PASS | test: auth.test.ts:67, impl: auth.ts:89 |
+| 3 | SHOULD | edge-case | Unicode in name fields | SKIP | Justified: "deferred to i18n story" |
 
 No missing requirements. No scope creep.
 ```
@@ -74,24 +102,22 @@ No missing requirements. No scope creep.
 ```markdown
 ## Spec Review: FAIL
 
-**Task**: {task_title}
+1 MUST criterion not met.
 
-### Issues
-
-| Issue | Type | Detail |
-|-------|------|--------|
-| [issue 1] | Missing requirement | [what's missing] |
-| [issue 2] | Scope creep | [what was added unnecessarily] |
+| # | Priority | Type | Criterion | Verdict | Evidence |
+|---|----------|------|-----------|---------|----------|
+| 1 | MUST | functional | Email validation rejects invalid formats | PASS | test: auth.test.ts:42 |
+| 2 | MUST | error | Duplicate email returns 409 | FAIL | No test exists. Handler returns 500 generic error. |
 
 ### Required Fixes
-1. [Specific fix needed]
-2. [Specific fix needed]
+1. Add test for duplicate email → 409 response
+2. Update handler to catch unique constraint violation and return 409
 ```
 
 ## Guidelines
 
 1. **Binary verdict**: PASS or FAIL only
-2. **Evidence-based**: Cite files, lines, and specific code
+2. **Evidence-based**: Every PASS needs file:line for BOTH test and implementation. No evidence = FAIL.
 3. **Don't assess quality**: That's the quality reviewer's job
 4. **Extra work = FAIL**: Scope creep is a spec compliance issue
 5. **Missing = FAIL**: Even if "close enough", missing is missing
