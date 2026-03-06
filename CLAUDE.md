@@ -51,7 +51,7 @@ Claude Code Hook Event
         │
         ├── SessionStart  → verify-clean.sh, pre-flight.sh (unattended), recover.sh (if crashed)
         ├── update_task_status(done) → sync.sh, commit.sh, detect-spike.sh
-        │   └── if story_completed → test.sh, audit-gate.sh
+        │   └── if story_completed → test.sh, story-integration.sh, audit-gate.sh
         │   └── if epic_completed → audit-gate.sh
         ├── update_task_status(in_progress) → check-blockers.sh, setup-worktree.sh
         ├── set_blocker → notification
@@ -70,12 +70,12 @@ The `/work`, `/fix`, and `/hotfix` commands use a coordinator pattern that dispa
 2. **yokay-browser-verifier** - Verifies UI changes in a real browser
 3. **yokay-explorer** - Fast codebase search (Haiku model, read-only)
 4. **yokay-fixer** - Auto-retry on test failures with targeted fixes
-5. **yokay-implementer** - Executes tasks with fresh context (TDD)
-6. **yokay-planner** - PRD analysis and structured plan generation
-7. **yokay-quality-reviewer** - Code quality review (runs after spec review passes)
+5. **yokay-implementer** - Executes tasks with AC-first TDD (tests from acceptance criteria, not implementation)
+6. **yokay-planner** - PRD analysis with structured acceptance criteria (MUST/SHOULD/COULD)
+7. **yokay-quality-reviewer** - Code quality review with automated checks (coverage, lint, test-AC mapping)
 8. **yokay-reviewer** - Code review and analysis (read-only)
 9. **yokay-security-scanner** - OWASP vulnerability scanning (read-only)
-10. **yokay-spec-reviewer** - Adversarial spec compliance review
+10. **yokay-spec-reviewer** - Checklist-based spec review with evidence table (file:line for each criterion)
 11. **yokay-spike-runner** - Time-boxed technical investigations
 12. **yokay-test-runner** - Test execution with concise output
 13. **yokay-auditor** - L0-L5 completeness scanning (read-only)
