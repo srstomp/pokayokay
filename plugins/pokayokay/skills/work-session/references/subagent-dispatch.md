@@ -314,10 +314,25 @@ plugins/pokayokay/agents/templates/implementer-prompt.md
 | `{TASK_ID}` | `task.id` | `task-abc123` |
 | `{TASK_TITLE}` | `task.title` | `Create grid component` |
 | `{TASK_DESCRIPTION}` | `task.description` | Full description text |
-| `{ACCEPTANCE_CRITERIA}` | `task.acceptance_criteria` or coordinator-defined | Bullet list |
+| `{ACCEPTANCE_CRITERIA}` | Structured AC from task description (see below) | MUST/SHOULD/COULD list |
 | `{CONTEXT}` | Built from multiple sources | Story + handoff + deps |
 | `{RELEVANT_SKILL}` | Routing decision | Skill name and guidance |
 | `{WORKING_DIRECTORY}` | Project root | `/path/to/project` |
+
+### Acceptance Criteria in Dispatch
+
+The planner produces structured AC in `[MUST/type] criterion` format within task
+descriptions. When filling `{ACCEPTANCE_CRITERIA}`:
+
+1. **Extract** the `## Acceptance Criteria` section from the ohno task description
+2. **Preserve** the MUST/SHOULD/COULD tags and type annotations — the implementer
+   uses these to drive AC-first TDD (failing tests for each MUST before coding)
+3. **If missing** (legacy tasks without structured AC), the coordinator should either:
+   - Generate basic MUST criteria from the description before dispatching
+   - Route the task through brainstorm gate to add AC first
+
+The spec reviewer will check each criterion with file:line evidence, so vague or
+untestable criteria will cause review failures. Better to refine AC upfront.
 
 ### Filling the Template
 
