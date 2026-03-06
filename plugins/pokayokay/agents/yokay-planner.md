@@ -131,7 +131,7 @@ Return a JSON plan wrapped in a markdown code block:
               "task_type": "feature",
               "estimate_hours": 4,
               "skill": "api-design",
-              "description": "Full task description with behavior, input/output contract, acceptance criteria checkboxes, connects-to, and patterns to follow",
+              "description": "Full task description with:\n1. Behavior\n2. Input/output contract\n3. Connects-to and patterns to follow\n\n## Acceptance Criteria\n- [ ] [MUST/functional] Specific testable condition\n- [ ] [MUST/error] Error condition with expected response\n- [ ] [SHOULD/edge-case] Edge case handling",
               "depends_on": ["other-task-title"]
             }
           ]
@@ -164,7 +164,7 @@ Return a JSON plan wrapped in a markdown code block:
 The implementer agent receives task descriptions as its ONLY context. Every task must include:
 1. **Behavior**: What the code should _do_
 2. **Input/output contract**: Endpoints, function signatures, data shapes
-3. **Acceptance criteria**: 3-5 checkboxes for self-verification
+3. **Acceptance criteria**: Structured MUST/SHOULD/COULD criteria with priority and type tags (see Acceptance Criteria Format above)
 4. **Connects To**: Dependencies and blockers with context
 5. **Patterns to Follow**: Where to look for conventions
 
@@ -176,6 +176,32 @@ GOOD: "POST /api/auth/register endpoint accepting {email, password, name}.
        Validate email format and uniqueness. Hash password with bcrypt (12 rounds).
        Return 201 with {id, email}. Return 409 for duplicate email."
 ```
+
+### Acceptance Criteria Format
+
+Every task MUST include structured acceptance criteria in this format:
+
+```
+## Acceptance Criteria
+- [ ] [MUST/functional] Specific testable condition
+- [ ] [MUST/error] Error handling condition
+- [ ] [SHOULD/edge-case] Edge case condition
+- [ ] [COULD/performance] Optional performance condition
+```
+
+**Priority tags:**
+- `MUST` — Required for task completion. Implementer writes a failing test for each before coding.
+- `SHOULD` — Expected. Can defer with documented justification.
+- `COULD` — Optional. Implement if time permits.
+
+**Type tags:** functional, error, edge-case, performance, security
+
+**Guidelines:**
+- 3-8 MUST criteria per task (fewer is better — each adds test + review cost)
+- 1-3 SHOULD criteria
+- 0-2 COULD criteria
+- Each criterion must be independently testable
+- Each criterion must be atomic (one condition per line)
 
 ## Constraints
 
