@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Reads and analyzes the PRD document",
+      "passed": false,
+      "evidence": "The response states Claude would attempt to read the PRD and fail ('This would fail (file doesn't exist)'), then work from user description instead. No structured PRD analysis is performed -- the response explicitly notes 'No Structured PRD Analysis Phase' as a deficiency. The plan is based on a conversational summary, not document analysis."
+    },
+    {
+      "text": "Classifies features by priority P0-P3",
+      "passed": false,
+      "evidence": "The response uses P0 and P1 labels loosely on epics but the self-critique section explicitly states: 'Claude assigned P0/P1 loosely. No P2/P3 items identified. No Out of Scope or Deferred sections.' The Quality Issues section confirms 'No Priority Classification Methodology -- Missing: MoSCoW matrix (P0-P3), per-feature priority rationale, explicit scope boundaries.'"
+    },
+    {
+      "text": "Creates epic/story/task hierarchy with estimates",
+      "passed": true,
+      "evidence": "Five epics with stories and tasks are created (Epic 1-5 with stories like 1.1, 1.2 and tasks with hour estimates). However, the self-critique notes task descriptions are 'Title + vague 1-liner' and estimates lack methodology. The hierarchy structure itself does exist."
+    },
+    {
+      "text": "Assigns appropriate skills to features",
+      "passed": false,
+      "evidence": "The Quality Issues section explicitly states: 'No Skill Routing -- Missing: No skill hints assigned to tasks. Skill does: Routes every task to a skill based on keyword matching. Impact: When the coordinator dispatches tasks, it won't know which skill to activate.'"
+    },
+    {
+      "text": "Flags ambiguities or unclear requirements",
+      "passed": false,
+      "evidence": "The Quality Issues section explicitly states: 'No Structured PRD Analysis Phase -- Missing: Gap analysis, ambiguity flagging, assumption documentation, stakeholder questions. Impact: Claude proceeds with assumptions it never surfaces. The user doesn't know what Claude guessed vs. what was specified.' No ambiguities are flagged in the plan itself."
+    },
+    {
+      "text": "Generates PROJECT.md or equivalent output",
+      "passed": false,
+      "evidence": "The Quality Issues section explicitly states: 'No .claude/ Output Artifacts -- Missing: No PROJECT.md, features.json, kanban.html, or tasks.db. Impact: No shared project context file, no machine-readable feature list, no visual kanban board.' The plan is free-form markdown only."
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 5,
+    "total": 6,
+    "pass_rate": 0.17
+  }
+}

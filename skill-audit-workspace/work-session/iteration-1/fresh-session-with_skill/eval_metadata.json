@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "fresh-session",
+  "prompt": "I've got the user-management epic loaded in ohno with 3 stories and about 9 tasks. I want to work through them in semi-auto mode. The project is a Next.js app at ~/Projects/acme/webapp. Let's get started.",
+  "assertions": [
+    {"text": "Calls get_session_context() MCP tool to check for existing session state"},
+    {"text": "Calls get_next_task() to find the first available task"},
+    {"text": "References semi-auto mode behavior (pause at story boundaries, skip task boundaries)"},
+    {"text": "Mentions worktree setup or isolation for the task"},
+    {"text": "Dispatches an implementer subagent for the first task"},
+    {"text": "Describes the checkpoint behavior for story completion"}
+  ]
+}

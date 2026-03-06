@@ -32,3 +32,4 @@ docs/
 
 # Git worktrees
 .worktrees/
+/docs/plans/

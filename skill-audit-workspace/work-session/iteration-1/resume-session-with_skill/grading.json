@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Calls get_session_context() to retrieve previous session state",
+      "passed": true,
+      "evidence": "Step 2 (lines 57-59) explicitly calls 'mcp__ohno__get_session_context()' and describes using it as 'the primary mechanism for understanding where the user left off' (line 61). The MCP calls summary table also lists it as call #2."
+    },
+    {
+      "text": "Looks for handoff notes or in-progress tasks from previous session",
+      "passed": true,
+      "evidence": "Step 3 (lines 86-101) calls get_tasks(status='in_progress') to find resumable tasks, get_task(task_id) for full details including WIP data, and get_task_handoff(task_id) for the previous implementer's handoff data (summary, files_changed, self-review findings). Lines 103-121 display the resume context including files modified, last commit, uncommitted changes, decisions made, and next step."
+    },
+    {
+      "text": "Does not re-execute already completed tasks",
+      "passed": true,
+      "evidence": "Session context (lines 75-76) identifies Story 1 as COMPLETE and Story 2 as partially done (3/6 tasks). The coordinator filters to in-progress tasks only (line 89). The implementer dispatch includes explicit instruction: 'Pick up from where the previous session left off. Do NOT redo work that was already committed. Start from the next step above.' (lines 176-177)."
+    },
+    {
+      "text": "References auto mode behavior (skip task and story checkpoints, pause at epic boundary)",
+      "passed": true,
+      "evidence": "Line 70-71 states checkpoint behavior: 'task complete -> skip, story complete -> log, epic complete -> PAUSE'. Step 9 (lines 232-234): 'In auto mode, task completion is handled with skip -- no pause, no log.' Step 11 (lines 268-269): 'In auto mode, story completion triggers log and continue.' Step 14 (lines 309-331): epic boundary triggers PAUSE with user options to continue, review, or end."
+    },
+    {
+      "text": "Resumes from the specific in-progress task",
+      "passed": true,
+      "evidence": "Step 3 identifies the specific in-progress task (task-xyz) via get_tasks and get_task calls (lines 86-95). Step 5 (lines 135-178) dispatches the implementer specifically for the resumed task with full WIP context appended, including phase, files modified, last commit, uncommitted changes, decisions made, test results, and next step. The implementer is told to 'Pick up from where the previous session left off.'"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

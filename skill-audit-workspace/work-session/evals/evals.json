@@ -1,0 +1,45 @@
+{
+  "skill_name": "work-session",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I've got the user-management epic loaded in ohno with 3 stories and about 9 tasks. I want to work through them in semi-auto mode. The project is a Next.js app at ~/Projects/acme/webapp. Let's get started.",
+      "expected_output": "Claude initializes ohno session, calls get_session_context and get_next_task, sets up worktree for first task, dispatches implementer agent, works through tasks with pauses at story boundaries.",
+      "files": [],
+      "expectations": [
+        "Calls get_session_context() MCP tool to check for existing session state",
+        "Calls get_next_task() to find the first available task",
+        "References semi-auto mode behavior (pause at story boundaries, skip task boundaries)",
+        "Mentions worktree setup or isolation for the task",
+        "Dispatches an implementer subagent for the first task",
+        "Describes the checkpoint behavior for story completion"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I was working on the payments epic yesterday and got through story-1 and half of story-2. The session context in ohno should have details. Continue where I left off in auto mode.",
+      "expected_output": "Claude calls get_session_context to find previous state, identifies the in-progress task, reads handoff notes, resumes execution without redoing completed work. Uses auto mode (pause only at epic boundary).",
+      "files": [],
+      "expectations": [
+        "Calls get_session_context() to retrieve previous session state",
+        "Looks for handoff notes or in-progress tasks from previous session",
+        "Does not re-execute already completed tasks",
+        "References auto mode behavior (skip task and story checkpoints, pause at epic boundary)",
+        "Resumes from the specific in-progress task"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run through all remaining tasks in the notifications epic overnight. Unattended mode, parallel with 3 agents. I'll review in the morning.",
+      "expected_output": "Claude configures unattended mode (never pauses), sets up parallel execution with 3 agents, verifies pre-flight checks, starts autonomous task execution.",
+      "files": [],
+      "expectations": [
+        "References unattended mode (no pauses at any boundary)",
+        "Configures parallel execution with multiple agents",
+        "Mentions or performs pre-flight checks before starting",
+        "Describes how parallel tasks avoid dependencies or conflicts",
+        "Plans for session summary or handoff notes at the end"
+      ]
+    }
+  ]
+}

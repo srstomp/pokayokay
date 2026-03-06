@@ -1,0 +1,11 @@
+{
+  "eval_id": 2, "eval_name": "coverage-gaps",
+  "prompt": "Our project has 45% line coverage but mostly happy-path tests. Help me audit coverage and identify critical gaps. Node.js REST API with Express, Prisma, PostgreSQL.",
+  "assertions": [
+    {"text": "Distinguishes between line coverage and branch coverage"},
+    {"text": "Identifies error handling paths as likely coverage gaps"},
+    {"text": "Suggests specific tools or commands for coverage analysis"},
+    {"text": "Prioritizes gaps by risk (financial, security, data integrity)"},
+    {"text": "Provides concrete test examples for identified gaps"}
+  ]
+}

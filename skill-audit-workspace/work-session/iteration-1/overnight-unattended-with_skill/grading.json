@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "References unattended mode (no pauses at any boundary)",
+      "passed": true,
+      "evidence": "Line 3: 'Mode: unattended (no human checkpoints)'. Lines 103-110 explicitly enumerate all boundary types (task, story, epic) as skipped: 'All checkpoints are skipped... No pauses. Work continues to next batch immediately.'"
+    },
+    {
+      "text": "Configures parallel execution with multiple agents",
+      "passed": true,
+      "evidence": "Line 4: 'Parallel: 3 (fixed)'. Line 45: '-n 3: Run 3 implementer agents in parallel (fixed count, not adaptive)'. Lines 76-77: '3 yokay-implementer agents are dispatched simultaneously via the Task tool'."
+    },
+    {
+      "text": "Mentions or performs pre-flight checks before starting",
+      "passed": true,
+      "evidence": "Lines 15-28: Detailed pre-flight checks table covering git clean, ohno responsive, tasks available, disk space, worktree locks, and chain state. Line 17: 'These checks run before any work begins to prevent a wasted overnight session'. Distinguishes blocking vs warning checks."
+    },
+    {
+      "text": "Describes how parallel tasks avoid dependencies or conflicts",
+      "passed": true,
+      "evidence": "Lines 113-117: 'The ohno blockedBy graph prevents unsafe parallelism: If Task B depends on Task A, B will not appear in a batch until A is marked done. Only independent tasks are dispatched concurrently.' Also lines 65-66: get_next_batch returns tasks 'with unmet dependencies excluded'."
+    },
+    {
+      "text": "Plans for session summary or handoff notes at the end",
+      "passed": true,
+      "evidence": "Lines 138-147: Session end includes 'session-summary hook runs with token cost tracking' and chain report containing 'Total sessions in chain, Tasks completed/failed/remaining, Total duration, Key decisions extracted from task handoffs'. Also line 126: WIP saved via update_task_wip() during chaining."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Calls get_session_context() MCP tool to check for existing session state",
+      "passed": true,
+      "evidence": "Lines 17-23: Step 1 explicitly calls mcp__ohno__get_session_context() with stated purpose 'Check for any previous session state, in-progress tasks, or blockers.'"
+    },
+    {
+      "text": "Calls get_next_task() to find the first available task",
+      "passed": true,
+      "evidence": "Lines 65-69: Step 5 calls mcp__ohno__get_next_task() to get the first task after session initialization."
+    },
+    {
+      "text": "References semi-auto mode behavior (pause at story boundaries, skip task boundaries)",
+      "passed": true,
+      "evidence": "Lines 7, 110-119: Describes semi-auto as 'pausing at story and epic boundaries so you can review, but continuing automatically between individual tasks.' Task boundaries get 'Task [title] complete. Moving to next task...' while story boundaries get a pause with summary and prompt."
+    },
+    {
+      "text": "Mentions worktree setup or isolation for the task",
+      "passed": false,
+      "evidence": "Lines 149: Response explicitly states 'No worktree management. Claude would not create isolated git worktrees for feature/bug tasks.' Worktrees are only mentioned as a gap that would be missing without the skill, not as something the baseline would actually do."
+    },
+    {
+      "text": "Dispatches an implementer subagent for the first task",
+      "passed": false,
+      "evidence": "Lines 88-89: Response explicitly states 'Without skill guidance, Claude would not dispatch a subagent. It would implement the task directly in the conversation context.' Also line 137: 'No subagent dispatch' listed as Critical Gap #1."
+    },
+    {
+      "text": "Describes the checkpoint behavior for story completion",
+      "passed": true,
+      "evidence": "Lines 114-119: Describes story completion checkpoint as pausing with summary ('Story [title] complete (X/X tasks done). Here's a summary of what was built') and asking user whether to continue, review, or stop."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 2,
+    "total": 6,
+    "pass_rate": 0.67
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Addresses database isolation",
+      "passed": true,
+      "evidence": "Phase 3 'Fix Database State Issues' with three strategies: Strategy A transaction rollback (fastest, with test API endpoints), Strategy B truncate between tests (with full SQL truncation example), Strategy C namespace isolation (tag data with unique test ID). Also covers 'Never Share Mutable Data Between Tests' with before/after patterns, and recommends Docker tmpfs for CI database speed."
+    },
+    {
+      "text": "Recommends replacing waits with waitFor",
+      "passed": true,
+      "evidence": "Phase 2.1 'Eliminate All Fixed Waits' explicitly shows WRONG (page.waitForTimeout(2000)) vs RIGHT (expect(page.getByText('Dashboard')).toBeVisible()). Phase 2.2 shows waiting for network responses before asserting. States: 'wait for conditions, never for time.'"
+    },
+    {
+      "text": "Suggests retry as diagnostic not fix",
+      "passed": false,
+      "evidence": "Response configures retries (retries: 2 in CI) but does not explicitly frame retry as a diagnostic tool rather than a fix. Phase 1.1 sets retries to enable trace capture. The action plan at the end uses retries as a standard CI practice without cautioning against using them as a solution. No clear statement that retries mask problems or should only be used diagnostically."
+    },
+    {
+      "text": "Addresses CI vs local differences",
+      "passed": true,
+      "evidence": "Phase 4 'Fix CI-Specific Environment Issues' covers: server readiness (Playwright webServer with health check and 120s timeout), blocking external network requests (page.route to abort non-localhost), reducing parallelism in CI (workers: 1), and disabling animations. Also recommends Docker tmpfs and CI shard strategy."
+    },
+    {
+      "text": "Provides systematic diagnosis approach",
+      "passed": true,
+      "evidence": "Phase 1 is entirely diagnosis: 1.1 Enable traces and artifacts with Playwright config + CI artifact upload, 1.2 Categorize failures into five buckets (Timing, Database state, Network, Animation/rendering, Resource contention) with symptoms and typical causes table. Action plan is numbered 1-8 in dependency order with time estimates."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 1,
+    "total": 5,
+    "pass_rate": 0.8
+  }
+}

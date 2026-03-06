@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Applies test pyramid framework",
+      "passed": true,
+      "evidence": "Explicit 'Test Pyramid for This Service' table with Unit ~65%, Integration ~25%, Contract, E2E ~10% layers and what each covers."
+    },
+    {
+      "text": "Recommends mocking Stripe API calls",
+      "passed": true,
+      "evidence": "Dedicated 'Mocking Strategy' section with MSW network-level mocking for Stripe API. Includes concrete MSW handler code for stripe.com/v1/payment_intents endpoints. States: 'Mock at the boundary, not inside your code.'"
+    },
+    {
+      "text": "Addresses webhook handler testing",
+      "passed": true,
+      "evidence": "Phase 3 is entirely dedicated to webhook handlers with integration tests covering signature verification (valid, invalid, missing, expired), payment_intent events (succeeded, failed, unknown), and webhook-level idempotency (duplicate event deduplication)."
+    },
+    {
+      "text": "Addresses idempotency testing",
+      "passed": true,
+      "evidence": "Phase 1 is dedicated to idempotency logic: state transitions (pending->completed, pending->failed, completed->no transition), key validation with boundary values, request deduplication decision table. E2E section also includes a double-charge prevention test."
+    },
+    {
+      "text": "Suggests test file organization",
+      "passed": true,
+      "evidence": "Full directory tree under 'Test Organization' section showing src/ co-located unit tests, tests/integration/, tests/contracts/, tests/e2e/, tests/helpers/factories/, tests/mocks/, and schemas/ directories."
+    },
+    {
+      "text": "Prioritizes which tests to write first",
+      "passed": true,
+      "evidence": "Explicit phased priority order: Phase 1 Idempotency Logic (highest risk), Phase 2 Retry Mechanism, Phase 3 Webhook Handlers, Phase 4 Payment Calculations, Phase 5 Contract Tests, Phase 6 E2E. States 'critical paths (auth, payments, data mutations) need 100% coverage' to justify ordering."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

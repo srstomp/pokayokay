@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Applies test pyramid framework",
+      "passed": true,
+      "evidence": "Explicit 'Test Pyramid Structure' with four layers: Unit (Layer 1, highest priority), Integration (Layer 2), Contract (Layer 3), E2E (Layer 4). Each layer includes estimated test counts and speed characteristics."
+    },
+    {
+      "text": "Recommends mocking Stripe API calls",
+      "passed": true,
+      "evidence": "Integration tests section states 'still mock external APIs.' Contract tests use 'recorded or fixture-based Stripe responses.' E2E section mentions Stripe CLI for forwarding test webhooks. Retry testing pattern shows mocking Stripe to fail then succeed. Overall approach clearly recommends mocking Stripe."
+    },
+    {
+      "text": "Addresses webhook handler testing",
+      "passed": true,
+      "evidence": "Unit tests cover webhook signature verification and webhook event parsing. Contract tests cover webhook payload contracts with real example payloads. Includes a webhook testing pattern with factory for properly-signed payloads. E2E covers webhook delivery end-to-end."
+    },
+    {
+      "text": "Addresses idempotency testing",
+      "passed": true,
+      "evidence": "Unit tests cover idempotency key generation/validation and deduplication logic with three explicit scenarios: first request, duplicate request (same key same params), conflicting request (same key different params returning 409). Integration tests cover storage round-trips and concurrent writes."
+    },
+    {
+      "text": "Suggests test file organization",
+      "passed": true,
+      "evidence": "Full directory tree under 'Test Organization' with tests/unit/ (per domain), tests/integration/, tests/contract/, tests/e2e/, tests/fixtures/stripe/ (with subdirectories for responses), and tests/helpers/."
+    },
+    {
+      "text": "Prioritizes which tests to write first",
+      "passed": true,
+      "evidence": "Explicit 'Prioritization Order (from 0% coverage)' with four phases: Phase 1 Foundation (days 1-3) covering webhook sig verification, idempotency, error classification, state machine. Phase 2 Reliability (days 4-6). Phase 3 Contracts (days 7-8). Phase 4 Confidence (day 9+). Justified by 'maximize risk reduction per hour invested.'"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

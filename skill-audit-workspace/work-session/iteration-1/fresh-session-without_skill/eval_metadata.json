@@ -1,0 +1,6 @@
+{
+  "eval_id": 1,
+  "eval_name": "fresh-session",
+  "prompt": "I've got the user-management epic loaded in ohno with 3 stories and about 9 tasks. I want to work through them in semi-auto mode. The project is a Next.js app at ~/Projects/acme/webapp. Let's get started.",
+  "assertions": []
+}

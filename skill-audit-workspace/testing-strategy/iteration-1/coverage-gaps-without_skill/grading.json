@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Distinguishes line vs branch coverage",
+      "passed": true,
+      "evidence": "Phase 1.1 titled 'Branch Coverage vs. Line Coverage' explicitly states: 'A large gap (e.g., 45% lines but 18% branches) confirms that tests are executing code paths without actually exercising conditional logic. Branch coverage is the real metric for error-handling adequacy.'"
+    },
+    {
+      "text": "Identifies error handling as likely gaps",
+      "passed": true,
+      "evidence": "Multiple gap categories focused on error handling: 2.2 Prisma Error Handling (P2002, P2003, P2025, connection failures, transaction rollback), 2.3 Auth rejection paths, 2.4 Global Error Handler and middleware, 2.7 External Service Failures. Summary estimates error handler coverage at ~10%, Prisma error path coverage at ~5%."
+    },
+    {
+      "text": "Suggests specific tools for coverage analysis",
+      "passed": true,
+      "evidence": "Recommends Jest --coverage with json-summary and lcov reporters, c8/vitest with --branches flag, HTML coverage report (coverage/lcov-report/index.html), and Stryker for mutation testing ('npx stryker init' / 'npx stryker run'). Also shows grep commands to find Prisma error handling patterns."
+    },
+    {
+      "text": "Prioritizes gaps by risk",
+      "passed": true,
+      "evidence": "Three-phase prioritized plan: Immediate Week 1 (auth audit on every endpoint, global error handler, validation tests -- labeled 'Highest Impact'), Short-Term Weeks 2-3 (input validation, 404 tests, global error handler), Medium-Term Weeks 4-6 (transaction failures, external service mocks, pagination edge cases). Each gap category also has explicit priority labels (CRITICAL, HIGH, MEDIUM-HIGH, MEDIUM)."
+    },
+    {
+      "text": "Provides concrete test examples",
+      "passed": true,
+      "evidence": "Code examples throughout: input validation (missing fields, empty string, malformed JSON), Prisma errors (duplicate email 409, FK constraint 409, not-found 404), auth tests (no token 401, non-admin 403, expired token 401), global error handling (404 for undefined routes, no stack traces), and a meta-test pattern that iterates over all registered routes to verify auth."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

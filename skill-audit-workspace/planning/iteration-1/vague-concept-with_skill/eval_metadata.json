@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "vague-concept",
+  "prompt": "I've got this concept doc from the founder about adding a marketplace to our platform. It's pretty high-level and vague - just says 'vendors should be able to list products, buyers can browse and purchase, we need reviews and ratings.' Can you analyze it, flag what's missing, and create a structured plan?",
+  "assertions": [
+    {"text": "Identifies the input as a vague/high-level concept requiring clarification"},
+    {"text": "Flags specific missing requirements (pricing, payments, vendor verification, etc.)"},
+    {"text": "Either asks clarifying questions or documents assumptions explicitly"},
+    {"text": "Still produces a structured breakdown despite ambiguity"},
+    {"text": "Marks uncertain areas or assumptions in the plan"}
+  ]
+}

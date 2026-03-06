@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I have a PRD for a new multi-tenant billing system (it's at docs/prds/billing-v2.md). Can you analyze it and create an implementation plan with epics, stories, and tasks? I need estimates and dependency ordering.",
+    "should_trigger": true
+  },
+  {
+    "query": "we just got the product brief for the notifications overhaul from the PM. its in google docs but I copied it to docs/notifications-brief.md. need to turn it into something actionable - tasks, priorities, the whole breakdown",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to plan out the implementation for our new search feature. We need elasticsearch integration, a search API, and frontend components. Can you break this down into manageable tasks with the right ordering?",
+    "should_trigger": true
+  },
+  {
+    "query": "take this feature spec and create a PROJECT.md with the full epic/story/task hierarchy. I want to see what skills each feature needs and get the kanban board set up in ohno",
+    "should_trigger": true
+  },
+  {
+    "query": "hey I've got this concept doc from the founder about adding a marketplace to our platform. It's pretty high-level and vague in places. Can you analyze it, flag the ambiguities, and create a structured plan?",
+    "should_trigger": true
+  },
+  {
+    "query": "need to break down the payments integration project. we're adding Stripe for subscriptions, metered billing, and invoicing. probably 3-4 epics worth of work. create the task hierarchy with estimates",
+    "should_trigger": true
+  },
+  {
+    "query": "we have an existing plan in ohno but the scope changed significantly after the stakeholder meeting. the original PRD is at docs/prds/dashboard-v3.md and the new requirements are in docs/prds/dashboard-v3-revised.md. need to re-plan",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to do a headless planning session on the API migration PRD. auto-decide on ambiguities, skip the review, just generate the full plan and task breakdown into ohno",
+    "should_trigger": true
+  },
+  {
+    "query": "can you review the plan we created last week for the auth refactor? walk me through the decisions that were made and let me adjust priorities and dependencies",
+    "should_trigger": true
+  },
+  {
+    "query": "I've got a rough feature list for our MVP - user registration, profile management, team invites, and role-based permissions. Can you turn this into a proper implementation plan with the right build order?",
+    "should_trigger": true
+  },
+  {
+    "query": "I've got the tasks already planned in ohno and I want to start working through them in semi-auto mode. The project is a Next.js app. Let's get started.",
+    "should_trigger": false
+  },
+  {
+    "query": "there's a bug where the checkout page crashes when a user has more than 50 items in their cart. the error is a TypeError in CartSummary.tsx line 142",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to investigate whether we should use PostgreSQL row-level security or application-level tenant isolation. Give me about 2 hours to prototype both and compare",
+    "should_trigger": false
+  },
+  {
+    "query": "design the REST API endpoints for our inventory management service. I need CRUD operations for products, categories, and suppliers with pagination",
+    "should_trigger": false
+  },
+  {
+    "query": "our test coverage is at 30% and we have no integration tests. help me design a testing strategy that covers the critical payment flows",
+    "should_trigger": false
+  },
+  {
+    "query": "review the architecture of our monolith - I think we need to extract the billing module into a separate service. map the dependencies and suggest a migration path",
+    "should_trigger": false
+  },
+  {
+    "query": "we already have tasks in ohno and I need to revise the plan. story-3 turned out to be way bigger than estimated and we need to split it. also story-5 depends on story-3 now",
+    "should_trigger": false
+  },
+  {
+    "query": "help me design the database schema for the multi-tenant billing system. each tenant needs isolated billing data and we need to support metered usage tracking",
+    "should_trigger": false
+  },
+  {
+    "query": "set up GitHub Actions CI/CD for this project. we need build, test, and deploy stages with staging and production environments",
+    "should_trigger": false
+  },
+  {
+    "query": "check this authentication implementation for security vulnerabilities. I'm worried about the JWT token handling and the password reset flow",
+    "should_trigger": false
+  }
+]

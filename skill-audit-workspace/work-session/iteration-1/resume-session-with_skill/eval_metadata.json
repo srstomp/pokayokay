@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "resume-session",
+  "prompt": "I was working on the payments epic yesterday and got through story-1 and half of story-2. The session context in ohno should have details. Continue where I left off in auto mode.",
+  "assertions": [
+    {"text": "Calls get_session_context() to retrieve previous session state"},
+    {"text": "Looks for handoff notes or in-progress tasks from previous session"},
+    {"text": "Does not re-execute already completed tasks"},
+    {"text": "References auto mode behavior (skip task and story checkpoints, pause at epic boundary)"},
+    {"text": "Resumes from the specific in-progress task"}
+  ]
+}

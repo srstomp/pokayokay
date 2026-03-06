@@ -1,0 +1,45 @@
+{
+  "skill_name": "planning",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a PRD for a new multi-tenant billing system at docs/prds/billing-v2.md. It covers subscription management, metered billing, invoicing, and payment processing. Analyze it and create a full implementation plan with epics, stories, and tasks. I need dependency ordering and estimates.",
+      "expected_output": "Claude reads the PRD, extracts features, classifies priorities, breaks into epic/story/task hierarchy with estimates, assigns skills, generates PROJECT.md and creates tasks in ohno.",
+      "files": [],
+      "expectations": [
+        "Reads and analyzes the PRD document",
+        "Classifies features by priority (P0-P3)",
+        "Creates epic/story/task hierarchy with estimates",
+        "Assigns appropriate skills to features (api-design, database-design, etc.)",
+        "Flags ambiguities or unclear requirements before planning",
+        "Generates PROJECT.md or equivalent output"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I've got this concept doc from the founder about adding a marketplace to our platform. It's pretty high-level and vague - just says 'vendors should be able to list products, buyers can browse and purchase, we need reviews and ratings.' Can you analyze it, flag what's missing, and create a structured plan?",
+      "expected_output": "Claude identifies the vague requirements, flags specific ambiguities (pricing model? vendor onboarding? payment split?), asks clarifying questions or makes noted assumptions, then produces a structured plan.",
+      "files": [],
+      "expectations": [
+        "Identifies the input as a vague/high-level concept requiring clarification",
+        "Flags specific missing requirements (pricing, payments, vendor verification, etc.)",
+        "Either asks clarifying questions or documents assumptions explicitly",
+        "Still produces a structured breakdown despite ambiguity",
+        "Marks uncertain areas or assumptions in the plan"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to do a headless planning session on the API migration PRD at docs/prds/api-v3-migration.md. Auto-decide on ambiguities, skip the review, just generate the full plan and task breakdown into ohno.",
+      "expected_output": "Claude runs in headless mode: auto-decides ambiguities with logging, dispatches yokay-planner, generates full plan without interactive review, creates all tasks in ohno.",
+      "files": [],
+      "expectations": [
+        "Recognizes headless mode request (auto-decide, no interactive review)",
+        "Documents or logs auto-decisions on ambiguities rather than asking",
+        "Dispatches yokay-planner agent or follows planner workflow",
+        "Creates tasks in ohno programmatically",
+        "Skips the interactive plan review session"
+      ]
+    }
+  ]
+}
