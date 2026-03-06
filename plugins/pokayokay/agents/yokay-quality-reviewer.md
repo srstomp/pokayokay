@@ -50,6 +50,38 @@ git diff HEAD~1
 # Look at similar files to verify convention compliance
 ```
 
+## Automated Checks (Run Before Code Review)
+
+Before reading the code, run these checks. Note results in your output.
+
+### 1. Coverage Delta
+
+```bash
+# Get changed source files (exclude tests)
+CHANGED=$(git diff HEAD~1 --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx|py)$' | grep -v '\.test\.\|\.spec\.')
+
+# Run tests with coverage (adapt to project)
+npm test -- --coverage --changedSince=HEAD~1 2>/dev/null || npx vitest run --coverage 2>/dev/null
+```
+
+If branch coverage on any touched source file is below 80%, note as Warning.
+
+### 2. Lint and Type Check
+
+```bash
+# Lint changed files
+npx eslint $(git diff HEAD~1 --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx)$') 2>/dev/null
+
+# Type check
+npx tsc --noEmit 2>/dev/null
+```
+
+New lint warnings or type errors in changed files = Warning.
+
+### 3. Test-AC Mapping
+
+Read the task's acceptance criteria. For each MUST criterion, verify a test exists with a name or comment referencing that criterion. Missing mappings = Warning.
+
 ## Output Format
 
 ### PASS
@@ -63,6 +95,7 @@ Code is well-structured, tested, and follows project conventions.
 
 | Aspect | Status | Notes |
 |--------|--------|-------|
+| Automated checks | Pass | [coverage %, lint warnings, AC mapping] |
 | Structure | Pass | [brief note] |
 | Tests | Pass | [brief note] |
 | Edge cases | Pass | [brief note] |
