@@ -2,7 +2,9 @@
 # Graduate recurring failure patterns to .claude/rules/ files
 # Called by: bridge.py when failure count >= threshold
 # Environment: CLAUDE_PROJECT_DIR, CATEGORY, PATTERN_DESCRIPTION, AFFECTED_PATHS, FAILURE_COUNT
-# Output: Creates/updates .claude/rules/pokayokay/<category>.md
+#              AGENT_NAME (optional) - target agent for agent-specific rules
+#              ROOT_CAUSE (optional) - vague-criterion|missing-test|shallow-review|missing-edge-case
+# Output: Creates/updates .claude/rules/pokayokay/<category>.md (or <agent>-<category>.md)
 
 set -e
 
@@ -11,9 +13,12 @@ CATEGORY="${CATEGORY:-}"
 PATTERN="${PATTERN_DESCRIPTION:-}"
 PATHS="${AFFECTED_PATHS:-}"
 COUNT="${FAILURE_COUNT:-0}"
+AGENT="${AGENT_NAME:-}"
+ROOT_CAUSE="${ROOT_CAUSE:-}"
 
-# Sanitize category to prevent path traversal
+# Sanitize inputs to prevent path traversal
 CATEGORY=$(basename "$CATEGORY" | sed 's/[^a-zA-Z0-9_-]//g')
+AGENT=$(echo "$AGENT" | sed 's/[^a-zA-Z0-9_-]//g')
 if [ -z "$CATEGORY" ]; then
   exit 0
 fi
@@ -23,7 +28,13 @@ if [ -z "$PATTERN" ]; then
 fi
 
 # Convert category to filename (missing_tests -> missing-tests)
-FILENAME=$(echo "$CATEGORY" | tr '_' '-')
+# If agent specified, prefix filename for agent-targeted rules
+BASE_CATEGORY=$(echo "$CATEGORY" | tr '_' '-')
+if [ -n "$AGENT" ]; then
+  FILENAME="${AGENT}-${BASE_CATEGORY}"
+else
+  FILENAME="$BASE_CATEGORY"
+fi
 
 # Ensure rules directory exists
 RULES_DIR="$PROJECT_DIR/.claude/rules/pokayokay"
@@ -39,7 +50,10 @@ if [ -f "$RULE_FILE" ]; then
     exit 0
   fi
   echo "" >> "$RULE_FILE"
-  echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)" >> "$RULE_FILE"
+  ROOT_SUFFIX=""
+  [ -n "$ROOT_CAUSE" ] && ROOT_SUFFIX=" [root: $ROOT_CAUSE]"
+  [ -n "$AGENT" ] && ROOT_SUFFIX="${ROOT_SUFFIX} [agent: $AGENT]"
+  echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)${ROOT_SUFFIX}" >> "$RULE_FILE"
   echo "Graduated pattern to $FILENAME.md"
 else
   # Create new rule file
@@ -56,7 +70,10 @@ else
       echo ""
       echo "Patterns detected from recurring review failures (auto-graduated by pokayokay)."
       echo ""
-      echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)"
+      ROOT_SUFFIX=""
+      [ -n "$ROOT_CAUSE" ] && ROOT_SUFFIX=" [root: $ROOT_CAUSE]"
+      [ -n "$AGENT" ] && ROOT_SUFFIX="${ROOT_SUFFIX} [agent: $AGENT]"
+      echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)${ROOT_SUFFIX}"
     } > "$RULE_FILE"
   else
     {
@@ -64,7 +81,10 @@ else
       echo ""
       echo "Patterns detected from recurring review failures (auto-graduated by pokayokay)."
       echo ""
-      echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)"
+      ROOT_SUFFIX=""
+      [ -n "$ROOT_CAUSE" ] && ROOT_SUFFIX=" [root: $ROOT_CAUSE]"
+      [ -n "$AGENT" ] && ROOT_SUFFIX="${ROOT_SUFFIX} [agent: $AGENT]"
+      echo "- $PATTERN (seen ${COUNT}x, recorded $DATE)${ROOT_SUFFIX}"
     } > "$RULE_FILE"
   fi
   echo "Graduated pattern to $FILENAME.md"
