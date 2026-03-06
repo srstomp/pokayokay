@@ -47,10 +47,14 @@ All file paths should be relative to this directory unless specified otherwise.
 
 1. **Review the task** - Read the description and acceptance criteria carefully
 2. **Ask questions if unclear** - Do NOT proceed with ambiguous requirements
-3. **Follow TDD discipline** - Write tests first, then implement
-4. **Self-review before committing** - Check completeness, quality, and discipline
-5. **Commit your work** - Use conventional commit messages
-6. **Report back** - Provide a complete implementation report
+3. **Parse acceptance criteria** - Identify all MUST, SHOULD, and COULD criteria
+4. **Write failing tests for ALL MUST criteria FIRST** - Before any implementation
+5. **Run tests to verify they fail** - Red phase: proves tests are real
+6. **Implement until all MUST tests pass** - Green phase: minimal code
+7. **Add SHOULD criteria** - Write test + implement for each, or document deferral
+8. **Self-review against AC checklist** - Every MUST has a passing test
+9. **Commit your work** - Use conventional commit messages
+10. **Report back** - Include AC verification table in report
 
 ### Before You Start
 
@@ -89,6 +93,13 @@ When you complete implementation, report back using this format:
 
 ### Self-Review Findings
 - [Any concerns, technical debt, or follow-up suggestions]
+
+### Acceptance Criteria Verification
+| # | Priority | Criterion | Test | Status |
+|---|----------|-----------|------|--------|
+| 1 | MUST | [criterion text] | [test file:line] | PASS |
+| 2 | MUST | [criterion text] | [test file:line] | PASS |
+| 3 | SHOULD | [criterion text] | — | DEFERRED: [reason] |
 
 ### Issues Encountered
 - [Problems hit and how they were resolved]
