@@ -1,0 +1,432 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(pokayokay work --help:*)",
+      "Bash(pokayokay kanban --help:*)",
+      "Bash(pokayokay status:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(npx @stevestomp/ohno-cli create \"Add MCP configuration for ohno integration\" --priority medium)",
+      "Bash(npx @stevestomp/ohno-cli:*)",
+      "Bash(cd *&&*npx @stevestomp/ohno-cli:*)",
+      "Bash(cd *&&*TASK_ID=*ohno-cli*:*)",
+      "WebSearch",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(chmod:*)",
+      "Bash(git -C /Users/sis4m4/Projects/stevestomp/pokayokay status --short)",
+      "Bash(for f in /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/yokay/commands/*.md)",
+      "Bash(do)",
+      "Bash(if ! grep -q \"^skill:\" \"$f\")",
+      "Bash(then)",
+      "Bash(basename:*)",
+      "Bash(fi)",
+      "Bash(done)",
+      "mcp__plugin_pokayokay_ohno__create_task",
+      "Bash(git pull:*)",
+      "Bash(git push)",
+      "mcp__plugin_pokayokay_ohno__get_session_context",
+      "mcp__plugin_pokayokay_ohno__get_next_task",
+      "mcp__plugin_pokayokay_ohno__update_task_status",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add auto-task creation for audit commands with post-command hooks\n\nAudit commands now automatically create ohno tasks for findings:\n- /security: Creates bug tasks for Critical/High/Medium findings\n- /a11y: Creates bug tasks for WCAG A/AA violations\n- /test --audit: Creates test tasks for coverage gaps\n- /observe --audit: Creates chore tasks for observability gaps\n- /arch --audit: Creates chore tasks for architectural issues\n\nAdded post-command hooks to verify task creation:\n- New verify-tasks.sh script checks for expected task prefixes\n- bridge.py extended to handle Skill tool PostToolUse events\n- Warns if audit completes without creating tasks\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(claude plugin validate:*)",
+      "mcp__ohno__create_task",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: add superpowers architecture adoption design\n\nDesign document for adopting Superpowers patterns into pokayokay:\n- Subagent execution per task \\(fresh context\\)\n- Two-stage review \\(spec compliance + code quality\\)\n- Conditional brainstorm gate for ambiguous tasks\n- Pressure testing framework\n\nPhases tracked in ohno for visibility.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(agents\\): add implementer prompt template\n\n- Create templates directory for agent prompts\n- Add implementer-prompt.md with placeholders for coordinator dispatch\n- Include: TASK_ID, TASK_TITLE, TASK_DESCRIPTION, ACCEPTANCE_CRITERIA,\n  CONTEXT, RELEVANT_SKILL, WORKING_DIRECTORY\n- Template provides structured format for task handoff to implementer\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit --amend -m \"$\\(cat <<''EOF''\nfeat\\(commands\\): add subagent dispatch to work loop\n\n- Add Step 3: Dispatch Implementer Subagent \\(after skill routing\\)\n- Reorder flow: Understand → Route to Skill → Dispatch → Complete\n- Add note about Phase 2 review \\(coming soon\\)\n- Document why subagent pattern is used\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(xxd:*)",
+      "mcp__ohno__get_task",
+      "mcp__ohno__update_task_status",
+      "mcp__ohno__add_task_activity",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Bash(npm test)",
+      "Skill(superpowers:brainstorm)",
+      "Bash(git worktree:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Skill(superpowers:execute-plan)",
+      "Bash(git status:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(grep:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/tests/audit-gate-security.test.sh)",
+      "Bash(BOUNDARY_TYPE=story /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/audit-gate.sh:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/tests/audit-gate-integration.test.sh)",
+      "Bash(bash:*)",
+      "Bash(sqlite3:*)",
+      "mcp__ohno__get_epic",
+      "mcp__ohno__create_epic",
+      "mcp__ohno__list_stories",
+      "Bash(npm view:*)",
+      "Bash(npx @stevestomp/ohno-mcp@latest:*)",
+      "Bash(npm pack:*)",
+      "Bash(tar:*)",
+      "Bash(OHNO_DB_PATH=~/Projects/plinkr/ffc/.ohno/tasks.db node -e \"\nconst { TaskDatabase } = require\\(''@stevestomp/ohno-core''\\);\n\\(async \\(\\) => {\n  const db = await TaskDatabase.open\\(process.env.OHNO_DB_PATH\\);\n  console.log\\(''TaskDatabase methods:'', Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(db\\)\\).filter\\(m => m.includes\\(''Epic''\\) || m.includes\\(''Story''\\)\\)\\);\n  db.close\\(\\);\n}\\)\\(\\);\n\")",
+      "Bash(npm init -y)",
+      "Bash(npm install:*)",
+      "Bash(node --input-type=module -e:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(OHNO_DB_PATH=/Users/sis4m4/Projects/plinkr/ffc/.ohno/tasks.db echo:*)",
+      "Bash(export OHNO_DB_PATH=/Users/sis4m4/Projects/plinkr/ffc/.ohno/tasks.db:*)",
+      "mcp__ohno__get_epics",
+      "Bash(gh issue create:*)",
+      "Bash(find:*)",
+      "mcp__ohno__get_project_status",
+      "Bash(npx ohno --help:*)",
+      "Bash(TASK_ID=\"test-123\" TASK_TITLE=\"Test task\" TASK_TYPE=\"chore\" STORY_ID=\"\" /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/validate-task-linkage.sh:*)",
+      "Bash(TASK_ID=\"test-123\" TASK_TITLE=\"Test task\" TASK_TYPE=\"feature\" STORY_ID=\"story-2639e3ff\" /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/validate-task-linkage.sh:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm link:*)",
+      "Bash(git checkout:*)",
+      "mcp__ohno__create_story",
+      "mcp__ohno__add_dependency",
+      "mcp__ohno__get_next_task",
+      "mcp__ohno__get_tasks",
+      "mcp__ohno__get_session_context",
+      "mcp__ohno__get_story",
+      "mcp__ohno__set_blocker",
+      "Bash(tree:*)",
+      "Bash(python3:*)",
+      "Bash(ruby -e:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/examples/validate-template.test.sh)",
+      "Bash(command -v:*)",
+      "mcp__ohno__set_handoff_notes",
+      "Bash(for file in WT-00*.yaml)",
+      "Bash(do echo \"Validating $file...\")",
+      "Bash(for dir in /Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/failures/*/)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(gofmt:*)",
+      "Bash(go vet:*)",
+      "Bash(go tool cover:*)",
+      "mcp__ohno__resolve_blocker",
+      "Bash(./bin/yokay-evals grade-skills:*)",
+      "Bash(./bin/yokay-evals)",
+      "Bash(go fmt:*)",
+      "Bash(go doc:*)",
+      "Bash(staticcheck:*)",
+      "Bash(go run:*)",
+      "Bash(git push:*)",
+      "Bash(./bin/yokay-evals meta:*)",
+      "Bash(./bin/yokay-evals:*)",
+      "Bash(go get:*)",
+      "Bash(if [ -f meta/agents/yokay-brainstormer/eval.yaml ])",
+      "Bash(then echo \"yokay-brainstormer eval exists\")",
+      "Bash(else echo \"No eval found\")",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== Run $i ===\")",
+      "Bash(./yokay-evals/bin/yokay-evals --help)",
+      "Bash(./yokay-evals/bin/yokay-evals:*)",
+      "Bash(head:*)",
+      "Bash(go list:*)",
+      "Bash(make build:*)",
+      "Bash(/tmp/yokay-evals eval:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/cmd/yokay-evals/yokay-evals-debug report:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/cmd/yokay-evals/yokay-evals-debug eval:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/cmd/yokay-evals/yokay-evals-debug:*)",
+      "mcp__ohno__update_task",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/test_summary_command.sh)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/test_summary_functional.sh)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/test_summary_integration.sh)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/bin/yokay-evals report:*)",
+      "Bash(BOUNDARY_TYPE=story ./plugins/pokayokay/hooks/actions/eval-gate.sh:*)",
+      "Bash(BOUNDARY_TYPE=epic ./plugins/pokayokay/hooks/actions/eval-gate.sh:*)",
+      "Bash(BOUNDARY_TYPE=story bash -c 'YOKAY_EVALS_BIN=\"\"/nonexistent/path\"\" plugins/pokayokay/hooks/actions/eval-gate.sh')",
+      "Bash(BOUNDARY_TYPE=story /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/eval-gate.sh:*)",
+      "Bash({)",
+      "Bash(\"hook_event_name\": \"PostToolUse\",)",
+      "Bash(\"tool_name\": \"mcp__ohno__update_task_status\",)",
+      "Bash(\"tool_input\": {)",
+      "Bash(\"task_id\": \"test-123\",)",
+      "Bash(\"status\": \"done\",)",
+      "Bash(\"title\": \"Test task\",)",
+      "Bash(\"type\": \"feature\",)",
+      "Bash(\"notes\": \"Test notes\")",
+      "Bash(},)",
+      "Bash(\"tool_response\": {)",
+      "Bash(\"task\": {)",
+      "Bash(\"type\": \"feature\")",
+      "Bash(\"boundaries\": {)",
+      "Bash(\"story_completed\": true,)",
+      "Bash(\"epic_completed\": false,)",
+      "Bash(\"story_id\": \"story-456\",)",
+      "Bash(\"epic_id\": null)",
+      "Bash(})",
+      "Bash(EOF)",
+      "Bash(\"task_id\": \"test-456\",)",
+      "Bash(\"title\": \"Test epic task\",)",
+      "Bash(\"notes\": \"Test epic notes\")",
+      "Bash(\"story_completed\": false,)",
+      "Bash(\"epic_completed\": true,)",
+      "Bash(\"story_id\": \"story-789\",)",
+      "Bash(\"epic_id\": \"epic-123\")",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/bin/yokay-evals meta:*)",
+      "Bash(echo:*)",
+      "Bash(BOUNDARY_TYPE=epic /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/post-review-consistency.sh:*)",
+      "Bash(BOUNDARY_TYPE=session /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/post-review-consistency.sh:*)",
+      "Bash(BOUNDARY_TYPE=story /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/post-review-consistency.sh:*)",
+      "Bash(BOUNDARY_TYPE=story plugins/pokayokay/hooks/actions/post-review-consistency.sh:*)",
+      "Bash(EXIT_CODE=$?)",
+      "Bash(exit $EXIT_CODE)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/test-review-consistency.sh)",
+      "Bash(BOUNDARY_TYPE=test /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/post-review-consistency.sh:*)",
+      "Bash(test:*)",
+      "Bash(shellcheck:*)",
+      "Bash(__NEW_LINE_ac4644e3fefcced6__ bash -n plugins/pokayokay/hooks/actions/post-review-consistency.sh)",
+      "Bash(file:*)",
+      "Bash(git reset:*)",
+      "Bash(xargs cat:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/yokay-evals/bin/yokay-evals:*)",
+      "Bash(TASK_ID=test-task-001 TASK_TYPE=feature ./plugins/pokayokay/hooks/actions/post-task-eval.sh:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/test_post_task_eval.sh)",
+      "Bash(TASK_ID=\"test-task\" TASK_TITLE=\"Investigate bug\" TASK_TYPE=\"feature\" DESCRIPTION=\"Short\" ACCEPTANCE_CRITERIA=\"\" ./plugins/pokayokay/hooks/actions/pre-task-quality-gate.sh:*)",
+      "Bash(SKIP_QUALITY_GATE=1 TASK_ID=\"test-task\" TASK_TITLE=\"Investigate bug\" TASK_TYPE=\"feature\" DESCRIPTION=\"Short\" ./plugins/pokayokay/hooks/actions/pre-task-quality-gate.sh:*)",
+      "Bash(SKIP_QUALITY_GATE=1 /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/pre-task-quality-gate.sh:*)",
+      "Bash(DESCRIPTION=\"A\" ACCEPTANCE_CRITERIA=\"\" TASK_ID=\"TST-001\" TASK_TITLE=\"Test Task\" TASK_TYPE=\"feature\" /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/pre-task-quality-gate.sh)",
+      "Bash(TASK_ID=\"test-123\" TASK_TITLE=\"Test\" TASK_TYPE=\"invalid\" bash:*)",
+      "Bash(TASK_ID=\"test-fail\" TASK_TITLE=\"Implement feature\" TASK_TYPE=\"feature\" DESCRIPTION=\"short\" bash:*)",
+      "Bash([ -f /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/capture-review-failure.sh ])",
+      "Bash(git restore:*)",
+      "Bash(./yokay-evals/cmd/yokay-evals/yokay-evals-test:*)",
+      "Bash(/tmp/yokay-evals gate:*)",
+      "Bash(./yokay-evals dashboard:*)",
+      "Bash(./yokay-evals/cmd/yokay-evals/yokay-evals dashboard --reports-dir ./reports --output /tmp/test-dashboard.html)",
+      "Bash(/tmp/yokay-evals report:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/.github/workflows/test-meta-eval-workflow.sh)",
+      "Bash(yq:*)",
+      "Bash(/Users/sis4m4/Projects/stevestomp/pokayokay/.github/workflows/test-release-meta-eval.sh)",
+      "Bash(/tmp/yokay-evals meta:*)",
+      "Bash(claude --agent nonexistent-agent-12345 --print)",
+      "Bash(git log:*)",
+      "Bash(xargs sed:*)",
+      "Bash(do echo \"Running $test...\")",
+      "Bash(do echo \"=== Running $test ===\")",
+      "Bash(gh pr create --title \"feat: add parallel agent execution to /work command\" --body \"$\\(cat <<''EOF''\n## Summary\n\n- Add `--parallel N` / `-p N` flag to `/work` command for running multiple implementer agents simultaneously\n- Coordinator dispatches up to N implementers in a single message, processes results as they complete\n- Dependency-aware scheduling using ohno `blockedBy` graph as safety mechanism\n- Git conflict handling with auto-rebase and manual resolution fallback\n- Updated checkpoint reporting with batch status table for parallel mode\n\n## Changes\n\n| File | Description |\n|------|-------------|\n| `commands/work.md` | Parallel flag parsing, state tracking, work loop, conflict handling, status reporting |\n| `skills/project-harness/SKILL.md` | Parallel execution docs and work loop diagram |\n| `agents/templates/parallel-dispatch-example.md` | New template showing parallel dispatch pattern |\n| `tests/parallel-mode.test.sh` | Integration tests \\(6 test cases\\) |\n| `README.md` | User-facing parallel execution documentation |\n\n## Test Plan\n\n- [x] All 6 parallel mode tests pass\n- [x] All existing tests pass \\(no regressions\\)\n- [ ] Manual verification: run `/work -p 2` with multiple independent tasks\n\n🤖 Generated with [Claude Code]\\(https://claude.ai/code\\)\nEOF\n\\)\")",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr:*)",
+      "Bash(./plugins/pokayokay/tests/parallel-mode.test.sh:*)",
+      "Bash(if timeout 30 bash \"$test\")",
+      "Bash(else)",
+      "Bash(if bash \"$test\")",
+      "Bash(git fetch:*)",
+      "Bash(node cli/bin/cli.js:*)",
+      "Bash(node --check:*)",
+      "Bash(node:*)",
+      "Bash(~/go/bin/kaizen init:*)",
+      "Bash(npm whoami:*)",
+      "Bash(npm publish:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm unlink:*)",
+      "Bash(npx pokayokay@latest help:*)",
+      "Bash(git rebase:*)",
+      "Bash(git -C /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/.worktrees/design-cleanup/plugins/pokayokay diff --stat)",
+      "Bash(git -C /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/.worktrees/design-cleanup/plugins/pokayokay status)",
+      "Bash(TASK_ID=\"test-123\" TASK_TYPE=\"feature\" TASK_TITLE=\"Test Feature Implementation\" STORY_ID=\"\" FORCE_WORKTREE=\"false\" FORCE_INPLACE=\"false\" bash -x plugins/pokayokay/hooks/actions/setup-worktree.sh)",
+      "Bash(TASK_ID=\"test-456\" TASK_TYPE=\"chore\" TASK_TITLE=\"Chore Task\" STORY_ID=\"\" FORCE_WORKTREE=\"false\" FORCE_INPLACE=\"false\" /Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/setup-worktree.sh:*)",
+      "Bash(npx vitest:*)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay/.worktrees/context-efficiency log --oneline master..feature/context-efficiency)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay/.worktrees/context-efficiency diff master..feature/context-efficiency --stat)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay/.worktrees/context-efficiency status --short)",
+      "Bash(npm test:*)",
+      "Bash(npx:*)",
+      "Bash(TASK_ID=\"task-4099bdde\")",
+      "Bash(COMMIT_HASH=\"a3dbe24a5f0a421f5be5250cedb03e463dbb3cd0\")",
+      "Bash(FILES_CHANGED='[\"\"plugins/pokayokay/agents/yokay-fixer.md\"\",\"\"plugins/pokayokay/commands/work.md\"\"]')",
+      "Bash(__NEW_LINE_0876b9c81a9adb84__ npx @stevestomp/ohno-cli set-handoff \"$TASK_ID\" \"PASS\" \"Created yokay-fixer agent and integrated auto-retry flow into work command\" --files \"$FILES_CHANGED\" --details \"$FULL_DETAILS\")",
+      "mcp__ohno__update_task_progress",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay status --short plugins/pokayokay/skills/)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay diff --stat plugins/pokayokay/skills/)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/pokayokay log --oneline -5)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/ohno status)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/ohno branch --show-current)",
+      "Bash(git -C /Users/steve/Projects/stevestomp/ohno checkout -b feature/work-queue)",
+      "Bash(make test)",
+      "Bash(diffstat:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash({ echo \"FAILED: $test\")",
+      "Bash(exit:*)",
+      "Bash(git stash:*)",
+      "Bash(do bash \"$test\")",
+      "WebFetch(domain:mcpmarket.com)",
+      "mcp__ohno__get_next_batch",
+      "Bash(git config:*)",
+      "Bash(CHAIN_ID=\"test\" READY_COUNT=0 CHAIN_AUDITED=false CHAIN_INDEX=0 MAX_CHAINS=10 SCOPE_TYPE=all TASKS_COMPLETED=5 REPORT_MODE=never NOTIFY_MODE=none bash -c 'source plugins/pokayokay/hooks/actions/session-chain.sh')",
+      "Bash(CHAIN_ID=\"test\" READY_COUNT=0 CHAIN_AUDITED=true CHAIN_INDEX=0 MAX_CHAINS=10 SCOPE_TYPE=all TASKS_COMPLETED=5 REPORT_MODE=never NOTIFY_MODE=none bash:*)",
+      "WebFetch(domain:docs.claude.com)",
+      "Bash(/tmp/test-traversal-detail.sh:*)",
+      "Bash(/tmp/test-edge-cases.sh:*)",
+      "Bash(/tmp/quality-review-summary.md:*)",
+      "Bash(do echo \"=== Running: $test ===\")",
+      "Bash(open:*)",
+      "Bash(python:*)",
+      "Bash(brew list python)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/steve/Library/Python/**)",
+      "Bash(pyenv versions)",
+      "Bash(uv python list)",
+      "Bash(uv:*)",
+      "Bash(source:*)",
+      "Bash(mkdir:*)",
+      "Bash(ps:*)",
+      "Bash(uv run:*)",
+      "Bash(claude:*)",
+      "Bash(env:*)",
+      "Bash(pip3 show:*)",
+      "Bash(pip3 install:*)",
+      "Bash(/Users/steve/Library/Python/3.9/bin/git-filter-repo:*)",
+      "Bash(git remote:*)",
+      "Bash(rm:*)",
+      "Bash(claude agents:*)",
+      "Bash(gh issue:*)",
+      "Bash(unset CLAUDECODE)",
+      "Read(//tmp/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "ohno"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__ohno__update_task_status",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ohno__set_blocker",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ohno__create_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

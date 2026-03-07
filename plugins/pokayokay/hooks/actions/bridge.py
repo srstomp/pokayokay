@@ -1056,14 +1056,14 @@ def track_review_failure(failure_text: str, task_id: str) -> List[str]:
     return newly_recorded
 
 
-def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
+def handle_review_complete(tool_input: dict, tool_response: dict, agent_id: str = "") -> dict:
     """Handle Task tool PostToolUse for review agents (spec-reviewer, quality-reviewer).
 
     Detects review failures and triggers post-review-fail hook for kaizen integration.
     Gracefully handles missing kaizen installation.
     """
     description = tool_input.get("description", "").lower()
-    subagent_type = tool_input.get("subagent_type", "")
+    subagent_type = agent_id or tool_input.get("subagent_type", "")
 
     # Only handle spec-reviewer and quality-reviewer
     is_spec_review = "spec-review" in subagent_type or "spec review" in description
@@ -1367,6 +1367,40 @@ def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
     return {"skip": True, "reason": "wip updated silently"}
 
 
+def handle_worktree_create(input_data: dict) -> dict:
+    """Handle WorktreeCreate event — install dependencies in new worktree."""
+    worktree = input_data.get("worktree", {})
+    worktree_path = worktree.get("path", "")
+    if not worktree_path:
+        return {"skip": True, "reason": "no worktree path"}
+
+    result = run_action("setup-worktree", env={
+        "WORKTREE_PATH": worktree_path,
+        "WORKTREE_BRANCH": worktree.get("branch", ""),
+        "WORKTREE_NAME": worktree.get("name", ""),
+    })
+
+    return {
+        "hooks_run": ["worktree-create"],
+        "results": [result],
+        "summary": f"Worktree created: {worktree_path}",
+    }
+
+
+def handle_worktree_remove(input_data: dict) -> dict:
+    """Handle WorktreeRemove event — log worktree cleanup."""
+    worktree = input_data.get("worktree", {})
+    worktree_path = worktree.get("path", "")
+    if not worktree_path:
+        return {"skip": True, "reason": "no worktree path"}
+
+    return {
+        "hooks_run": ["worktree-remove"],
+        "results": [{"action": "worktree-remove", "status": "success", "output": f"Cleaned up: {worktree_path}"}],
+        "summary": f"Worktree removed: {worktree_path}",
+    }
+
+
 def main():
     """Main entry point."""
     try:
@@ -1381,6 +1415,11 @@ def main():
     tool_response = input_data.get("tool_response", {})
     hook_event = input_data.get("hook_event_name", "")
 
+    # Extract native agent metadata (Claude Code v2.1.69+)
+    # Falls back to tool_input fields for older versions
+    agent_id = input_data.get("agent_id", "") or tool_input.get("subagent_type", "")
+    agent_type = input_data.get("agent_type", "")
+
     result = None
 
     # Route to appropriate handler based on event type
@@ -1389,6 +1428,12 @@ def main():
 
     elif hook_event == "SessionEnd":
         result = handle_session_end(input_data)
+
+    elif hook_event == "WorktreeCreate":
+        result = handle_worktree_create(input_data)
+
+    elif hook_event == "WorktreeRemove":
+        result = handle_worktree_remove(input_data)
 
     elif tool_name == "mcp__ohno__update_task_status":
         status = tool_input.get("status", "")
@@ -1412,12 +1457,13 @@ def main():
 
     elif tool_name == "Task" and hook_event == "PostToolUse":
         # Track token usage for all subagent completions
+        # Prefer native agent_id (v2.1.69+), fall back to tool_input
         record_agent_tokens(
-            tool_input.get("subagent_type", "unknown"),
+            agent_id or tool_input.get("subagent_type", "unknown"),
             tool_input.get("description", ""),
             tool_response,
         )
-        result = handle_review_complete(tool_input, tool_response)
+        result = handle_review_complete(tool_input, tool_response, agent_id=agent_id)
 
     elif tool_name in ("Edit", "Write") and hook_event == "PostToolUse":
         result = handle_file_change(tool_name, tool_input, tool_response)
