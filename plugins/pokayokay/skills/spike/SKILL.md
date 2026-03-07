@@ -1,7 +1,8 @@
 ---
 name: spike
 agents: [yokay-spike-runner]
-description: Time-boxed technical investigation with structured output. Use for feasibility studies, architecture exploration, integration assessment, performance analysis, or risk evaluation. Creates spike tasks in ohno, enforces time-boxing, generates spike reports, and creates actionable follow-up tasks.
+description: Use for time-boxed technical investigations — feasibility studies, architecture exploration, integration assessment, performance analysis, or risk evaluation. Enforces time-boxing, generates spike reports with GO/NO-GO decisions, and creates follow-up tasks in ohno.
+disable-model-invocation: true
 ---
 
 # Spike

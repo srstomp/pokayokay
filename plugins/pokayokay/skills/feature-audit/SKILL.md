@@ -1,7 +1,8 @@
 ---
 name: feature-audit
 agents: [yokay-auditor]
-description: Use when verifying feature completeness against PRD requirements, identifying gaps between backend implementation and user-facing accessibility, generating remediation tasks, or auditing across frameworks (Next.js, React Router, TanStack, React Native, Expo).
+description: Use when verifying feature completeness against PRD requirements or identifying gaps between backend implementation and user-facing accessibility. Assigns L0-L5 completeness levels and generates remediation tasks.
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Feature Audit

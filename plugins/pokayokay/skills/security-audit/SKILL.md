@@ -2,6 +2,7 @@
 name: security-audit
 agents: [yokay-security-scanner]
 description: Use when reviewing code security, auditing dependencies for CVEs, checking configuration or secret security, assessing authentication and authorization patterns, identifying OWASP vulnerabilities (injection, XSS, CSRF), or addressing security concerns about implementations.
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Security Audit

@@ -29,17 +29,7 @@ Figma plugins run in two threads communicating via postMessage:
 5. Test in Figma development mode
 6. Publish via Figma Community
 
-## References
+## When NOT to Use
 
-| Reference | Description |
-|-----------|-------------|
-| [project-structure-and-build.md](references/project-structure-and-build.md) | Manifest, TypeScript setup, build configuration |
-| [development-testing-and-publishing.md](references/development-testing-and-publishing.md) | Dev workflow, testing, publishing, troubleshooting |
-| [api-globals-and-nodes.md](references/api-globals-and-nodes.md) | Global objects, node types, components |
-| [api-rendering-and-advanced.md](references/api-rendering-and-advanced.md) | Paints, effects, auto layout, styles, variables, events |
-| [ui-architecture-and-messaging.md](references/ui-architecture-and-messaging.md) | iframe UI, postMessage, typed messages, plain HTML |
-| [ui-react-and-theming.md](references/ui-react-and-theming.md) | React setup, hooks, Figma theme colors |
-| [ui-patterns-and-resources.md](references/ui-patterns-and-resources.md) | Loading states, tabs, color pickers, file downloads |
-| [selection-traversal-and-batching.md](references/selection-traversal-and-batching.md) | Selection handling, node traversal, batch operations |
-| [colors-and-text.md](references/colors-and-text.md) | Color conversion, manipulation, text operations |
-| [layout-storage-and-utilities.md](references/layout-storage-and-utilities.md) | Positioning, alignment, storage, error handling, utilities |
+- For using Figma's MCP tools (get_design_context, etc.) — those are built-in
+- For design system work — see design plugin

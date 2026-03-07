@@ -44,12 +44,5 @@ Design clear, consistent, and developer-friendly REST APIs.
 
 | Reference | Description |
 |-----------|-------------|
-| [endpoints.md](references/endpoints.md) | URL design, HTTP methods, resource modeling |
-| [requests-responses.md](references/requests-responses.md) | Request/response formats, headers, content types |
-| [status-codes.md](references/status-codes.md) | HTTP status codes, error handling patterns |
-| [pagination-filtering.md](references/pagination-filtering.md) | Pagination, filtering, sorting, searching |
-| [versioning.md](references/versioning.md) | API versioning strategies |
-| [openapi.md](references/openapi.md) | OpenAPI specification, documentation |
-| [security.md](references/security.md) | Authentication, authorization, rate limiting |
 | [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for REST endpoints, supertest templates |
 | [review-checklist.md](references/review-checklist.md) | API design review checklist (validation, auth, performance, docs) |

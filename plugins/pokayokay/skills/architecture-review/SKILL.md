@@ -1,6 +1,7 @@
 ---
 name: architecture-review
 description: Use when auditing project structure, planning refactors, improving code organization, analyzing dependencies and module boundaries, or identifying structural issues. TypeScript/JavaScript-primary with language-agnostic patterns.
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Architecture Review
@@ -39,4 +40,3 @@ Analyze, audit, and improve project structure.
 | [structural-patterns.md](references/structural-patterns.md) | Directory structures for different project types |
 | [dependency-management.md](references/dependency-management.md) | Circular deps, coupling, module boundaries |
 | [cleanup-strategies.md](references/cleanup-strategies.md) | Dead code removal, consolidation, naming conventions |
-| [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for architecture discipline |

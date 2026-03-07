@@ -28,11 +28,5 @@ Design efficient, maintainable database schemas with safe migration strategies.
 
 | Reference | Description |
 |-----------|-------------|
-| [schema-patterns.md](references/schema-patterns.md) | Normalization, relationships, naming conventions |
-| [index-design.md](references/index-design.md) | Index types, composite indexes, partial indexes |
-| [migration-strategies.md](references/migration-strategies.md) | Safe migrations, zero-downtime, rollback |
-| [query-optimization.md](references/query-optimization.md) | EXPLAIN, N+1 queries, join strategies |
-| [postgresql.md](references/postgresql.md) | PostgreSQL-specific features and patterns |
-| [prisma-patterns.md](references/prisma-patterns.md) | Prisma schema, relations, transactions |
 | [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for migrations, constraints, factories |
 | [review-checklist.md](references/review-checklist.md) | Database design review checklist (schema, indexes, integrity) |

@@ -1,6 +1,7 @@
 ---
 name: documentation
-description: Create and maintain technical documentation including READMEs, API docs, architecture decision records (ADRs), and user guides. Use this skill when writing project documentation, documenting APIs, recording architectural decisions, creating how-to guides, or establishing documentation standards.
+description: Use when creating READMEs, API docs, ADRs, or user guides. Provides templates and patterns for each documentation type. Dispatched by /work for docs-type tasks.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Documentation
@@ -30,6 +31,11 @@ Create clear, maintainable technical documentation that serves your audience.
 | API Docs | Endpoint reference | Developers |
 | ADR | Major decisions | Team/future devs |
 | User Guide | Task completion | End users |
+
+## When NOT to Use
+
+- **Inline code comments** — Just add comments directly; this skill is for standalone documentation artifacts
+- **API design** — Use `api-design` for designing APIs; this skill documents existing APIs
 
 ## References
 
