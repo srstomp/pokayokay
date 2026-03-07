@@ -1,0 +1,225 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)",
+      "Bash(brew:*)",
+      "Bash(cd:*)",
+      "Bash(chmod:*)",
+      "Bash(claude:*)",
+      "Bash(command -v:*)",
+      "Bash(diffstat:*)",
+      "Bash(echo:*)",
+      "Bash(env:*)",
+      "Bash(exit:*)",
+      "Bash(file:*)",
+      "Bash(find:*)",
+      "Bash(for:*)",
+      "Bash(gh:*)",
+      "Bash(git:*)",
+      "Bash(go:*)",
+      "Bash(gofmt:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(ls:*)",
+      "Bash(make:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(open:*)",
+      "Bash(pip3:*)",
+      "Bash(ps:*)",
+      "Bash(pyenv:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)",
+      "Bash(shellcheck:*)",
+      "Bash(source:*)",
+      "Bash(staticcheck:*)",
+      "Bash(tar:*)",
+      "Bash(test:*)",
+      "Bash(tree:*)",
+      "Bash(unset:*)",
+      "Bash(uv:*)",
+      "Bash(wc:*)",
+      "Bash(xargs:*)",
+      "Bash(xxd:*)",
+      "Bash(yq:*)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//tmp/**)",
+      "Read(//Users/steve/.claude/**)",
+      "Read(//Users/steve/Library/Python/**)",
+      "Read(//Users/steve/Projects/stevestomp/pokayokay/plugins/pokayokay/skills/$skill/**)",
+      "Read(//usr/local/bin/**)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:mcpmarket.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebSearch",
+      "Skill(superpowers:brainstorm)",
+      "Skill(superpowers:execute-plan)",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:writing-plans)",
+      "mcp__ohno__add_dependency",
+      "mcp__ohno__add_task_activity",
+      "mcp__ohno__create_epic",
+      "mcp__ohno__create_story",
+      "mcp__ohno__create_task",
+      "mcp__ohno__get_epic",
+      "mcp__ohno__get_epics",
+      "mcp__ohno__get_next_batch",
+      "mcp__ohno__get_next_task",
+      "mcp__ohno__get_project_status",
+      "mcp__ohno__get_session_context",
+      "mcp__ohno__get_story",
+      "mcp__ohno__get_task",
+      "mcp__ohno__get_tasks",
+      "mcp__ohno__list_stories",
+      "mcp__ohno__resolve_blocker",
+      "mcp__ohno__set_blocker",
+      "mcp__ohno__set_handoff_notes",
+      "mcp__ohno__update_task",
+      "mcp__ohno__update_task_progress",
+      "mcp__ohno__update_task_status"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "ohno"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__ohno__update_task_status",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ohno__set_blocker",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ohno__create_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/plugins/pokayokay/hooks/actions/bridge.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

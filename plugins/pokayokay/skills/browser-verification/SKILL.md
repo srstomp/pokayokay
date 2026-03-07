@@ -1,7 +1,7 @@
 ---
 name: browser-verification
 agents: [yokay-browser-verifier]
-description: Automatically verify UI changes in a real browser after implementation. Integrated into the /work workflow — checks visual elements, interactions, and console errors using Playwright. Not a standalone skill.
+description: Automatically verify UI changes in a real browser after implementation. Integrated into the /work workflow — checks visual elements, interactions, and console errors using Playwright. Can also be manually invoked for ad-hoc browser checks.
 ---
 
 # Browser Verification Skill
@@ -10,7 +10,7 @@ Automatically verify UI changes in a real browser after implementation.
 
 ## When This Skill Is Used
 
-This skill is triggered during the `/work` workflow after the implementer completes a task that modifies UI-related files. It is NOT a standalone skill - it's integrated into the work loop.
+This skill is primarily triggered during the `/work` workflow after the implementer completes a task that modifies UI-related files. It can also be manually invoked via `/pokayokay:browser-verification` for ad-hoc checks.
 
 ## Purpose
 
@@ -74,6 +74,11 @@ Projects can customize in `.pokayokay.json`:
   }
 }
 ```
+
+## When NOT to Use
+
+- **Unit/integration testing** — Use `testing-strategy` for test architecture; this skill verifies visual output in a browser
+- **API-only changes** — Browser verification is for UI changes; backend-only tasks skip this automatically
 
 ## Reference Documents
 

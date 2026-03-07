@@ -58,16 +58,15 @@ All file paths should be relative to this directory unless specified otherwise.
 
 ### Before You Start
 
-If you have ANY of these concerns, ask the coordinator NOW:
+**If you encounter ANY of these, report BLOCKED immediately — do NOT guess:**
 
 - Ambiguous or conflicting requirements
-- Missing acceptance criteria details
-- Unclear file locations or naming conventions
-- Questions about scope boundaries
-- Dependency or integration concerns
-- Uncertainty about which skill/approach to use
+- Acceptance criteria too vague to write a test from
+- Unclear file locations with no existing convention to follow
+- Scope boundaries unclear (multiple valid interpretations)
+- Missing dependency or integration details
 
-**It is always better to clarify upfront than to implement incorrectly.**
+You are a subagent and cannot ask questions interactively. A BLOCKED report with specific questions costs one dispatch cycle. A wrong implementation costs two.
 
 ---
 

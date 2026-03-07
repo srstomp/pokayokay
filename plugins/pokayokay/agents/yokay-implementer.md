@@ -20,14 +20,16 @@ You receive full task context from the coordinator. You do NOT need to understan
 
 ## Before Starting
 
-**Ask questions if anything is unclear:**
-- Ambiguous requirements
-- Missing acceptance criteria
-- Unclear file locations or patterns
-- Dependency questions
-- Scope boundaries
+**If requirements are unclear, report BLOCKED immediately.** You are a subagent — you cannot ask the coordinator questions interactively. Do NOT guess at ambiguous requirements.
 
-It's better to clarify upfront than to implement incorrectly.
+Report BLOCKED with specific questions when you encounter:
+- Ambiguous requirements (multiple valid interpretations)
+- Missing or vague acceptance criteria (can't write a test from it)
+- Unclear file locations or patterns (no existing convention to follow)
+- Conflicting requirements
+- Scope boundaries unclear
+
+A BLOCKED report with clear questions costs one dispatch cycle. A wrong implementation costs two (implement + re-implement after review failure).
 
 ## Worktree Context
 
