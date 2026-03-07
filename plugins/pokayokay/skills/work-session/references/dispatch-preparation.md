@@ -45,16 +45,30 @@ Assemble context from: (1) story context if task belongs to story, (2) task's ow
 
 ### Trigger Conditions
 
-Brainstorm is needed when:
+Brainstorm is needed when ANY of these are true:
 - Description < 100 chars
 - No acceptance criteria
+- **AC quality check fails** (see below)
 - Task type is spike
 - Contains ambiguous keywords: "investigate", "explore", "figure out", "look into", "research"
 
-Skip brainstorm when:
-- `--skip-brainstorm` flag set
-- Task type is bug or chore
-- Task is well-specified (description >= 100 chars + AC present + no ambiguous keywords)
+Skip brainstorm when ALL of these are true:
+- `--skip-brainstorm` flag set, OR task type is bug or chore
+- AC present AND passes quality check
+
+### AC Quality Check
+
+Even when AC exists, check quality before dispatching. **Route through brainstorm if ANY criterion fails these checks:**
+
+| Check | Fail Example | Pass Example |
+|-------|-------------|-------------|
+| Too vague (< 5 words) | "Settings work" | "User can update display name via settings form" |
+| No verb | "Error handling" | "API returns 400 with validation errors for invalid input" |
+| Not testable | "Should be fast" | "Page loads in < 2s with 1000 items" |
+| Duplicate of title | "Implement auth" (title: "Implement auth") | "POST /auth/login returns JWT with 1h expiry" |
+| All criteria identical pattern | 3x "Feature works correctly" | Distinct conditions per criterion |
+
+**Quick heuristic**: If you could write a test from the criterion text alone, it passes. If you'd need to guess what to test, it fails.
 
 ### Processing Result
 
@@ -112,8 +126,11 @@ Extract `## Acceptance Criteria` from task description. Preserve MUST/SHOULD/COU
 
 - Task retrieved from ohno
 - Description present (or coordinator defined one)
-- Acceptance criteria defined
+- Acceptance criteria defined **AND pass quality check**
+- Each MUST criterion is specific enough to write a test from
 - Context assembled
 - Skill determined
 - Template fully populated
 - Dependencies resolved (task unblocked)
+
+**STOP if AC quality check fails.** Route through brainstorm gate to refine, or refine AC yourself before dispatching. Dispatching with vague AC wastes an entire implementer cycle.
