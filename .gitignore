@@ -27,6 +27,7 @@ npm-debug.log*
 
 # Claude Code local state
 .claude/
+.mcp.json
 
 docs/
 

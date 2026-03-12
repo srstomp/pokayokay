@@ -5,6 +5,22 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-03-12
+
+### Changed
+- **Agent Behavioral Defaults** — All 13 agents now have explicit disposition constraints and hard rules, inspired by [agency-agents](https://github.com/msitarzewski/agency-agents) personality-as-constraint pattern
+  - `## Behavioral Defaults` section (2-4 per agent): disposition constraints that shape how agents think, not what they know
+  - `## Critical Rules` section (3-5 per agent): hard "never" constraints for common failure modes
+  - `## Output Contract`: consistent heading across all agents (renamed from Output Format / Report Format / Spike Report Format)
+- **Implementer TDD Compression** — Replaced 60-line step-by-step TDD workflow with red/green TDD shorthand (~10 lines), trusting model knowledge per [Simon Willison's agentic patterns](https://simonwillison.net/guides/agentic-engineering-patterns/red-green-tdd/)
+- **Fixer Output Consolidation** — Merged dual output sections (Output Format + Return Minimal Output) into single Output Contract
+
+### Highlights
+- Spec reviewer: "Default to FAIL. The implementer must prove compliance, not you."
+- Quality reviewer: "Default to PASS unless you'd flag it in a real code review. Don't manufacture issues."
+- Implementer: "NEVER skip the red phase. If a test passes before implementation, the test is wrong."
+- Fixer: "NEVER change more than one thing per attempt. Isolate your variables."
+
 ## [0.15.0] - 2026-02-26
 
 ### Changed
