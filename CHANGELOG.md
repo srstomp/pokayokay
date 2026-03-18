@@ -5,6 +5,22 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-03-18
+
+### Added
+- **auto-improve** — Autonomous skill improvement system inspired by Karpathy's autoresearch
+  - `eval.py`: Core eval runner with scenario-based skill quality measurement
+  - `judge.py`: LLM-as-judge with binary criteria, chain-of-thought-before-verdict, anti-slop checks
+  - `structural.py`: Automated structural checks (line counts, required sections, description format)
+  - `runner.py`: Loop orchestrator with adaptive/breadth/deep scheduling, portfolio dashboard, git integration
+  - Uses `claude -p` (print mode) for API access — no separate API key needed
+- **Per-skill eval files** for 3 pilot skills (15 scenarios each):
+  - `planning/eval.json` — Tests PRD analysis, P0-P3 classification, skill routing, ambiguity flagging
+  - `work-session/eval.json` — Tests orchestration, worktrees, mode selection, parallel dispatch
+  - `api-design/eval.json` — Tests domain knowledge (baseline regression, validates -7% hypothesis)
+- `improvement-program.md` — Human steering file for the improvement loop
+- `dashboard.json` + `patterns.json` — Portfolio state and cross-skill learning
+
 ## [0.17.0] - 2026-03-12
 
 ### Changed

@@ -1,0 +1,514 @@
+{
+  "skill": "api-design",
+  "version": 1,
+  "baseline_model": "claude-haiku-4-5-20251001",
+  "eval_model": "claude-haiku-4-5-20251001",
+  "current_best_score": null,
+  "scenarios": [
+    {
+      "id": "basic-crud-endpoint-design",
+      "name": "Design CRUD endpoints for a resource (baseline regression)",
+      "input": "Design the REST API endpoints for a blog post resource. Include URL paths, HTTP methods, request/response shapes, and status codes.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Includes GET (list), GET (single), POST, PUT or PATCH, and DELETE endpoints",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses plural noun for collection path (/posts, not /post)",
+          "weight": 1
+        },
+        {
+          "criterion": "Returns appropriate status codes (200, 201, 204, 404)",
+          "weight": 1
+        },
+        {
+          "criterion": "POST returns 201 Created (not 200)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": 1.0,
+      "anti_slop_checks": [
+        "Does NOT use verbs in URL paths (no /getPosts, /createPost)"
+      ]
+    },
+    {
+      "id": "error-response-format",
+      "name": "Design error response format (baseline regression)",
+      "input": "Design a consistent error response format for a REST API. Cover validation errors, not found, unauthorized, and server errors.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses consistent envelope structure across all error types",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes field-level error details for validation errors",
+          "weight": 1
+        },
+        {
+          "criterion": "Maps error types to correct HTTP status codes (400, 401, 403, 404, 500)",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes machine-readable error codes (not just human messages)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": 1.0,
+      "anti_slop_checks": [
+        "Does NOT return generic 500 for all errors",
+        "Does NOT omit field-level details for validation errors"
+      ]
+    },
+    {
+      "id": "pagination-design",
+      "name": "Design pagination for a list endpoint (baseline regression)",
+      "input": "Design pagination for a GET /api/products endpoint that could return thousands of results. Include the request parameters and response format.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Includes page/limit or cursor-based pagination parameters",
+          "weight": 1
+        },
+        {
+          "criterion": "Response includes total count or has_more indicator",
+          "weight": 1
+        },
+        {
+          "criterion": "Response includes pagination metadata (page, limit, total or next_cursor)",
+          "weight": 1
+        },
+        {
+          "criterion": "Sets reasonable default and maximum page sizes",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT return all results without pagination"
+      ]
+    },
+    {
+      "id": "resource-modeling-relationships",
+      "name": "Model resource relationships in URL design",
+      "input": "Design the API endpoints for an e-commerce system with these relationships: Users have many Orders, Orders have many OrderItems, Products have many Reviews. Show how to model these in the URL structure.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses nested resources for direct relationships (e.g., /users/{id}/orders)",
+          "weight": 1
+        },
+        {
+          "criterion": "Keeps nesting to max 2-3 levels deep",
+          "weight": 2
+        },
+        {
+          "criterion": "Provides alternative flat access for deeply nested resources",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses consistent naming convention throughout (kebab-case or snake_case, not mixed)",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes query parameter alternative for filtering (e.g., /orders?user_id=123)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT nest deeper than 3 levels (no /users/1/orders/2/items/3/reviews)",
+        "Does NOT mix naming conventions (kebab-case and camelCase)"
+      ]
+    },
+    {
+      "id": "non-crud-actions",
+      "name": "Design non-CRUD action endpoints",
+      "input": "Design API endpoints for these non-CRUD operations:\n1. Send a verification email to a user\n2. Archive an order\n3. Cancel an order with a reason\n4. Bulk archive multiple orders",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses POST for action endpoints (not GET or PUT)",
+          "weight": 2
+        },
+        {
+          "criterion": "Uses action name in URL path (e.g., /users/{id}/send-verification-email)",
+          "weight": 1
+        },
+        {
+          "criterion": "Cancel includes request body for reason",
+          "weight": 1
+        },
+        {
+          "criterion": "Bulk operation uses /bulk- prefix or /bulk path",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses appropriate response codes (200, 202 Accepted, 204)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT use GET for operations that trigger side effects"
+      ]
+    },
+    {
+      "id": "versioning-strategy",
+      "name": "Recommend API versioning strategy",
+      "input": "We're building a public API that external developers will integrate with. Recommend a versioning strategy and explain how to handle breaking changes.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Recommends a specific versioning approach (URL path, header, or query param)",
+          "weight": 1
+        },
+        {
+          "criterion": "Discusses backward compatibility and deprecation process",
+          "weight": 1
+        },
+        {
+          "criterion": "Mentions what constitutes a breaking change vs non-breaking",
+          "weight": 1
+        },
+        {
+          "criterion": "Provides concrete URL examples showing versioned paths",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT skip the deprecation/migration strategy"
+      ]
+    },
+    {
+      "id": "auth-endpoint-design",
+      "name": "Design authentication API endpoints",
+      "input": "Design the authentication API endpoints for a web application. Include registration, login, token refresh, password reset, and logout.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Registration returns 201 with user object (no password in response)",
+          "weight": 1
+        },
+        {
+          "criterion": "Login returns access token and refresh token",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes rate limiting mention on auth endpoints",
+          "weight": 2
+        },
+        {
+          "criterion": "Password reset uses a two-step flow (request -> confirm with token)",
+          "weight": 1
+        },
+        {
+          "criterion": "Token refresh endpoint is separate from login",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT return passwords in any response body",
+        "Does NOT use GET for login or registration"
+      ]
+    },
+    {
+      "id": "openapi-spec-generation",
+      "name": "Generate OpenAPI specification for endpoints",
+      "input": "Write an OpenAPI 3.0 specification for a simple user CRUD API with GET /users, GET /users/{id}, POST /users, and PATCH /users/{id}. Include request/response schemas and error responses.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Valid OpenAPI 3.0 YAML or JSON structure with openapi, info, and paths keys",
+          "weight": 2
+        },
+        {
+          "criterion": "Defines reusable schemas in components/schemas",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes error response schemas (400, 404, 500)",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes request body schema for POST and PATCH",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes example values in schemas",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT produce invalid OpenAPI syntax",
+        "Does NOT define inline schemas everywhere without reuse"
+      ]
+    },
+    {
+      "id": "tdd-supertest-template",
+      "name": "Write test-first API test with supertest",
+      "input": "Write a test-first supertest integration test for a POST /api/products endpoint. The endpoint creates a product with name, price, and category. Cover success, validation error, and auth failure cases.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Tests success case expecting 201 status",
+          "weight": 1
+        },
+        {
+          "criterion": "Tests validation failure expecting 400 status",
+          "weight": 1
+        },
+        {
+          "criterion": "Tests authentication failure expecting 401 status",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses supertest request(app) pattern",
+          "weight": 1
+        },
+        {
+          "criterion": "Verifies response body shape (not just status code)",
+          "weight": 2
+        },
+        {
+          "criterion": "Tests for specific missing required field",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT only test the happy path",
+        "Does NOT use generic assertions like 'expect(res).toBeDefined()'"
+      ]
+    },
+    {
+      "id": "review-checklist-application",
+      "name": "Review an API design against checklist",
+      "input": "Review this API design for issues:\n\nGET /api/getUsers - returns all users\nPOST /api/users/create - creates a user, returns 200\nGET /api/user/123 - gets one user, returns internal DB ID and hashed password\nDELETE /api/users/remove/123 - deletes user\nGET /api/users - no pagination, returns all records",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Flags verb in URL path (/getUsers, /create, /remove)",
+          "weight": 2
+        },
+        {
+          "criterion": "Flags inconsistent pluralization (/user vs /users)",
+          "weight": 1
+        },
+        {
+          "criterion": "Flags POST returning 200 instead of 201",
+          "weight": 1
+        },
+        {
+          "criterion": "Flags hashed password being returned in response",
+          "weight": 2
+        },
+        {
+          "criterion": "Flags missing pagination on list endpoint",
+          "weight": 1
+        },
+        {
+          "criterion": "Provides corrected endpoint designs",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT approve the design without finding issues",
+        "Catches at least 4 of the 5 planted issues"
+      ]
+    },
+    {
+      "id": "bulk-operations-design",
+      "name": "Design bulk operation endpoints",
+      "input": "Design bulk create and bulk update endpoints for a /api/contacts resource. Handle partial success (some items succeed, some fail).",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses POST for bulk create and PATCH for bulk update",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses /bulk path segment or similar for bulk endpoints",
+          "weight": 1
+        },
+        {
+          "criterion": "Handles partial success with per-item status in response",
+          "weight": 2
+        },
+        {
+          "criterion": "Uses 207 Multi-Status or documents the partial success response code",
+          "weight": 2
+        },
+        {
+          "criterion": "Includes a summary object (succeeded count, failed count)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT treat bulk operations as all-or-nothing without discussing partial success",
+        "Response format includes individual item statuses, not just a global status"
+      ]
+    },
+    {
+      "id": "response-envelope-design",
+      "name": "Design consistent response envelope format",
+      "input": "Design a consistent response envelope format that works for single resources, collections with pagination, and errors. Show examples of each.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses consistent top-level keys across all response types (e.g., data, meta, errors)",
+          "weight": 2
+        },
+        {
+          "criterion": "Collection response includes pagination metadata",
+          "weight": 1
+        },
+        {
+          "criterion": "Error response uses same envelope with errors array or object",
+          "weight": 1
+        },
+        {
+          "criterion": "Dates shown in ISO 8601 format in examples",
+          "weight": 1
+        },
+        {
+          "criterion": "Shows at least 3 examples (single, list, error)",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT use different response structures for different endpoint types",
+        "Does NOT omit the error response format"
+      ]
+    },
+    {
+      "id": "multi-tenant-api-design",
+      "name": "Design multi-tenant API with scoping",
+      "input": "Design REST API endpoints for a multi-tenant SaaS application where users belong to organizations. Resources (projects, tasks) are scoped to organizations. Show URL patterns and authorization approach.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Scopes resources under organization path (e.g., /organizations/{id}/projects)",
+          "weight": 2
+        },
+        {
+          "criterion": "Includes organization membership/role management endpoints",
+          "weight": 1
+        },
+        {
+          "criterion": "Discusses authorization checks (user must belong to org)",
+          "weight": 1
+        },
+        {
+          "criterion": "Handles cross-org access prevention",
+          "weight": 1
+        },
+        {
+          "criterion": "Includes invite flow for adding members",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT ignore tenant isolation in the design",
+        "Does NOT scope resources globally without organization context"
+      ]
+    },
+    {
+      "id": "search-and-filtering",
+      "name": "Design search and filtering for list endpoints",
+      "input": "Design the query parameter interface for GET /api/products that supports: text search, filtering by category and price range, sorting by multiple fields, and field selection.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Uses q or search parameter for text search",
+          "weight": 1
+        },
+        {
+          "criterion": "Uses category and price range as separate filter parameters",
+          "weight": 1
+        },
+        {
+          "criterion": "Supports sort direction (asc/desc) notation",
+          "weight": 1
+        },
+        {
+          "criterion": "Supports field selection parameter (fields=id,name,price)",
+          "weight": 1
+        },
+        {
+          "criterion": "Shows concrete URL examples with query parameters",
+          "weight": 1
+        },
+        {
+          "criterion": "Suggests POST for complex queries when query string gets too long",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT omit sort direction support",
+        "Does NOT put all filtering in the request body for a GET endpoint"
+      ]
+    },
+    {
+      "id": "security-headers-and-rate-limiting",
+      "name": "API security: headers and rate limiting",
+      "input": "What security headers and rate limiting should I implement for a public REST API? Provide specific recommendations.",
+      "system_context": null,
+      "eval_criteria": [
+        {
+          "criterion": "Recommends CORS configuration with specific allowed origins",
+          "weight": 1
+        },
+        {
+          "criterion": "Recommends rate limiting with specific thresholds (e.g., 100 req/min)",
+          "weight": 1
+        },
+        {
+          "criterion": "Mentions stricter rate limits on auth endpoints",
+          "weight": 2
+        },
+        {
+          "criterion": "Mentions Content-Security-Policy or X-Content-Type-Options headers",
+          "weight": 1
+        },
+        {
+          "criterion": "Mentions input validation and sanitization for injection prevention",
+          "weight": 1
+        }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT give vague advice like 'add security headers' without specifics",
+        "Does NOT apply uniform rate limits to all endpoints"
+      ]
+    }
+  ],
+  "structural_checks": {
+    "max_skill_lines": 100,
+    "max_reference_lines": 500,
+    "required_sections": [
+      "When NOT to Use"
+    ],
+    "description_format": "trigger-condition"
+  },
+  "scoring": {
+    "weights": {
+      "scenario_pass_rate": 0.5,
+      "anti_slop_rate": 0.2,
+      "structural_compliance": 0.15,
+      "llm_quality_score": 0.15
+    },
+    "improvement_threshold": 0.02,
+    "simplicity_bonus": true
+  }
+}

@@ -1,0 +1,306 @@
+{
+  "skill": "planning",
+  "version": 1,
+  "baseline_model": "claude-haiku-4-5-20251001",
+  "eval_model": "claude-haiku-4-5-20251001",
+  "current_best_score": null,
+  "scenarios": [
+    {
+      "id": "prd-breakdown-ecommerce",
+      "name": "PRD breakdown for e-commerce platform",
+      "input": "Analyze this PRD and create an implementation plan:\n\n# PRD: Customer Loyalty Program\n\nWe want to add a loyalty points system to our e-commerce platform. Customers earn points on purchases, can redeem points for discounts, and see their tier status (Bronze, Silver, Gold, Platinum). Admins need to configure point-earning rules and manage tier thresholds. We use React frontend, Node.js/Express backend, PostgreSQL. The mobile app team will need an API. Target launch is 8 weeks.\n\nPlease break this down into epics, stories, and tasks with estimates.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Creates epic-level groupings (not just a flat task list)", "weight": 2 },
+        { "criterion": "Stories have acceptance criteria in Given/When/Then format", "weight": 2 },
+        { "criterion": "Tasks are sized at 1-8 hours each (no task exceeds 8h)", "weight": 2 },
+        { "criterion": "Assigns priority levels using P0/P1/P2/P3 classification", "weight": 2 },
+        { "criterion": "Identifies infrastructure-first tasks (DB schema, auth setup) that must precede feature tasks", "weight": 1 },
+        { "criterion": "Maps dependencies between tasks (blocked-by/blocks relationships)", "weight": 1 },
+        { "criterion": "Identifies a critical path with minimum duration estimate", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT produce a single flat list of tasks without hierarchy",
+        "Does NOT leave all tasks at the same priority level",
+        "Does NOT create tasks larger than 8 hours without splitting them"
+      ]
+    },
+    {
+      "id": "prd-breakdown-saas-mvp",
+      "name": "PRD breakdown for SaaS MVP",
+      "input": "Break down this concept into an implementation plan with pokayokay's planning methodology:\n\n# Product Brief: Team Standup Bot\n\nSlack bot that collects async standups from team members. Each morning it DMs team members asking: what they did yesterday, what they're doing today, blockers. Summarizes responses in a channel. Tracks participation over time. Dashboard for managers.\n\nStack: TypeScript, Next.js, Prisma, PostgreSQL, Slack Bolt SDK.\n\nCreate the full epic/story/task hierarchy.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Creates 2+ epics grouping related capabilities", "weight": 2 },
+        { "criterion": "Each story follows INVEST criteria (independent, valuable, testable)", "weight": 1 },
+        { "criterion": "Tasks include ohno-compatible descriptions (behavior, input/output contract, acceptance criteria, connections)", "weight": 2 },
+        { "criterion": "Assigns P0-P3 priorities with rationale", "weight": 2 },
+        { "criterion": "Identifies skill routing for tasks (e.g., api-design, database-design, testing-strategy)", "weight": 2 },
+        { "criterion": "Estimates each task in hours", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT skip acceptance criteria on stories",
+        "Task descriptions are self-contained (not just titles)",
+        "Does NOT assign all tasks the same priority"
+      ]
+    },
+    {
+      "id": "priority-classification-mixed",
+      "name": "Classify features by P0-P3 priority",
+      "input": "I have these features for a project management tool. Classify each as P0, P1, P2, or P3 with rationale:\n\n1. User login/registration\n2. Create and assign tasks\n3. Dark mode toggle\n4. Email notifications for task updates\n5. Gantt chart visualization\n6. Role-based access control (admin, member, viewer)\n7. CSV export of tasks\n8. Real-time collaborative editing\n9. Task comments and @mentions\n10. Mobile responsive layout",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Uses exactly the P0/P1/P2/P3 classification scheme (not High/Medium/Low or MoSCoW alone)", "weight": 2 },
+        { "criterion": "P0 items are true MVP launch blockers (product doesn't work without them)", "weight": 2 },
+        { "criterion": "P3 items are explicitly deferred/out-of-scope for initial build", "weight": 1 },
+        { "criterion": "Each classification includes a rationale explaining why", "weight": 1 },
+        { "criterion": "Distinguishes between P1 (significantly impacts value) and P2 (nice-to-have)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT classify everything as High priority",
+        "Does NOT use a different priority scheme than P0-P3"
+      ]
+    },
+    {
+      "id": "ambiguity-flagging-vague-brief",
+      "name": "Flag ambiguities in a vague concept brief",
+      "input": "Analyze this concept brief and flag all ambiguities, assumptions, and open questions before planning:\n\n# Concept: AI Writing Assistant\n\nWe want to build an AI-powered writing tool. Users write content and the AI helps improve it. Should support multiple content types. Needs to be fast and reliable. We want it to feel premium.\n\nIdentify what's missing and what questions need answers before we can plan implementation.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Identifies missing success metrics / measurable outcomes", "weight": 1 },
+        { "criterion": "Flags undefined user personas (who are the target users?)", "weight": 1 },
+        { "criterion": "Questions what 'multiple content types' means specifically", "weight": 1 },
+        { "criterion": "Questions what 'fast' means in measurable terms (latency targets)", "weight": 1 },
+        { "criterion": "Identifies missing technical constraints (stack, AI model, hosting)", "weight": 1 },
+        { "criterion": "Documents assumptions explicitly (not just questions)", "weight": 2 },
+        { "criterion": "Separates ambiguities into categories (scope, technical, business)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT jump straight to implementation plan without flagging gaps",
+        "Does NOT treat vague language as clear requirements"
+      ]
+    },
+    {
+      "id": "skill-routing-mixed-features",
+      "name": "Route features to appropriate skills",
+      "input": "I'm planning implementation of these features. For each one, recommend which pokayokay skill should handle it and why:\n\n1. REST API for user management (CRUD + auth)\n2. PostgreSQL schema for multi-tenant data\n3. CI/CD pipeline with GitHub Actions\n4. Stripe payment integration\n5. React dashboard with charts\n6. AWS Lambda for webhook processing\n7. End-to-end test suite with Playwright\n8. OpenAPI documentation generation",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Routes REST API work to api-design skill", "weight": 2 },
+        { "criterion": "Routes database schema work to database-design skill", "weight": 1 },
+        { "criterion": "Routes CI/CD work to ci-cd skill", "weight": 1 },
+        { "criterion": "Routes AWS Lambda/cloud work to cloud-infrastructure skill", "weight": 1 },
+        { "criterion": "Routes testing work to testing-strategy skill", "weight": 1 },
+        { "criterion": "Identifies secondary skills where applicable (e.g., testing-strategy as secondary for API)", "weight": 2 },
+        { "criterion": "Mentions skill names matching pokayokay's actual skill inventory", "weight": 2 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT invent skill names that don't exist in pokayokay",
+        "Does NOT route all features to a single generic skill"
+      ]
+    },
+    {
+      "id": "task-description-self-contained",
+      "name": "Write self-contained task descriptions for ohno",
+      "input": "Write a task description for an ohno task that an implementer agent will receive as its only context. The task is: 'Create the user registration API endpoint' for a Node.js/Express app with PostgreSQL.\n\nThe description must be completely self-contained since the implementer gets no other context.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Includes explicit behavior section describing what the code does", "weight": 2 },
+        { "criterion": "Includes input/output contract (request body shape, response shape, status codes)", "weight": 2 },
+        { "criterion": "Includes acceptance criteria as checkboxes", "weight": 2 },
+        { "criterion": "Includes 'Connects To' section with dependency context", "weight": 1 },
+        { "criterion": "Includes 'Patterns to Follow' pointing to existing code conventions", "weight": 1 },
+        { "criterion": "Description is long enough to be self-contained (100+ words)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT produce a one-liner task description",
+        "Does NOT omit status codes from the endpoint contract",
+        "Description mentions specific file paths or code patterns to follow"
+      ]
+    },
+    {
+      "id": "story-splitting-too-large",
+      "name": "Split an oversized story into smaller stories",
+      "input": "This story is too large. Split it into smaller stories using appropriate splitting patterns:\n\n'As an admin, I want to manage all aspects of the product catalog so that products are organized and discoverable. This includes creating products with images, setting prices and inventory, managing categories and tags, configuring search indexing, setting up product recommendations, and managing product reviews.'",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Splits into 3+ separate stories", "weight": 2 },
+        { "criterion": "Each split story has its own acceptance criteria", "weight": 2 },
+        { "criterion": "Uses a recognized splitting pattern (workflow steps, simple/complex, data variations)", "weight": 1 },
+        { "criterion": "Each split story is independently deliverable (provides value on its own)", "weight": 1 },
+        { "criterion": "Identifies the out-of-scope items for each split story", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT keep it as one large story",
+        "Split stories are not just the original bullet points restated as story titles"
+      ]
+    },
+    {
+      "id": "dependency-graph-identification",
+      "name": "Identify task dependencies and critical path",
+      "input": "Given these tasks for a blog platform feature, identify all dependencies (blocked-by relationships) and determine the critical path:\n\n1. Create blog_posts database table (2h)\n2. Create Post model with validation (3h)\n3. Build POST /api/posts endpoint (4h)\n4. Build GET /api/posts endpoint with pagination (3h)\n5. Create PostList React component (4h)\n6. Create PostEditor React component (6h)\n7. Wire PostEditor to POST API (2h)\n8. Wire PostList to GET API (2h)\n9. Add image upload to posts (4h)\n10. Write integration tests (3h)",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Correctly identifies DB table as blocking the model task", "weight": 1 },
+        { "criterion": "Correctly identifies model as blocking API endpoints", "weight": 1 },
+        { "criterion": "Correctly identifies API endpoints as blocking frontend wiring tasks", "weight": 1 },
+        { "criterion": "Presents dependencies as a graph or matrix (not just prose)", "weight": 1 },
+        { "criterion": "Identifies the critical path with total duration", "weight": 2 },
+        { "criterion": "Identifies which tasks can run in parallel", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT treat all tasks as sequential (some can be parallelized)",
+        "Critical path duration is calculated correctly based on dependency chain"
+      ]
+    },
+    {
+      "id": "output-format-project-md",
+      "name": "Generate PROJECT.md output format",
+      "input": "I've analyzed a PRD for a notification service. Generate the PROJECT.md file that should go in .claude/PROJECT.md. Include:\n- 2 epics (Core Notifications, Advanced Features)\n- 3 stories per epic\n- 2-3 tasks per story\n\nUse pokayokay's standard output format.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Output targets .claude/PROJECT.md path", "weight": 1 },
+        { "criterion": "Includes epic definitions with ID, priority, goal, scope, and success criteria", "weight": 2 },
+        { "criterion": "Stories use 'As a / I want / So that' format", "weight": 1 },
+        { "criterion": "Tasks include type (frontend/backend/etc), hour estimates, and blocked-by fields", "weight": 2 },
+        { "criterion": "Includes a dependency graph section", "weight": 1 },
+        { "criterion": "Includes a timeline/phasing section", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT place output files outside .claude/ directory",
+        "Epic and story IDs follow a consistent naming scheme"
+      ]
+    },
+    {
+      "id": "infrastructure-first-detection",
+      "name": "Detect infrastructure-first tasks in a PRD",
+      "input": "This PRD describes a new project from scratch. Identify which infrastructure tasks must be created first and what they block:\n\n# PRD: Inventory Management System\n\nBuild a web app for warehouse inventory tracking. Features: product CRUD, barcode scanning, stock level alerts, role-based access (warehouse staff, managers, admins), reporting dashboard. Stack: React, NestJS, PostgreSQL, Redis for caching.\n\nNo existing codebase - this is greenfield.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Identifies database schema setup as a blocking infrastructure task", "weight": 2 },
+        { "criterion": "Identifies auth/RBAC setup as a blocking infrastructure task", "weight": 2 },
+        { "criterion": "Identifies test framework setup as a blocking infrastructure task", "weight": 1 },
+        { "criterion": "Shows which feature tasks are blocked by each infrastructure task", "weight": 1 },
+        { "criterion": "Orders infrastructure tasks before feature tasks in the plan", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT interleave infrastructure and feature tasks without dependency ordering",
+        "Does NOT skip test setup for a greenfield project"
+      ]
+    },
+    {
+      "id": "estimation-with-adjustments",
+      "name": "Estimate tasks with complexity adjustments",
+      "input": "Estimate these tasks in hours. For each, state your base estimate and any adjustment factors:\n\n1. Add email field validation to existing user form (React + Zod)\n2. Integrate Stripe subscription billing (new integration, never done before)\n3. Migrate legacy MySQL queries to Prisma ORM\n4. Build admin dashboard with 5 chart widgets\n5. Add i18n support to 30 existing components",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Provides hour-based estimates for each task", "weight": 1 },
+        { "criterion": "Applies adjustment factors for new technology (+50-100%)", "weight": 2 },
+        { "criterion": "Applies adjustment factors for legacy integration (+30-50%)", "weight": 1 },
+        { "criterion": "Flags any task that exceeds 8 hours as needing to be split", "weight": 2 },
+        { "criterion": "Gives confidence ranges (not single-point estimates)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT give all tasks the same estimate",
+        "Does NOT ignore the 'never done before' factor for Stripe integration"
+      ]
+    },
+    {
+      "id": "gap-analysis-incomplete-prd",
+      "name": "Gap analysis on an incomplete PRD",
+      "input": "Perform a gap analysis on this PRD. What's missing, what assumptions would you make, and what questions must be answered before planning?\n\n# PRD: Employee Directory\n\nBuild an internal employee directory. Should show org chart, allow searching by name/department/skills, and let employees update their profiles. Needs to sync with our HR system.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Identifies missing success metrics", "weight": 1 },
+        { "criterion": "Questions which HR system and what sync mechanism (API, CSV, real-time)", "weight": 1 },
+        { "criterion": "Flags missing auth/access control requirements", "weight": 1 },
+        { "criterion": "Documents explicit assumptions (not just questions)", "weight": 2 },
+        { "criterion": "Separates findings into categories (missing info, assumptions, questions)", "weight": 1 },
+        { "criterion": "Includes a completeness checklist or quality assessment", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT treat the brief as complete and jump to implementation",
+        "Questions are specific (not generic 'what are the requirements')"
+      ]
+    },
+    {
+      "id": "simple-task-breakdown",
+      "name": "Break down a simple feature (baseline regression)",
+      "input": "Break down this feature into implementable tasks with estimates: 'Add a dark mode toggle to the settings page of our React app. We already have a ThemeProvider and light theme defined.'",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Creates 2+ separate tasks", "weight": 1 },
+        { "criterion": "Each task has an hour estimate", "weight": 1 },
+        { "criterion": "Tasks are ordered by dependency", "weight": 1 },
+        { "criterion": "Includes a testing task", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT create a single monolithic task",
+        "Estimates are reasonable (total under 16h for a toggle feature)"
+      ]
+    },
+    {
+      "id": "simple-story-writing",
+      "name": "Write a user story with acceptance criteria (baseline regression)",
+      "input": "Write a user story with acceptance criteria for: password reset functionality via email.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Uses 'As a / I want / So that' format", "weight": 1 },
+        { "criterion": "Includes 3+ acceptance criteria", "weight": 1 },
+        { "criterion": "Acceptance criteria are testable (not vague)", "weight": 1 },
+        { "criterion": "Mentions edge cases (expired link, user not found)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT write acceptance criteria as implementation steps"
+      ]
+    },
+    {
+      "id": "multi-document-consolidation",
+      "name": "Consolidate scattered requirements into unified plan",
+      "input": "These requirements came from different stakeholders in separate messages. Consolidate them into a unified analysis, flag contradictions, and propose a plan:\n\nFrom PM: 'Users need to upload documents (PDF, Word). Max 10MB. Need full-text search.'\nFrom CTO: 'Use S3 for storage. Keep costs low - maybe use cheaper storage tier.'\nFrom Designer: 'Drag and drop upload with progress bar. Preview PDFs inline.'\nFrom Security: 'All documents must be encrypted at rest. Scan for malware before storing.'\nFrom PM (later): 'Actually, let's support files up to 50MB for enterprise users.'",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Identifies the contradiction in file size limits (10MB vs 50MB)", "weight": 2 },
+        { "criterion": "Consolidates all sources into a single requirements view", "weight": 1 },
+        { "criterion": "Flags cost vs feature tension (cheap storage vs malware scanning + encryption)", "weight": 1 },
+        { "criterion": "Assigns priorities to the consolidated features", "weight": 1 },
+        { "criterion": "Lists open questions that need resolution before planning", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT ignore the contradicting file size requirements",
+        "Does NOT treat all stakeholder inputs as equally prioritized"
+      ]
+    }
+  ],
+  "structural_checks": {
+    "max_skill_lines": 100,
+    "max_reference_lines": 500,
+    "required_sections": ["When NOT to Use"],
+    "description_format": "trigger-condition"
+  },
+  "scoring": {
+    "weights": {
+      "scenario_pass_rate": 0.50,
+      "anti_slop_rate": 0.20,
+      "structural_compliance": 0.15,
+      "llm_quality_score": 0.15
+    },
+    "improvement_threshold": 0.02,
+    "simplicity_bonus": true
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "last_updated": "2026-03-18T20:08:17.795071+00:00",
+  "skills": {
+    "api-design": {
+      "score": 0.9192,
+      "experiments": 0,
+      "kept": 0,
+      "trend": "new",
+      "last_experiment": "2026-03-18T20:08:17.795057+00:00"
+    }
+  },
+  "portfolio_avg": 0.9192,
+  "total_experiments": 0,
+  "total_kept": 0,
+  "keep_rate": 0.0,
+  "cost_total_usd": 0.0
+}

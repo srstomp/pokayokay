@@ -1,0 +1,300 @@
+{
+  "skill": "work-session",
+  "version": 1,
+  "baseline_model": "claude-haiku-4-5-20251001",
+  "eval_model": "claude-haiku-4-5-20251001",
+  "current_best_score": null,
+  "scenarios": [
+    {
+      "id": "fresh-session-start",
+      "name": "Start a fresh work session with ohno",
+      "input": "I just ran '/work semi-auto' to start a new pokayokay work session. ohno has 3 stories with 12 tasks total. Walk me through what happens at session start, step by step.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions calling get_session_context() from ohno MCP to check for previous session state", "weight": 2 },
+        { "criterion": "Mentions calling get_next_task() to select the first task", "weight": 1 },
+        { "criterion": "Describes worktree decision based on task type (feature/bug -> worktree, chore/docs -> in-place)", "weight": 2 },
+        { "criterion": "Correctly describes semi-auto checkpoint behavior (log at task, PAUSE at story/epic)", "weight": 2 },
+        { "criterion": "Mentions subagent dispatch for implementation (not working inline)", "weight": 1 },
+        { "criterion": "Mentions pre-flight or verification checks at session start", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT describe a generic development workflow without ohno MCP integration",
+        "Does NOT skip the worktree isolation step",
+        "Does NOT confuse semi-auto with supervised mode behavior"
+      ]
+    },
+    {
+      "id": "worktree-setup-feature-task",
+      "name": "Set up worktree for a feature task",
+      "input": "I'm working on a pokayokay session. The next task is a 'feature' type task belonging to story-abc123. How should I set up the working environment?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Checks for existing story worktree first (reuse if story-abc123 worktree exists)", "weight": 2 },
+        { "criterion": "Creates worktree in .worktrees/ directory", "weight": 2 },
+        { "criterion": "Creates a new branch from the base branch (main/master)", "weight": 1 },
+        { "criterion": "Uses git worktree add command with -b flag for new branch", "weight": 1 },
+        { "criterion": "Mentions installing dependencies after worktree setup", "weight": 1 },
+        { "criterion": "Names the worktree using story ID (story-abc123-slug pattern)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT suggest creating a regular git branch instead of a worktree",
+        "Does NOT skip dependency installation in the new worktree",
+        "Does NOT suggest placing worktrees outside .worktrees/ directory"
+      ]
+    },
+    {
+      "id": "mode-selection-guidance",
+      "name": "Recommend operating mode for a scenario",
+      "input": "I'm setting up a pokayokay work session for each of these situations. What mode should I use and why?\n\n1. First time working on a new project with unfamiliar codebase\n2. Routine implementation of well-specified tasks during the workday\n3. Running overnight while I sleep, processing a full epic\n4. Well-defined tasks but I want to review at story boundaries",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Recommends supervised mode for unfamiliar codebase (PAUSE at every task)", "weight": 2 },
+        { "criterion": "Recommends semi-auto for routine work (log at task, PAUSE at story/epic)", "weight": 2 },
+        { "criterion": "Recommends unattended mode for overnight runs", "weight": 2 },
+        { "criterion": "Mentions unattended requires --headless --dangerously-skip-permissions flags", "weight": 1 },
+        { "criterion": "Recommends semi-auto or auto for story-boundary review scenario", "weight": 1 },
+        { "criterion": "Uses the exact mode names: supervised, semi-auto, auto, unattended", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT invent mode names that don't exist",
+        "Does NOT recommend unattended mode for unfamiliar codebases"
+      ]
+    },
+    {
+      "id": "subagent-dispatch-flow",
+      "name": "Describe the subagent dispatch flow for a task",
+      "input": "A pokayokay coordinator just got a task from ohno. Describe the complete subagent dispatch flow from task retrieval to completion, including all stages.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Describes brainstorm gate check (conditional, based on description quality/length)", "weight": 2 },
+        { "criterion": "Describes implementer dispatch with template variable filling", "weight": 1 },
+        { "criterion": "Describes two-stage review: spec review first, then quality review", "weight": 2 },
+        { "criterion": "Mentions review loop limit (max 3 cycles before escalation)", "weight": 1 },
+        { "criterion": "Mentions skill routing to determine which skill to load for the implementer", "weight": 1 },
+        { "criterion": "Describes updating ohno task status on completion", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT describe a single-agent flow (must mention multiple specialized agents)",
+        "Does NOT skip the review stages",
+        "Does NOT confuse coordinator and implementer roles"
+      ]
+    },
+    {
+      "id": "parallel-execution-setup",
+      "name": "Configure parallel task execution",
+      "input": "I want to run pokayokay with parallel execution. I have 8 independent tasks in my backlog. How do I configure parallel dispatch, and what are the tradeoffs?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions --parallel N flag (or -n flag) for setting parallelism", "weight": 2 },
+        { "criterion": "Recommends 2-4 parallel agents (not 8, which is too many)", "weight": 2 },
+        { "criterion": "Explains that dependency graph prevents dispatching blocked tasks", "weight": 1 },
+        { "criterion": "Mentions git conflict risk as a tradeoff of parallel execution", "weight": 1 },
+        { "criterion": "Mentions higher token usage as a tradeoff", "weight": 1 },
+        { "criterion": "Notes that each parallel agent gets its own worktree", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT suggest running all 8 tasks in parallel",
+        "Does NOT omit the dependency safety mechanism"
+      ]
+    },
+    {
+      "id": "session-chain-overnight",
+      "name": "Configure overnight session chaining",
+      "input": "I want to set up pokayokay for an overnight run that processes an entire epic. The context window might fill up. How do I ensure work continues across session boundaries?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions session chaining via .claude/pokayokay-chain-state.json", "weight": 2 },
+        { "criterion": "Recommends unattended mode for overnight runs", "weight": 1 },
+        { "criterion": "Mentions --headless and --dangerously-skip-permissions flags for true unattended", "weight": 2 },
+        { "criterion": "Mentions --all flag for scoping the full epic", "weight": 1 },
+        { "criterion": "Explains that session chains automatically on context pressure", "weight": 1 },
+        { "criterion": "Mentions pre-flight checks that run at session start in unattended mode", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT suggest manual session restarts as the solution",
+        "Does NOT omit the chain state file mechanism"
+      ]
+    },
+    {
+      "id": "checkpoint-behavior-auto-mode",
+      "name": "Explain checkpoint behavior in auto mode",
+      "input": "I'm running in auto mode. What happens when:\n1. A task completes\n2. A story completes (all tasks in story done)\n3. An epic completes (all stories in epic done)",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Task complete in auto mode: skip (no pause, no log)", "weight": 2 },
+        { "criterion": "Story complete in auto mode: log and continue", "weight": 2 },
+        { "criterion": "Epic complete in auto mode: PAUSE for human review", "weight": 2 },
+        { "criterion": "Distinguishes auto from semi-auto behavior correctly", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT confuse auto mode with semi-auto or unattended behavior",
+        "Does NOT say auto mode pauses at story boundaries"
+      ]
+    },
+    {
+      "id": "worktree-completion-story-done",
+      "name": "Handle worktree when story completes",
+      "input": "A pokayokay work session just completed the last task in a story. The story was using a worktree at .worktrees/story-12-user-auth. What are my options for the worktree now?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Lists merge to main as an option", "weight": 1 },
+        { "criterion": "Lists create pull request as an option", "weight": 1 },
+        { "criterion": "Lists keep worktree (continue later) as an option", "weight": 1 },
+        { "criterion": "Lists discard work as an option", "weight": 1 },
+        { "criterion": "Shows the git commands for merge (checkout main, merge --no-ff, worktree remove, branch delete)", "weight": 2 },
+        { "criterion": "Shows the git/gh commands for PR creation (push -u origin, gh pr create)", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT suggest only one option without alternatives",
+        "Does NOT forget to clean up the worktree after merge"
+      ]
+    },
+    {
+      "id": "pre-flight-checks-unattended",
+      "name": "Describe pre-flight checks for unattended sessions",
+      "input": "I'm about to start an unattended pokayokay session. What pre-flight checks run automatically, and what happens if one fails?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions git clean check (no uncommitted changes)", "weight": 2 },
+        { "criterion": "Mentions ohno responsive check (CLI can list tasks)", "weight": 2 },
+        { "criterion": "Mentions tasks available check (ready count > 0)", "weight": 1 },
+        { "criterion": "Distinguishes blocking issues (session stops) from warnings (session continues)", "weight": 2 },
+        { "criterion": "Mentions disk space and worktree lock checks as warnings", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT describe generic health checks without pokayokay-specific details",
+        "Does NOT say pre-flight runs in all modes (only unattended)"
+      ]
+    },
+    {
+      "id": "brainstorm-gate-trigger",
+      "name": "When does the brainstorm gate trigger?",
+      "input": "In pokayokay's work session flow, when does the brainstorm gate trigger before dispatching an implementer? Give specific trigger conditions.",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions short description (< 100 chars) as a trigger", "weight": 2 },
+        { "criterion": "Mentions missing acceptance criteria as a trigger", "weight": 2 },
+        { "criterion": "Mentions spike task type as a trigger", "weight": 1 },
+        { "criterion": "Mentions ambiguous keywords ('investigate', 'explore', 'figure out') as a trigger", "weight": 1 },
+        { "criterion": "Mentions that bug and chore task types skip brainstorm", "weight": 1 },
+        { "criterion": "Mentions --skip-brainstorm flag to bypass", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT describe brainstorming as always happening",
+        "Does NOT omit the conditional nature of the gate"
+      ]
+    },
+    {
+      "id": "error-recovery-ohno-down",
+      "name": "Recover when ohno MCP is unavailable",
+      "input": "I'm in the middle of a pokayokay work session and ohno MCP stops responding. What's the recovery procedure?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Suggests retrying once (transient failure)", "weight": 1 },
+        { "criterion": "Suggests checking ohno server status (npx @stevestomp/ohno-cli status)", "weight": 2 },
+        { "criterion": "Mentions CLI fallback if MCP is unavailable", "weight": 2 },
+        { "criterion": "Mentions proceeding without ohno using manual context as last resort", "weight": 1 },
+        { "criterion": "Suggests syncing back to ohno when it becomes available again", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT just say 'restart the session'",
+        "Does NOT omit the escalation path (retry -> check -> CLI fallback -> manual)"
+      ]
+    },
+    {
+      "id": "task-within-story-continuation",
+      "name": "Continue working on next task within same story",
+      "input": "A pokayokay implementer just finished task-42 which is part of story-12. Story-12 has 2 more tasks remaining. What happens next in the work loop?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Stays in the same worktree (story worktree reused for all story tasks)", "weight": 2 },
+        { "criterion": "Gets next task from ohno (get_next_task)", "weight": 1 },
+        { "criterion": "No worktree completion prompt (only at story boundary)", "weight": 2 },
+        { "criterion": "Commits to the story branch", "weight": 1 },
+        { "criterion": "Checkpoint behavior depends on operating mode", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT create a new worktree for each task within the same story",
+        "Does NOT prompt for worktree disposition mid-story"
+      ]
+    },
+    {
+      "id": "simple-session-resume",
+      "name": "Resume an interrupted session (baseline regression)",
+      "input": "I want to resume a pokayokay work session that was interrupted yesterday. How do I pick up where I left off?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions checking ohno for session context or in-progress tasks", "weight": 1 },
+        { "criterion": "Mentions looking for existing worktrees to reuse", "weight": 1 },
+        { "criterion": "Suggests running /work command to restart", "weight": 1 },
+        { "criterion": "Mentions that ohno preserves state across sessions", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT say all progress is lost and you need to start over"
+      ]
+    },
+    {
+      "id": "simple-task-completion",
+      "name": "What happens after a task completes (baseline regression)",
+      "input": "In a pokayokay work session, what generally happens after an implementer agent finishes a task?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "Mentions code review/verification step", "weight": 1 },
+        { "criterion": "Mentions git commit", "weight": 1 },
+        { "criterion": "Mentions updating task status in the task management system", "weight": 1 },
+        { "criterion": "Mentions proceeding to next task or checkpoint", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT skip the review step entirely"
+      ]
+    },
+    {
+      "id": "review-loop-escalation",
+      "name": "Handle repeated review failures",
+      "input": "A pokayokay implementer has failed spec review twice in a row for the same task. The coordinator is about to dispatch a third attempt. What happens if this one also fails?",
+      "system_context": null,
+      "eval_criteria": [
+        { "criterion": "States the maximum review cycle limit is 3", "weight": 2 },
+        { "criterion": "After 3 failures: task is blocked with escalation reason", "weight": 2 },
+        { "criterion": "After 3 failures: PAUSE for human intervention regardless of mode", "weight": 2 },
+        { "criterion": "Mentions logging the escalation to ohno", "weight": 1 }
+      ],
+      "baseline_score": null,
+      "anti_slop_checks": [
+        "Does NOT say it retries indefinitely",
+        "Does NOT skip escalation to human"
+      ]
+    }
+  ],
+  "structural_checks": {
+    "max_skill_lines": 100,
+    "max_reference_lines": 500,
+    "required_sections": ["When NOT to Use"],
+    "description_format": "trigger-condition"
+  },
+  "scoring": {
+    "weights": {
+      "scenario_pass_rate": 0.50,
+      "anti_slop_rate": 0.20,
+      "structural_compliance": 0.15,
+      "llm_quality_score": 0.15
+    },
+    "improvement_threshold": 0.02,
+    "simplicity_bonus": true
+  }
+}
