@@ -4,7 +4,41 @@ Autonomous skill improvement system for Claude Code plugins, inspired by [Karpat
 
 Iteratively evaluates and improves skill quality using an LLM-as-judge feedback loop: edit skill → run eval scenarios → score → keep/discard → repeat.
 
-## Quick Start
+## Using in a Claude Code Session
+
+The most common way to use auto-improve is interactively within Claude Code. Just ask Claude to run the commands for you:
+
+**Check how a skill is performing:**
+> "Run a baseline eval on the planning skill with 3 scenarios"
+
+**Compare with vs without:**
+> "Compare the work-session skill with and without — use 5 scenarios"
+
+**See the dashboard:**
+> "Show me the skill portfolio dashboard"
+
+**Improve a skill:**
+> "The api-design skill scores low on anti-slop. Look at the eval-log, read the SKILL.md, and try to improve it. Then re-run the eval to see if the score went up."
+
+**Manual improvement loop (the recommended workflow):**
+
+1. Ask Claude to run `eval.py --compare` on a skill
+2. Review which scenarios/criteria are failing
+3. Ask Claude to read the SKILL.md and propose an improvement hypothesis
+4. Make the edit
+5. Re-run the eval
+6. If score improved → commit. If not → revert.
+7. Repeat
+
+This manual loop is the same structure as the automated runner, but with you making the keep/discard decisions. Start here before trusting the automated loop.
+
+**Overnight automated run:**
+```bash
+claude -p --model opus --dangerously-skip-permissions \
+  "Run auto-improve/runner.py with --skills-dir plugins/pokayokay/skills --eval-only --max-scenarios 5 -v on all three pilot skills, then show me the dashboard"
+```
+
+## Quick Start (CLI)
 
 ```bash
 # 1. Run a baseline evaluation (measures what Claude knows WITHOUT the skill)
