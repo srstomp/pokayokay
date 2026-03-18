@@ -164,6 +164,8 @@ The `/work` command routes to skills based on task type, or use direct commands:
 | Documentation | documentation | `/pokayokay:docs` |
 | SDK/Packages | sdk-development | `/pokayokay:sdk` |
 | API integration | api-integration | `/pokayokay:integrate` |
+| Cloud/AWS | cloud-infrastructure | — |
+| Architecture | architecture-review | `/pokayokay:arch` |
 
 ## Keyword Detection
 
@@ -171,13 +173,17 @@ Tasks are automatically routed based on keywords:
 
 | Keywords | Skill |
 |----------|-------|
-| database, schema, migration | database-design |
+| database, schema, migration, prisma | database-design |
 | test, coverage, e2e, playwright | testing-strategy |
-| deploy, pipeline, ci/cd | ci-cd |
-| security, auth, encryption | security-audit |
-| logging, monitoring, metrics | observability |
+| deploy, pipeline, ci/cd, github actions | ci-cd |
+| security, auth, encryption, owasp | security-audit |
+| logging, monitoring, metrics, tracing | observability |
 | spike, investigate, feasibility | spike |
 | research, evaluate, compare | deep-research |
+| API endpoint, REST, GraphQL | api-design |
+| third-party, integration, webhook | api-integration |
+| cloud, aws, serverless, lambda, ecs, cdk | cloud-infrastructure |
+| sdk, package, extract, publish, npm | sdk-development |
 
 ## Spike Protocol
 

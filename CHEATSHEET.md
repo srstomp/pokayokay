@@ -47,6 +47,9 @@ npx @stevestomp/ohno-cli init
 | `/pokayokay:arch` | Architecture review |
 | `/pokayokay:test` | Testing strategy |
 | `/pokayokay:integrate` | API integration |
+| `/pokayokay:sdk` | SDK creation/extraction |
+| `/pokayokay:docs` | Documentation |
+| `/pokayokay:research` | Deep research |
 
 ## Infrastructure Commands
 | Command | Purpose |
@@ -54,6 +57,9 @@ npx @stevestomp/ohno-cli init
 | `/pokayokay:cicd` | CI/CD pipelines |
 | `/pokayokay:security` | Security audit |
 | `/pokayokay:observe` | Logging/metrics |
+| `/pokayokay:hooks` | View/manage hooks |
+| `/pokayokay:worktrees` | Manage worktrees |
+| `/pokayokay:review` | Session analysis |
 
 ## Work Modes
 | Mode | Task | Story | Epic |
@@ -106,9 +112,28 @@ npx @stevestomp/ohno-cli next      # Get next task
 npx @stevestomp/ohno-cli done <id> # Complete task
 ```
 
+## Planner Skill Routing
+| Task Keywords | Routed Skill |
+|---------------|-------------|
+| database, schema, migration | `database-design` |
+| test, coverage, e2e | `testing-strategy` |
+| deploy, pipeline, ci/cd | `ci-cd` |
+| security, auth, owasp | `security-audit` |
+| logging, monitoring, metrics | `observability` |
+| spike, investigate | `spike` |
+| research, evaluate | `deep-research` |
+| API endpoint, REST | `api-design` |
+| third-party, webhook | `api-integration` |
+| cloud, aws, serverless | `cloud-infrastructure` |
+| sdk, package, npm | `sdk-development` |
+
 ## Files
 | Path | Purpose |
 |------|---------|
 | `.claude/PROJECT.md` | Project context |
+| `.claude/pokayokay.json` | Chaining config |
+| `.claude/pokayokay-chain-state.json` | Active chain state |
+| `.claude/settings.local.json` | Hook configuration |
 | `.claude/spikes/*.md` | Spike reports |
-| `.yokay/hooks.yaml` | Custom hooks |
+| `.claude/rules/pokayokay/*.md` | Graduated failure rules |
+| `.ohno/` | ohno database and sessions |

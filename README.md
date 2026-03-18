@@ -17,7 +17,7 @@
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
 - **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, auto, or unattended
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
-- **23 Specialized Skills** - Route work to domain experts automatically
+- **23 Specialized Skills** - Route work to domain-specific workflows automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
 
 ## Prerequisites
@@ -158,28 +158,32 @@ npx @stevestomp/ohno-cli serve
 
 ## Skills
 
-The plugin includes 23 specialized skills that are automatically loaded based on task type:
+The plugin includes 23 specialized skills loaded on demand via commands or planner routing:
 
-### Backend & API
+### Orchestration (process skills - add structure Claude wouldn't do alone)
+- `work-session` - Coordinator workflow, modes, agent dispatch
+- `planning` - PRD-to-task breakdown with ohno integration
+- `plan-revision` - Impact analysis on existing plans
+- `spike` - Time-boxed investigation with structured output
+- `deep-research` - Multi-day technology evaluation
+- `session-review` - Post-session analysis and handoff prep
+- `feature-audit` - L0-L5 completeness verification
+- `worktrees` - Git worktree management
+- `browser-verification` - Playwright UI verification
+
+### Domain (reference material for implementer agents)
 - `api-design` - REST/GraphQL endpoint design
 - `api-integration` - Third-party API consumption
 - `database-design` - Schema design, migrations, optimization
 - `architecture-review` - Code structure, module boundaries
-
-### DevOps & Infrastructure
 - `ci-cd` - GitHub Actions, GitLab CI, deployment strategies
+- `cloud-infrastructure` - AWS service selection, CDK patterns
 - `observability` - Logging, metrics, tracing, alerting
-
-### Quality & Security
 - `testing-strategy` - Test architecture, coverage, E2E patterns
 - `security-audit` - OWASP Top 10, dependency scanning
-
-### Investigation
-- `spike` - Time-boxed technical investigation (2-4 hours)
-- `deep-research` - Multi-day technology evaluation
-
-### Planning
-- `plan-revision` - Guided plan revision with impact analysis
+- `error-handling` - Error hierarchies, recovery patterns
+- `sdk-development` - TypeScript SDK extraction and publishing
+- `documentation` - READMEs, API docs, ADRs
 
 ## Audit Dimensions
 
@@ -308,7 +312,7 @@ Tasks automatically run in isolated git worktrees based on type:
 
 ## Sub-Agents
 
-pokayokay includes **12 specialized sub-agents** that run in isolated context windows for verbose operations:
+pokayokay includes **13 specialized sub-agents** that run in isolated context windows for verbose operations:
 
 | Agent | Model | Purpose |
 |-------|-------|---------|

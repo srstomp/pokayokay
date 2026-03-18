@@ -5,6 +5,15 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1] - 2026-03-18
+
+### Removed
+- **figma-plugin skill** — Zero entry points (no command, not in planner routing, no agent dispatch). Hyper-specialized domain with no usage path.
+- **performance-optimization skill** — Zero entry points. Orphaned skill with generic principles Claude already knows.
+
+### Fixed
+- **Planner skill routing gaps** — Added `cloud-infrastructure` (cloud, aws, serverless, lambda, ecs, cdk) and `sdk-development` (sdk, package, extract, publish, npm) to planner's keyword routing table. Tasks with these keywords were previously unrouted.
+
 ## [0.18.0] - 2026-03-18
 
 ### Added

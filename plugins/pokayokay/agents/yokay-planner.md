@@ -78,6 +78,8 @@ Route tasks to appropriate skills based on content:
 | research, evaluate, compare | deep-research |
 | API endpoint, REST, GraphQL | api-design |
 | third-party, integration, webhook | api-integration |
+| cloud, aws, serverless, lambda, ecs, cdk | cloud-infrastructure |
+| sdk, package, extract, publish, npm | sdk-development |
 
 ### 5. Map Dependencies
 
