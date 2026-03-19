@@ -24,11 +24,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from judge import claude_cli, judge_response
+from judge import call_llm, judge_response, _get_backend
 from structural import check_skill_structure, check_agent_structure
 
 
@@ -161,7 +162,7 @@ def generate_response(
     component_type: str = "skill",
     model: str = "haiku",
 ) -> str:
-    """Generate a response with optional component content via claude CLI.
+    """Generate a response via the best available backend.
 
     For skills: content is injected into system prompt as context.
     For agents: content IS the system prompt (it's the agent's instructions).
@@ -171,7 +172,7 @@ def generate_response(
         system = skill_content
         if system_context:
             system += f"\n\n{system_context}"
-        return claude_cli(user_input, system, model)
+        return call_llm(user_input, system, model)
 
     # Skill mode (original behavior)
     system_parts = []
@@ -183,7 +184,7 @@ def generate_response(
         system_parts.append("You are a helpful AI assistant.")
 
     system = "\n\n".join(system_parts)
-    return claude_cli(user_input, system, model)
+    return call_llm(user_input, system, model)
 
 
 def eval_scenario(
@@ -316,6 +317,55 @@ def eval_agent(
     )
 
 
+def _eval_scenarios_parallel(
+    scenarios: list[dict],
+    content: str,
+    eval_model: str,
+    judge_model: str,
+    component_type: str,
+    baseline: bool,
+    compare: bool,
+    verbose: bool,
+    max_workers: int = 4,
+) -> tuple[list[dict], list[dict]]:
+    """Evaluate scenarios in parallel using ThreadPoolExecutor."""
+    results_with = [None] * len(scenarios)
+    results_without = [None] * len(scenarios)
+    futures = {}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for i, scenario in enumerate(scenarios):
+            if not baseline:
+                future = executor.submit(
+                    eval_scenario, scenario, content, eval_model, judge_model,
+                    True, component_type,
+                )
+                futures[future] = ("with", i, scenario["name"])
+
+            if baseline or compare:
+                future = executor.submit(
+                    eval_scenario, scenario, content, eval_model, judge_model,
+                    False, component_type,
+                )
+                futures[future] = ("without", i, scenario["name"])
+
+        for future in as_completed(futures):
+            kind, idx, name = futures[future]
+            result = future.result()
+            if kind == "with":
+                results_with[idx] = result
+            else:
+                results_without[idx] = result
+            if verbose:
+                score = result["criteria_weighted_score"]
+                print(f"  [{idx+1}/{len(scenarios)}] {name} ({kind}): {score:.2f}")
+
+    # Filter out None entries (from non-baseline or non-compare runs)
+    results_with = [r for r in results_with if r is not None]
+    results_without = [r for r in results_without if r is not None]
+    return results_with, results_without
+
+
 def _eval_component(
     config: dict,
     content: str,
@@ -357,30 +407,42 @@ def _eval_component(
     results_with = []
     results_without = []
 
-    for i, scenario in enumerate(scenarios):
-        if verbose:
-            print(f"  [{i+1}/{len(scenarios)}] {scenario['name']}...", end=" ", flush=True)
+    backend = _get_backend()
+    parallel = backend == "sdk" and len(scenarios) > 1
 
-        if not baseline:
-            result_with = eval_scenario(
-                scenario, content, eval_model, judge_model,
-                with_skill=True, component_type=component_type,
-            )
-            results_with.append(result_with)
+    if parallel and verbose:
+        print(f"  Running {len(scenarios)} scenarios in parallel (SDK backend)")
 
-        if baseline or compare:
-            result_without = eval_scenario(
-                scenario, content, eval_model, judge_model,
-                with_skill=False, component_type=component_type,
-            )
-            results_without.append(result_without)
+    if parallel:
+        results_with, results_without = _eval_scenarios_parallel(
+            scenarios, content, eval_model, judge_model,
+            component_type, baseline, compare, verbose,
+        )
+    else:
+        for i, scenario in enumerate(scenarios):
+            if verbose:
+                print(f"  [{i+1}/{len(scenarios)}] {scenario['name']}...", end=" ", flush=True)
 
-        if verbose:
-            if results_with:
-                print(f"with={results_with[-1]['criteria_weighted_score']:.2f}", end=" ")
-            if results_without:
-                print(f"without={results_without[-1]['criteria_weighted_score']:.2f}", end="")
-            print()
+            if not baseline:
+                result_with = eval_scenario(
+                    scenario, content, eval_model, judge_model,
+                    with_skill=True, component_type=component_type,
+                )
+                results_with.append(result_with)
+
+            if baseline or compare:
+                result_without = eval_scenario(
+                    scenario, content, eval_model, judge_model,
+                    with_skill=False, component_type=component_type,
+                )
+                results_without.append(result_without)
+
+            if verbose:
+                if results_with:
+                    print(f"with={results_with[-1]['criteria_weighted_score']:.2f}", end=" ")
+                if results_without:
+                    print(f"without={results_without[-1]['criteria_weighted_score']:.2f}", end="")
+                print()
 
     # Compute composite scores
     composite_with = None

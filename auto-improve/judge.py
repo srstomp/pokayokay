@@ -1,15 +1,45 @@
 """LLM-as-judge scoring for skill evaluation.
 
 Uses binary criteria with chain-of-thought-before-verdict for reliable scoring.
-Uses claude CLI in print mode (-p) for API access via Claude Code's auth.
+
+Two backends, auto-detected:
+- Anthropic SDK (fast, parallelizable) — used when ANTHROPIC_API_KEY is set
+- claude CLI (no API key needed) — fallback using Claude Code's auth
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 
+
+# --- Backend detection ---
+
+MODEL_MAP = {
+    "haiku": "claude-haiku-4-5-20251001",
+    "sonnet": "claude-sonnet-4-6",
+    "opus": "claude-opus-4-6",
+}
+
+MODEL_MAP_REVERSE = {v: k for k, v in MODEL_MAP.items()}
+
+
+def _get_backend() -> str:
+    """Detect which backend to use. SDK if API key is set, CLI otherwise."""
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "sdk"
+    return "cli"
+
+
+def _get_sdk_client():
+    """Lazy-load the Anthropic SDK client."""
+    import anthropic
+    return anthropic.Anthropic()
+
+
+# --- Prompts ---
 
 JUDGE_SYSTEM_PROMPT = """You are an evaluation judge. Your job is to assess whether an AI response meets specific criteria.
 
@@ -46,21 +76,35 @@ Return ONLY valid JSON in this exact format:
 }}"""
 
 
+# --- API backends ---
+
+def claude_sdk(
+    prompt: str,
+    system_prompt: str = "",
+    model: str = "haiku",
+) -> str:
+    """Call Claude via the Anthropic SDK."""
+    client = _get_sdk_client()
+    model_id = MODEL_MAP.get(model, model)
+
+    kwargs = {
+        "model": model_id,
+        "max_tokens": 4096,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system_prompt:
+        kwargs["system"] = system_prompt
+
+    response = client.messages.create(**kwargs)
+    return response.content[0].text.strip()
+
+
 def claude_cli(
     prompt: str,
     system_prompt: str = "",
     model: str = "haiku",
 ) -> str:
-    """Call claude CLI in print mode and return the response text.
-
-    Args:
-        prompt: User prompt to send
-        system_prompt: Optional system prompt
-        model: Model alias (haiku, sonnet, opus) or full model ID
-
-    Returns:
-        Response text from Claude
-    """
+    """Call claude CLI in print mode and return the response text."""
     cmd = [
         "claude", "-p",
         "--model", model,
@@ -76,7 +120,7 @@ def claude_cli(
         input=prompt,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=600,
     )
 
     if result.returncode != 0:
@@ -84,6 +128,20 @@ def claude_cli(
 
     return result.stdout.strip()
 
+
+def call_llm(
+    prompt: str,
+    system_prompt: str = "",
+    model: str = "haiku",
+) -> str:
+    """Call Claude using the best available backend."""
+    backend = _get_backend()
+    if backend == "sdk":
+        return claude_sdk(prompt, system_prompt, model)
+    return claude_cli(prompt, system_prompt, model)
+
+
+# --- Formatting ---
 
 def format_criteria_list(criteria: list[dict]) -> str:
     """Format criteria for the judge prompt."""
@@ -99,6 +157,34 @@ def format_anti_slop_list(checks: list[str]) -> str:
         return "(none)"
     return "\n".join(f"{i}. {check}" for i, check in enumerate(checks, 1))
 
+
+# --- JSON parsing ---
+
+def _parse_judge_json(raw_text: str) -> dict | None:
+    """Extract JSON from judge response, handling markdown code blocks."""
+    json_text = raw_text
+    if "```" in json_text:
+        start = json_text.find("{")
+        end = json_text.rfind("}") + 1
+        if start >= 0 and end > start:
+            json_text = json_text[start:end]
+
+    try:
+        return json.loads(json_text)
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+# --- Scoring ---
 
 def judge_response(
     response_text: str,
@@ -124,44 +210,25 @@ def judge_response(
     )
 
     try:
-        raw_text = claude_cli(user_msg, JUDGE_SYSTEM_PROMPT, model)
-    except (RuntimeError, subprocess.TimeoutExpired) as e:
+        raw_text = call_llm(user_msg, JUDGE_SYSTEM_PROMPT, model)
+    except (RuntimeError, subprocess.TimeoutExpired, Exception) as e:
         return {
             "error": str(e),
-            "criteria_scores": [{"reasoning": "cli error", "score": 0}] * len(criteria),
-            "anti_slop_scores": [{"reasoning": "cli error", "score": 0}] * len(anti_slop_checks),
+            "criteria_scores": [{"reasoning": "api error", "score": 0}] * len(criteria),
+            "anti_slop_scores": [{"reasoning": "api error", "score": 0}] * len(anti_slop_checks),
             "criteria_weighted_score": 0.0,
             "anti_slop_score": 0.0,
         }
 
-    # Parse JSON from response (handle markdown code blocks)
-    json_text = raw_text
-    if "```" in json_text:
-        start = json_text.find("{")
-        end = json_text.rfind("}") + 1
-        if start >= 0 and end > start:
-            json_text = json_text[start:end]
-
-    try:
-        result = json.loads(json_text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-        if match:
-            try:
-                result = json.loads(match.group())
-            except json.JSONDecodeError:
-                result = None
-        else:
-            result = None
-
-        if result is None:
-            return {
-                "error": f"Failed to parse judge response: {raw_text[:200]}",
-                "criteria_scores": [{"reasoning": "parse error", "score": 0}] * len(criteria),
-                "anti_slop_scores": [{"reasoning": "parse error", "score": 0}] * len(anti_slop_checks),
-                "criteria_weighted_score": 0.0,
-                "anti_slop_score": 0.0,
-            }
+    result = _parse_judge_json(raw_text)
+    if result is None:
+        return {
+            "error": f"Failed to parse judge response: {raw_text[:200]}",
+            "criteria_scores": [{"reasoning": "parse error", "score": 0}] * len(criteria),
+            "anti_slop_scores": [{"reasoning": "parse error", "score": 0}] * len(anti_slop_checks),
+            "criteria_weighted_score": 0.0,
+            "anti_slop_score": 0.0,
+        }
 
     criteria_scores = result.get("criteria", [])
     anti_slop_scores = result.get("anti_slop", [])
