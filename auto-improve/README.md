@@ -1,8 +1,8 @@
 # auto-improve
 
-Autonomous skill improvement system for Claude Code plugins, inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch).
+Autonomous improvement system for Claude Code plugin skills and agents, inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch).
 
-Iteratively evaluates and improves skill quality using an LLM-as-judge feedback loop: edit skill → run eval scenarios → score → keep/discard → repeat.
+Iteratively evaluates and improves component quality using an LLM-as-judge feedback loop: edit component → run eval scenarios → score → keep/discard → repeat. Works with both skills (context injected into user message) and agents (content used as system prompt).
 
 ## Using in a Claude Code Session
 
@@ -11,11 +11,14 @@ The most common way to use auto-improve is interactively within Claude Code. Jus
 **Check how a skill is performing:**
 > "Run a baseline eval on the planning skill with 3 scenarios"
 
+**Evaluate an agent:**
+> "Run an eval on the spec-reviewer agent with --compare"
+
 **Compare with vs without:**
 > "Compare the work-session skill with and without — use 5 scenarios"
 
 **See the dashboard:**
-> "Show me the skill portfolio dashboard"
+> "Show me the component portfolio dashboard"
 
 **Improve a skill:**
 > "The api-design skill scores low on anti-slop. Look at the eval-log, read the SKILL.md, and try to improve it. Then re-run the eval to see if the score went up."
@@ -55,7 +58,19 @@ python3 auto-improve/eval.py \
   --skill planning \
   -v
 
-# 3. Quick test (limit scenarios for speed)
+# 3. Evaluate an agent
+python3 auto-improve/eval.py \
+  --agents-dir plugins/pokayokay/agents \
+  --agent yokay-spec-reviewer \
+  -v
+
+# 4. Evaluate all skills and agents together
+python3 auto-improve/eval.py \
+  --skills-dir plugins/pokayokay/skills \
+  --agents-dir plugins/pokayokay/agents \
+  -v
+
+# 5. Quick test (limit scenarios for speed)
 python3 auto-improve/eval.py \
   --compare \
   --skills-dir plugins/pokayokay/skills \
@@ -63,20 +78,15 @@ python3 auto-improve/eval.py \
   --max-scenarios 3 \
   -v
 
-# 4. Evaluate all skills that have eval.json
-python3 auto-improve/eval.py \
-  --skills-dir plugins/pokayokay/skills \
-  -v
-
-# 5. Run through the runner with dashboard updates
+# 6. Run through the runner with dashboard updates
 python3 auto-improve/runner.py \
   --skills-dir plugins/pokayokay/skills \
+  --agents-dir plugins/pokayokay/agents \
   --eval-only \
   -v
 
-# 6. View portfolio dashboard
+# 7. View portfolio dashboard
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
   --dashboard
 ```
 
@@ -111,9 +121,9 @@ Each scenario is scored on four dimensions:
 
 The judge uses **binary criteria with chain-of-thought-before-verdict** for maximum reliability. Each criterion is independently evaluated as pass (1) or fail (0), then weighted and aggregated.
 
-### Per-Skill Files
+### Per-Component Files
 
-Each skill gets two files alongside its existing `SKILL.md`:
+**Skills** get eval files alongside `SKILL.md`:
 
 ```
 skills/api-design/
@@ -123,11 +133,34 @@ skills/api-design/
 └── eval-log.md       # Experiment history (append-only)
 ```
 
+**Agents** store eval files in a shared `eval/` subdirectory (since agents are flat .md files):
+
+```
+agents/
+├── yokay-spec-reviewer.md     # (existing agent file)
+├── yokay-implementer.md
+└── eval/
+    ├── yokay-spec-reviewer.json       # Eval config
+    ├── yokay-spec-reviewer.eval-log.md  # Experiment history
+    └── yokay-implementer.json
+```
+
 **`eval.json`** — Defines what "good" looks like. Contains scenarios with input prompts, binary eval criteria (with weights), anti-slop checks, structural checks, and scoring weights. Human-controlled: the improvement loop cannot edit its own eval criteria.
 
 **`eval-log.md`** — Records every experiment: hypothesis, what changed, before/after scores, kept/discarded. The agent reads this to learn from its own history.
 
+### Skills vs Agents: How Content Is Used
+
+| Component | Content injection | Baseline (without) |
+|---|---|---|
+| **Skill** | Injected into user message as context | Generic system prompt |
+| **Agent** | Used as the **system prompt** directly | Generic system prompt |
+
+This distinction matters: agents are system prompts that define behavior, while skills are knowledge loaded into context.
+
 ## eval.json Schema
+
+### For Skills
 
 ```json
 {
@@ -172,6 +205,45 @@ skills/api-design/
 }
 ```
 
+### For Agents
+
+Agent configs use `"agent"` instead of `"skill"` and have agent-specific structural checks:
+
+```json
+{
+  "agent": "yokay-spec-reviewer",
+  "type": "agent",
+  "version": 1,
+  "eval_model": "claude-haiku-4-5-20251001",
+  "scenarios": [
+    {
+      "id": "catches-missing-test",
+      "name": "Catches MUST criterion without test evidence",
+      "input": "Review this implementation...\n\n[code diff + acceptance criteria]",
+      "eval_criteria": [
+        { "criterion": "Produces evidence table with Priority, Criterion, Verdict, Evidence columns", "weight": 2 },
+        { "criterion": "Returns FAIL verdict for missing MUST criterion", "weight": 2 }
+      ],
+      "anti_slop_checks": [
+        "Does NOT blindly pass all criteria",
+        "Does NOT omit the evidence table"
+      ]
+    }
+  ],
+  "structural_checks": {
+    "max_agent_lines": 200,
+    "required_sections": ["Behavioral Defaults", "Critical Rules", "Output Contract"],
+    "has_frontmatter_fields": ["name", "description", "tools", "model"]
+  },
+  "scoring": { "..." : "same as skills" }
+}
+```
+
+Key differences from skill evals:
+- **Scenarios are task dispatches** — send the agent a realistic task, judge its output against the Output Contract
+- **Structural checks** verify agent-specific sections (Behavioral Defaults, Critical Rules, Output Contract) and frontmatter fields
+- Agent content becomes the **system prompt**, so scenarios should test behavioral compliance, not knowledge
+
 ## Writing Good Scenarios
 
 ### Discriminating scenarios
@@ -215,11 +287,13 @@ A good scenario sits in the **goldilocks zone** where baseline Claude passes 20-
 # Evaluate without modifying (updates dashboard)
 python3 auto-improve/runner.py \
   --skills-dir plugins/pokayokay/skills \
+  --agents-dir plugins/pokayokay/agents \
   --eval-only -v
 
 # Run improvement loop (N iterations)
 python3 auto-improve/runner.py \
   --skills-dir plugins/pokayokay/skills \
+  --agents-dir plugins/pokayokay/agents \
   --iterations 50 \
   --strategy adaptive
 
@@ -227,6 +301,12 @@ python3 auto-improve/runner.py \
 python3 auto-improve/runner.py \
   --skills-dir plugins/pokayokay/skills \
   --skill planning \
+  --iterations 20
+
+# Target one agent
+python3 auto-improve/runner.py \
+  --agents-dir plugins/pokayokay/agents \
+  --agent yokay-spec-reviewer \
   --iterations 20
 
 # Budget-constrained
@@ -237,7 +317,6 @@ python3 auto-improve/runner.py \
 
 # Dashboard
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
   --dashboard
 ```
 
@@ -251,11 +330,13 @@ Edit `auto-improve/improvement-program.md` to steer the agent's strategy:
 
 ## Cross-Plugin Usage
 
-The harness is plugin-agnostic. Point `--skills-dir` at any directory of skills:
+The harness is plugin-agnostic. Point `--skills-dir` and/or `--agents-dir` at any directory:
 
 ```bash
-# pokayokay skills
-python3 auto-improve/eval.py --skills-dir plugins/pokayokay/skills -v
+# pokayokay skills + agents
+python3 auto-improve/eval.py \
+  --skills-dir plugins/pokayokay/skills \
+  --agents-dir plugins/pokayokay/agents -v
 
 # toyoda design skills
 python3 auto-improve/eval.py --skills-dir ~/Projects/stevestomp/toyoda/plugins/design/skills -v
@@ -264,24 +345,44 @@ python3 auto-improve/eval.py --skills-dir ~/Projects/stevestomp/toyoda/plugins/d
 python3 auto-improve/eval.py --skills-dir ~/.claude/skills -v
 ```
 
-To add eval support to a new skill, create an `eval.json` in its directory.
+To add eval support: create `eval.json` in a skill directory, or `eval/<agent-name>.json` in an agents directory.
+
+### Docker isolation
+
+For overnight runs with `--dangerously-skip-permissions`, use the Docker wrapper. It mounts auto-improve read-only into any project:
+
+```bash
+# pokayokay (default)
+./docker/run-overnight.sh
+
+# toyoda — auto-improve available at /workspace/auto-improve
+./docker/run-overnight.sh -d ~/Projects/stevestomp/toyoda \
+    --print --dangerously-skip-permissions \
+    --prompt="Run python3 auto-improve/eval.py --skills-dir plugins/design/skills -v"
+```
 
 ## Architecture
 
 ```
 auto-improve/
-├── eval.py              # Core eval runner (scenarios, scoring, logging)
+├── eval.py              # Core eval runner (skills + agents, scoring, logging)
 ├── judge.py             # LLM-as-judge via claude CLI (binary criteria, CoT)
-├── structural.py        # Automated structural checks (line counts, sections)
+├── structural.py        # Structural checks (skills: line counts, sections; agents: frontmatter, Output Contract)
 ├── runner.py            # Loop orchestrator (scheduler, dashboard, git)
-├── dashboard.json       # Portfolio state (per-skill scores, trends)
-├── patterns.json        # Cross-skill learning patterns
+├── dashboard.json       # Portfolio state (per-component scores, trends)
+├── patterns.json        # Cross-component learning patterns
 ├── improvement-program.md  # Human steering file
 └── pyproject.toml       # Project metadata
 
 skills/<name>/
 ├── eval.json            # Eval definition (scenarios, criteria, weights)
 └── eval-log.md          # Experiment history (append-only)
+
+agents/
+├── <name>.md            # Agent definition (existing)
+└── eval/
+    ├── <name>.json          # Eval definition
+    └── <name>.eval-log.md   # Experiment history
 ```
 
 ### Key design decisions
