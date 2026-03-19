@@ -245,22 +245,6 @@ PUT /users/123/profile       # Create or update
 PATCH /users/123/profile     # Partial update
 DELETE /users/123/profile    # Remove profile
 ```
-
-### Resource vs. Attribute
-
-```yaml
-# As nested resource (if complex, has own lifecycle)
-GET /users/123/address
-PUT /users/123/address
-
-# As attribute (if simple, always with parent)
-GET /users/123
-Response: { "id": "123", "address": { "street": "...", "city": "..." } }
-
-PATCH /users/123
-Body: { "address": { "city": "New City" } }
-```
-
 ---
 
 ## Actions and Non-CRUD Operations
@@ -508,31 +492,3 @@ GET    /projects/{id}/files
 GET    /projects/{id}/settings
 ```
 
-### Social API
-
-```yaml
-# Users
-GET    /users/{id}
-GET    /users/{id}/posts
-GET    /users/{id}/followers
-GET    /users/{id}/following
-
-# Posts
-GET    /posts
-GET    /posts/{id}
-POST   /posts
-PATCH  /posts/{id}
-DELETE /posts/{id}
-POST   /posts/{id}/like
-DELETE /posts/{id}/like
-GET    /posts/{id}/comments
-POST   /posts/{id}/comments
-
-# Feed
-GET    /feed                    # Current user's feed
-GET    /feed/trending
-
-# Relationships
-POST   /users/{id}/follow
-DELETE /users/{id}/follow
-```

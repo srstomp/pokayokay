@@ -392,18 +392,6 @@ Content-Type: application/json; charset=utf-8
 
 ### File Downloads
 
-```http
-# PDF response
-Content-Type: application/pdf
-Content-Disposition: attachment; filename="report.pdf"
-
-# CSV export
-Content-Type: text/csv
-Content-Disposition: attachment; filename="users.csv"
-```
-
----
-
 ## Special Response Patterns
 
 ### Async Operations
@@ -505,49 +493,3 @@ Location: /users/123?format=full
 ```
 
 ---
-
-## Sparse Fieldsets
-
-Allow clients to request only needed fields:
-
-```http
-# Request specific fields
-GET /users/123?fields=id,name,email
-
-# Response
-{
-  "id": "123",
-  "name": "John Doe",
-  "email": "john@example.com"
-}
-
-# Nested field selection
-GET /users/123?fields=id,name,orders.id,orders.total
-```
-
-## Embedding Related Resources
-
-```http
-# Request with includes
-GET /orders/123?include=user,items.product
-
-# Response
-{
-  "id": "123",
-  "total": 99.99,
-  "user": {
-    "id": "456",
-    "name": "John Doe"
-  },
-  "items": [
-    {
-      "id": "789",
-      "quantity": 2,
-      "product": {
-        "id": "prod_1",
-        "name": "Widget"
-      }
-    }
-  ]
-}
-```

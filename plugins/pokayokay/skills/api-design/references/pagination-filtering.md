@@ -380,27 +380,6 @@ GET /orders/123?expand=customer
 GET /orders?expand=customer,items.product
 ```
 
-### JSON:API Style
-
-```json
-{
-  "data": {
-    "id": "123",
-    "type": "order",
-    "attributes": { "total": 99.99 },
-    "relationships": {
-      "customer": { "data": { "type": "user", "id": "456" } }
-    }
-  },
-  "included": [
-    {
-      "id": "456",
-      "type": "user",
-      "attributes": { "name": "John Doe" }
-    }
-  ]
-}
-```
 
 ---
 
@@ -517,32 +496,3 @@ field=value OR filter[field]=value
 q OR search OR query
 ```
 
----
-
-## Query String Length
-
-For very complex queries that exceed URL length limits:
-
-```yaml
-# POST to search endpoint
-POST /orders/search
-Content-Type: application/json
-{
-  "filters": {
-    "status": ["completed", "shipped"],
-    "customer": {
-      "type": "premium",
-      "country": ["US", "CA", "GB"]
-    },
-    "total": { "gte": 100, "lte": 1000 },
-    "created_at": { "gte": "2024-01-01" }
-  },
-  "sort": ["-created_at", "id"],
-  "fields": ["id", "total", "customer.name"],
-  "include": ["items", "items.product"],
-  "pagination": {
-    "page": 1,
-    "limit": 20
-  }
-}
-```
