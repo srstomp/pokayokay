@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Optional
 
 from eval import (
+    _agent_eval_log_path, _append_eval_log, discover_plugin,
     eval_agent, eval_skill, find_agents_with_evals, find_skills_with_evals,
     load_eval_config, update_eval_log,
 )
@@ -339,6 +340,7 @@ def print_dashboard(auto_improve_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="Auto-improve runner for skills and agents")
+    parser.add_argument("--plugin-dir", help="Path to plugin directory (auto-discovers skills/ and agents/)")
     parser.add_argument("--skills-dir", help="Path to skills directory")
     parser.add_argument("--skill", help="Target specific skill")
     parser.add_argument("--agents-dir", help="Path to agents directory")
@@ -360,11 +362,23 @@ def main():
         print_dashboard(auto_improve_dir)
         return
 
-    if not args.skills_dir and not args.agents_dir:
-        parser.error("At least one of --skills-dir or --agents-dir is required")
-
+    # Resolve directories
     skills_dir = Path(args.skills_dir).resolve() if args.skills_dir else None
     agents_dir = Path(args.agents_dir).resolve() if args.agents_dir else None
+
+    if args.plugin_dir:
+        plugin_path = Path(args.plugin_dir).resolve()
+        if not plugin_path.exists():
+            print(f"Error: plugin directory not found: {plugin_path}", file=sys.stderr)
+            sys.exit(1)
+        discovered_skills, discovered_agents = discover_plugin(plugin_path)
+        if not skills_dir and discovered_skills:
+            skills_dir = discovered_skills
+        if not agents_dir and discovered_agents:
+            agents_dir = discovered_agents
+
+    if not skills_dir and not agents_dir:
+        parser.error("Provide --plugin-dir, --skills-dir, or --agents-dir")
 
     if args.eval_only:
         skill_names = [args.skill] if args.skill else None
@@ -445,8 +459,7 @@ def main():
         update_dashboard_for_skill(dashboard, name, result, kept=False)
 
         if ctype == "agent":
-            log_path = cpath / "eval" / f"{name}.eval-log.md"
-            from eval import _append_eval_log
+            log_path = _agent_eval_log_path(cpath, name)
             _append_eval_log(log_path, result, f"Iteration {iteration}")
         else:
             update_eval_log(cpath, result, f"Iteration {iteration}")

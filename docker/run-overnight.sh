@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Derive container name from project directory (allows parallel runs)
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
+CONTAINER_NAME="claude-${PROJECT_NAME}"
+
 # Default args if none provided
 if [ ${#CLAUDE_ARGS[@]} -eq 0 ]; then
     CLAUDE_ARGS=(
@@ -51,13 +55,14 @@ docker build \
     "$SCRIPT_DIR"
 
 echo "Starting Claude Code in Docker..."
+echo "  Container: $CONTAINER_NAME"
 echo "  Project: $PROJECT_DIR"
 echo "  Auto-improve: $AUTO_IMPROVE_DIR"
 echo "  Args: ${CLAUDE_ARGS[*]}"
 echo ""
 
 docker run --rm -it \
-    --name pokayokay-overnight \
+    --name "$CONTAINER_NAME" \
     \
     `# Mount project (read-write for code changes)` \
     -v "$PROJECT_DIR:/workspace" \

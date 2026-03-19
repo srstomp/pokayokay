@@ -6,15 +6,16 @@ component loaded, then scoring responses with LLM-as-judge. Uses claude CLI
 for API access.
 
 Usage:
+    # Evaluate a whole plugin (auto-discovers skills + agents)
+    python eval.py --plugin-dir ./plugins/design -v
+
     # Evaluate skills
     python eval.py --skills-dir ./plugins/pokayokay/skills --skill api-design
-    python eval.py --compare --skills-dir ./plugins/pokayokay/skills --skill planning
 
     # Evaluate agents
     python eval.py --agents-dir ./plugins/pokayokay/agents --agent yokay-spec-reviewer
-    python eval.py --compare --agents-dir ./plugins/pokayokay/agents
 
-    # Evaluate both
+    # Evaluate both explicitly
     python eval.py --skills-dir ./plugins/pokayokay/skills --agents-dir ./plugins/pokayokay/agents -v
 """
 
@@ -51,12 +52,29 @@ def load_skill_content(skill_dir: Path) -> str:
     return content
 
 
+def _resolve_agent_file(agents_dir: Path, agent_name: str) -> Optional[Path]:
+    """Find the agent markdown file, supporting both layout styles.
+
+    pokayokay style: agents/<name>.md  (flat files)
+    toyoda style:    agents/<name>/AGENT.md  (subdirectories)
+    """
+    # Flat file first (pokayokay)
+    flat = agents_dir / f"{agent_name}.md"
+    if flat.exists():
+        return flat
+    # Subdirectory (toyoda)
+    subdir = agents_dir / agent_name / "AGENT.md"
+    if subdir.exists():
+        return subdir
+    return None
+
+
 def load_agent_content(agents_dir: Path, agent_name: str) -> str:
-    """Load agent .md file content (the full system prompt)."""
-    agent_md = agents_dir / f"{agent_name}.md"
-    if not agent_md.exists():
+    """Load agent markdown content (the full system prompt)."""
+    agent_path = _resolve_agent_file(agents_dir, agent_name)
+    if not agent_path:
         return ""
-    return agent_md.read_text()
+    return agent_path.read_text()
 
 
 def load_eval_config(skill_dir: Path) -> Optional[dict]:
@@ -68,25 +86,69 @@ def load_eval_config(skill_dir: Path) -> Optional[dict]:
 
 
 def load_agent_eval_config(agents_dir: Path, agent_name: str) -> Optional[dict]:
-    """Load eval config for an agent from agents/eval/<name>.json."""
-    eval_json = agents_dir / "eval" / f"{agent_name}.json"
-    if not eval_json.exists():
-        return None
-    return json.loads(eval_json.read_text())
+    """Load eval config for an agent. Checks both layout styles.
+
+    pokayokay style: agents/eval/<name>.json
+    toyoda style:    agents/<name>/eval.json
+    """
+    # pokayokay style
+    flat_eval = agents_dir / "eval" / f"{agent_name}.json"
+    if flat_eval.exists():
+        return json.loads(flat_eval.read_text())
+    # toyoda style
+    subdir_eval = agents_dir / agent_name / "eval.json"
+    if subdir_eval.exists():
+        return json.loads(subdir_eval.read_text())
+    return None
+
+
+def _agent_eval_log_path(agents_dir: Path, agent_name: str) -> Path:
+    """Return the eval log path for an agent, matching its layout style."""
+    # If subdir agent exists, log goes there
+    if (agents_dir / agent_name / "AGENT.md").exists():
+        return agents_dir / agent_name / "eval-log.md"
+    # Otherwise pokayokay style
+    return agents_dir / "eval" / f"{agent_name}.eval-log.md"
 
 
 def find_agents_with_evals(agents_dir: Path) -> list[str]:
-    """Find all agents that have eval configs in agents/eval/."""
-    eval_dir = agents_dir / "eval"
-    if not eval_dir.exists():
-        return []
+    """Find all agents that have eval configs.
+
+    Checks both layout styles:
+    - pokayokay: agents/eval/<name>.json  (with agents/<name>.md)
+    - toyoda:    agents/<name>/eval.json  (with agents/<name>/AGENT.md)
+    """
     agents = []
-    for eval_file in sorted(eval_dir.glob("*.json")):
-        agent_name = eval_file.stem
-        # Verify the agent .md exists
-        if (agents_dir / f"{agent_name}.md").exists():
-            agents.append(agent_name)
+
+    # pokayokay style: eval/<name>.json
+    eval_dir = agents_dir / "eval"
+    if eval_dir.exists():
+        for eval_file in sorted(eval_dir.glob("*.json")):
+            name = eval_file.stem
+            if (agents_dir / f"{name}.md").exists():
+                agents.append(name)
+
+    # toyoda style: <name>/eval.json
+    for subdir in sorted(agents_dir.iterdir()):
+        if subdir.is_dir() and subdir.name != "eval" and subdir.name != "templates":
+            if (subdir / "eval.json").exists() and (subdir / "AGENT.md").exists():
+                if subdir.name not in agents:  # avoid duplicates
+                    agents.append(subdir.name)
+
     return agents
+
+
+def discover_plugin(plugin_dir: Path) -> tuple[Optional[Path], Optional[Path]]:
+    """Auto-discover skills and agents directories within a plugin.
+
+    Returns (skills_dir, agents_dir) — either may be None.
+    """
+    skills_dir = plugin_dir / "skills"
+    agents_dir = plugin_dir / "agents"
+    return (
+        skills_dir if skills_dir.is_dir() else None,
+        agents_dir if agents_dir.is_dir() else None,
+    )
 
 
 # --- Response generation ---
@@ -236,9 +298,9 @@ def eval_agent(
 
     content = load_agent_content(agents_dir, agent_name)
     if not content:
-        return {"error": f"Agent file not found: {agents_dir / f'{agent_name}.md'}"}
+        return {"error": f"Agent file not found: {agent_name} in {agents_dir}"}
 
-    agent_path = agents_dir / f"{agent_name}.md"
+    agent_path = _resolve_agent_file(agents_dir, agent_name)
     structural_result = check_agent_structure(agent_path, config.get("structural_checks", {}))
 
     return _eval_component(
@@ -423,8 +485,60 @@ def find_skills_with_evals(skills_dir: Path) -> list[Path]:
     return skills
 
 
+def _eval_skills_from_dir(skills_dir: Path, skill_name: Optional[str], args, all_results: list):
+    """Evaluate skills from a directory, appending results."""
+    if skill_name:
+        skill_dirs = [skills_dir / skill_name]
+        if not skill_dirs[0].exists():
+            print(f"Error: skill not found: {skill_dirs[0]}", file=sys.stderr)
+            return
+    else:
+        skill_dirs = find_skills_with_evals(skills_dir)
+
+    for skill_dir in skill_dirs:
+        result = eval_skill(
+            skill_dir=skill_dir,
+            baseline=args.baseline,
+            compare=args.compare,
+            verbose=args.verbose,
+            max_scenarios=args.max_scenarios,
+        )
+        all_results.append(result)
+
+        entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
+        update_eval_log(skill_dir, result, entry_type)
+
+        if args.baseline and result.get("scenarios_without_skill"):
+            update_baseline_scores(skill_dir, result["scenarios_without_skill"])
+
+
+def _eval_agents_from_dir(agents_dir: Path, agent_name: Optional[str], args, all_results: list):
+    """Evaluate agents from a directory, appending results."""
+    if agent_name:
+        agent_names = [agent_name]
+    else:
+        agent_names = find_agents_with_evals(agents_dir)
+
+    for name in agent_names:
+        result = eval_agent(
+            agents_dir=agents_dir,
+            agent_name=name,
+            baseline=args.baseline,
+            compare=args.compare,
+            verbose=args.verbose,
+            max_scenarios=args.max_scenarios,
+        )
+        all_results.append(result)
+
+        if "error" not in result:
+            entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
+            log_path = _agent_eval_log_path(agents_dir, name)
+            _append_eval_log(log_path, result, entry_type)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate skill and agent quality")
+    parser.add_argument("--plugin-dir", help="Path to plugin directory (auto-discovers skills/ and agents/)")
     parser.add_argument("--skills-dir", help="Path to skills directory")
     parser.add_argument("--skill", help="Specific skill to evaluate")
     parser.add_argument("--agents-dir", help="Path to agents directory")
@@ -437,70 +551,32 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.skills_dir and not args.agents_dir:
-        parser.error("At least one of --skills-dir or --agents-dir is required")
+    # Resolve directories from --plugin-dir if provided
+    skills_dir = Path(args.skills_dir).resolve() if args.skills_dir else None
+    agents_dir = Path(args.agents_dir).resolve() if args.agents_dir else None
+
+    if args.plugin_dir:
+        plugin_path = Path(args.plugin_dir).resolve()
+        if not plugin_path.exists():
+            print(f"Error: plugin directory not found: {plugin_path}", file=sys.stderr)
+            sys.exit(1)
+        discovered_skills, discovered_agents = discover_plugin(plugin_path)
+        # --plugin-dir provides defaults; explicit --skills-dir/--agents-dir override
+        if not skills_dir and discovered_skills:
+            skills_dir = discovered_skills
+        if not agents_dir and discovered_agents:
+            agents_dir = discovered_agents
+
+    if not skills_dir and not agents_dir:
+        parser.error("Provide --plugin-dir, --skills-dir, or --agents-dir")
 
     all_results = []
 
-    # Evaluate skills
-    if args.skills_dir:
-        skills_dir = Path(args.skills_dir).resolve()
-        if not skills_dir.exists():
-            print(f"Error: skills directory not found: {skills_dir}", file=sys.stderr)
-            sys.exit(1)
+    if skills_dir and skills_dir.exists():
+        _eval_skills_from_dir(skills_dir, args.skill, args, all_results)
 
-        if args.skill:
-            skill_dirs = [skills_dir / args.skill]
-            if not skill_dirs[0].exists():
-                print(f"Error: skill not found: {skill_dirs[0]}", file=sys.stderr)
-                sys.exit(1)
-        else:
-            skill_dirs = find_skills_with_evals(skills_dir)
-
-        for skill_dir in skill_dirs:
-            result = eval_skill(
-                skill_dir=skill_dir,
-                baseline=args.baseline,
-                compare=args.compare,
-                verbose=args.verbose,
-                max_scenarios=args.max_scenarios,
-            )
-            all_results.append(result)
-
-            entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
-            update_eval_log(skill_dir, result, entry_type)
-
-            if args.baseline and result.get("scenarios_without_skill"):
-                update_baseline_scores(skill_dir, result["scenarios_without_skill"])
-
-    # Evaluate agents
-    if args.agents_dir:
-        agents_dir = Path(args.agents_dir).resolve()
-        if not agents_dir.exists():
-            print(f"Error: agents directory not found: {agents_dir}", file=sys.stderr)
-            sys.exit(1)
-
-        if args.agent:
-            agent_names = [args.agent]
-        else:
-            agent_names = find_agents_with_evals(agents_dir)
-
-        for agent_name in agent_names:
-            result = eval_agent(
-                agents_dir=agents_dir,
-                agent_name=agent_name,
-                baseline=args.baseline,
-                compare=args.compare,
-                verbose=args.verbose,
-                max_scenarios=args.max_scenarios,
-            )
-            all_results.append(result)
-
-            # Agent eval logs go in agents/eval/<name>.eval-log.md
-            if "error" not in result:
-                entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
-                log_path = agents_dir / "eval" / f"{agent_name}.eval-log.md"
-                _append_eval_log(log_path, result, entry_type)
+    if agents_dir and agents_dir.exists():
+        _eval_agents_from_dir(agents_dir, args.agent, args, all_results)
 
     if not all_results:
         print("No components with eval configs found.", file=sys.stderr)
