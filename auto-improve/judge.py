@@ -13,6 +13,11 @@ import json
 import os
 import re
 import subprocess
+import threading
+
+
+# Lock to serialize claude CLI calls and prevent .claude.json corruption
+_cli_lock = threading.Lock()
 
 
 # --- Backend detection ---
@@ -103,8 +108,15 @@ def claude_cli(
     prompt: str,
     system_prompt: str = "",
     model: str = "haiku",
+    _max_retries: int = 3,
 ) -> str:
-    """Call claude CLI in print mode and return the response text."""
+    """Call claude CLI in print mode and return the response text.
+
+    Retries on config corruption errors since the CLI auto-restores the config
+    from backups, but the parent session may re-corrupt it mid-run.
+    """
+    import time
+
     cmd = [
         "claude", "-p",
         "--model", model,
@@ -115,18 +127,33 @@ def claude_cli(
     if system_prompt:
         cmd.extend(["--system-prompt", system_prompt])
 
-    result = subprocess.run(
-        cmd,
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=600,
-    )
+    last_err = None
+    for attempt in range(_max_retries):
+        if attempt > 0:
+            time.sleep(2 + attempt * 2)  # backoff: 4s, 6s
 
-    if result.returncode != 0:
-        raise RuntimeError(f"claude CLI error (exit {result.returncode}): {result.stderr[:500]}")
+        with _cli_lock:
+            result = subprocess.run(
+                cmd,
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
 
-    return result.stdout.strip()
+        if result.returncode == 0:
+            return result.stdout.strip()
+
+        stderr = result.stderr[:500]
+        last_err = f"claude CLI error (exit {result.returncode}): {stderr}"
+
+        # Retry on config corruption errors
+        if "corrupted" in stderr.lower() or "json at position" in stderr.lower():
+            continue
+        # Non-corruption error, don't retry
+        break
+
+    raise RuntimeError(last_err)
 
 
 def call_llm(
