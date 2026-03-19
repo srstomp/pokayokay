@@ -44,50 +44,45 @@ claude -p --model opus --dangerously-skip-permissions \
 ## Quick Start (CLI)
 
 ```bash
-# 1. Run a baseline evaluation (measures what Claude knows WITHOUT the skill)
+# 1. Evaluate an entire plugin (auto-discovers skills/ and agents/)
+python3 auto-improve/eval.py --plugin-dir plugins/pokayokay -v
+
+# 2. Run a baseline evaluation (measures what Claude knows WITHOUT the skill)
 python3 auto-improve/eval.py \
   --baseline \
-  --skills-dir plugins/pokayokay/skills \
+  --plugin-dir plugins/pokayokay \
   --skill api-design \
   -v
 
-# 2. Compare with vs without skill
+# 3. Compare with vs without skill
 python3 auto-improve/eval.py \
   --compare \
-  --skills-dir plugins/pokayokay/skills \
+  --plugin-dir plugins/pokayokay \
   --skill planning \
   -v
 
-# 3. Evaluate an agent
+# 4. Evaluate a specific agent
 python3 auto-improve/eval.py \
   --agents-dir plugins/pokayokay/agents \
   --agent yokay-spec-reviewer \
   -v
 
-# 4. Evaluate all skills and agents together
-python3 auto-improve/eval.py \
-  --skills-dir plugins/pokayokay/skills \
-  --agents-dir plugins/pokayokay/agents \
-  -v
-
 # 5. Quick test (limit scenarios for speed)
 python3 auto-improve/eval.py \
   --compare \
-  --skills-dir plugins/pokayokay/skills \
+  --plugin-dir plugins/pokayokay \
   --skill api-design \
   --max-scenarios 3 \
   -v
 
 # 6. Run through the runner with dashboard updates
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
-  --agents-dir plugins/pokayokay/agents \
+  --plugin-dir plugins/pokayokay \
   --eval-only \
   -v
 
 # 7. View portfolio dashboard
-python3 auto-improve/runner.py \
-  --dashboard
+python3 auto-improve/runner.py --dashboard
 ```
 
 All commands use `claude -p` (print mode) under the hood, so they inherit Claude Code's authentication. No separate API key needed.
@@ -97,10 +92,10 @@ All commands use `claude -p` (print mode) under the hood, so they inherit Claude
 ### The Loop (autoresearch pattern)
 
 ```
-1. Select skill (scheduler picks lowest-score or most-stale)
-2. Read skill's eval.json + eval-log.md
+1. Select component (scheduler picks lowest-score or most-stale)
+2. Read component's eval.json + eval-log.md
 3. Generate improvement hypothesis
-4. Edit SKILL.md or references
+4. Edit SKILL.md/AGENT.md or references
 5. Run eval suite → LLM-as-judge scores response
 6. If improved → git commit, append eval-log.md
    If worse   → git revert, append eval-log.md
@@ -133,17 +128,34 @@ skills/api-design/
 └── eval-log.md       # Experiment history (append-only)
 ```
 
-**Agents** store eval files in a shared `eval/` subdirectory (since agents are flat .md files):
+**Agents** support two layout styles:
+
+**Flat files** (pokayokay style) — eval configs in a shared `eval/` subdirectory:
 
 ```
 agents/
-├── yokay-spec-reviewer.md     # (existing agent file)
+├── yokay-spec-reviewer.md           # Agent file
 ├── yokay-implementer.md
 └── eval/
     ├── yokay-spec-reviewer.json       # Eval config
     ├── yokay-spec-reviewer.eval-log.md  # Experiment history
     └── yokay-implementer.json
 ```
+
+**Subdirectories** (toyoda style) — eval configs alongside `AGENT.md`:
+
+```
+agents/
+├── design-reviewer/
+│   ├── AGENT.md          # Agent file
+│   ├── eval.json         # Eval config
+│   └── eval-log.md       # Experiment history
+└── accessibility-scanner/
+    ├── AGENT.md
+    └── eval.json
+```
+
+Both layouts are auto-detected. Use whichever matches your plugin structure.
 
 **`eval.json`** — Defines what "good" looks like. Contains scenarios with input prompts, binary eval criteria (with weights), anti-slop checks, structural checks, and scoring weights. Human-controlled: the improvement loop cannot edit its own eval criteria.
 
@@ -284,40 +296,37 @@ A good scenario sits in the **goldilocks zone** where baseline Claude passes 20-
 ### Commands
 
 ```bash
-# Evaluate without modifying (updates dashboard)
+# Evaluate a whole plugin without modifying (updates dashboard)
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
-  --agents-dir plugins/pokayokay/agents \
+  --plugin-dir plugins/pokayokay \
   --eval-only -v
 
 # Run improvement loop (N iterations)
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
-  --agents-dir plugins/pokayokay/agents \
+  --plugin-dir plugins/pokayokay \
   --iterations 50 \
   --strategy adaptive
 
 # Target one skill
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
+  --plugin-dir plugins/pokayokay \
   --skill planning \
   --iterations 20
 
 # Target one agent
 python3 auto-improve/runner.py \
-  --agents-dir plugins/pokayokay/agents \
+  --plugin-dir plugins/pokayokay \
   --agent yokay-spec-reviewer \
   --iterations 20
 
 # Budget-constrained
 python3 auto-improve/runner.py \
-  --skills-dir plugins/pokayokay/skills \
+  --plugin-dir plugins/pokayokay \
   --iterations 100 \
   --budget-usd 15.0
 
 # Dashboard
-python3 auto-improve/runner.py \
-  --dashboard
+python3 auto-improve/runner.py --dashboard
 ```
 
 ### Improvement program
@@ -330,26 +339,32 @@ Edit `auto-improve/improvement-program.md` to steer the agent's strategy:
 
 ## Cross-Plugin Usage
 
-The harness is plugin-agnostic. Point `--skills-dir` and/or `--agents-dir` at any directory:
+The harness is plugin-agnostic. Use `--plugin-dir` for auto-discovery or explicit paths:
 
 ```bash
-# pokayokay skills + agents
-python3 auto-improve/eval.py \
-  --skills-dir plugins/pokayokay/skills \
-  --agents-dir plugins/pokayokay/agents -v
+# Evaluate a pokayokay plugin
+python3 auto-improve/eval.py --plugin-dir plugins/pokayokay -v
 
-# toyoda design skills
-python3 auto-improve/eval.py --skills-dir ~/Projects/stevestomp/toyoda/plugins/design/skills -v
+# Evaluate a toyoda plugin (subdirectory agents auto-detected)
+python3 auto-improve/eval.py --plugin-dir ~/Projects/stevestomp/toyoda/plugins/design -v
 
-# Any skill directory
+# Evaluate all toyoda plugins
+for p in ~/Projects/stevestomp/toyoda/plugins/*/; do
+  python3 auto-improve/eval.py --plugin-dir "$p" -v
+done
+
+# Explicit paths still work
 python3 auto-improve/eval.py --skills-dir ~/.claude/skills -v
 ```
 
-To add eval support: create `eval.json` in a skill directory, or `eval/<agent-name>.json` in an agents directory.
+To add eval support:
+- **Skill**: create `eval.json` in the skill directory
+- **Agent (flat)**: create `eval/<agent-name>.json` in the agents directory
+- **Agent (subdir)**: create `eval.json` in the agent's subdirectory
 
 ### Docker isolation
 
-For overnight runs with `--dangerously-skip-permissions`, use the Docker wrapper. It mounts auto-improve read-only into any project:
+For overnight runs with `--dangerously-skip-permissions`, use the Docker wrapper. It mounts auto-improve read-only into any project and supports parallel containers:
 
 ```bash
 # pokayokay (default)
@@ -358,7 +373,11 @@ For overnight runs with `--dangerously-skip-permissions`, use the Docker wrapper
 # toyoda — auto-improve available at /workspace/auto-improve
 ./docker/run-overnight.sh -d ~/Projects/stevestomp/toyoda \
     --print --dangerously-skip-permissions \
-    --prompt="Run python3 auto-improve/eval.py --skills-dir plugins/design/skills -v"
+    --prompt="Run python3 auto-improve/eval.py --plugin-dir plugins/design -v"
+
+# Parallel runs (each gets a unique container name)
+./docker/run-overnight.sh &                                    # claude-pokayokay
+./docker/run-overnight.sh -d ~/Projects/stevestomp/toyoda &    # claude-toyoda
 ```
 
 ## Architecture
@@ -374,15 +393,23 @@ auto-improve/
 ├── improvement-program.md  # Human steering file
 └── pyproject.toml       # Project metadata
 
+# Skill eval files (same for all plugins)
 skills/<name>/
 ├── eval.json            # Eval definition (scenarios, criteria, weights)
 └── eval-log.md          # Experiment history (append-only)
 
+# Agent eval files — flat layout (pokayokay)
 agents/
-├── <name>.md            # Agent definition (existing)
+├── <name>.md
 └── eval/
-    ├── <name>.json          # Eval definition
-    └── <name>.eval-log.md   # Experiment history
+    ├── <name>.json
+    └── <name>.eval-log.md
+
+# Agent eval files — subdir layout (toyoda)
+agents/<name>/
+├── AGENT.md
+├── eval.json
+└── eval-log.md
 ```
 
 ### Key design decisions
