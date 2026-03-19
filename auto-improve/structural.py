@@ -1,4 +1,4 @@
-"""Automated structural checks for skill quality."""
+"""Automated structural checks for skill and agent quality."""
 
 from __future__ import annotations
 
@@ -106,6 +106,75 @@ def check_skill_structure(skill_dir: Path, checks: dict) -> dict:
         "check": "Valid YAML frontmatter with name and description",
         "passed": has_valid_fm,
     })
+
+    passed = sum(1 for r in results if r["passed"])
+    return {
+        "passed": passed,
+        "total": len(results),
+        "score": passed / len(results) if results else 0.0,
+        "details": results,
+    }
+
+
+def check_agent_structure(agent_path: Path, checks: dict) -> dict:
+    """Run structural checks on an agent .md file.
+
+    Args:
+        agent_path: Path to the agent markdown file
+        checks: structural_checks config from eval.json
+
+    Returns:
+        dict with passed/total counts and per-check details
+    """
+    if not agent_path.exists():
+        return {"passed": 0, "total": 1, "score": 0.0, "details": [{"check": "Agent file exists", "passed": False}]}
+
+    content = agent_path.read_text()
+    lines = content.splitlines()
+    results = []
+
+    # Check agent line count
+    max_lines = checks.get("max_agent_lines", 200)
+    results.append({
+        "check": f"Agent under {max_lines} lines",
+        "passed": len(lines) <= max_lines,
+        "value": len(lines),
+    })
+
+    # Check required sections (Behavioral Defaults, Critical Rules, Output Contract)
+    for section in checks.get("required_sections", ["Behavioral Defaults", "Critical Rules", "Output Contract"]):
+        pattern = re.compile(rf"#+\s*{re.escape(section)}", re.IGNORECASE)
+        found = bool(pattern.search(content))
+        if not found:
+            found = section.lower() in content.lower()
+        results.append({
+            "check": f"Has '{section}' section",
+            "passed": found,
+        })
+
+    # Check frontmatter fields
+    fm_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+    has_valid_fm = False
+    fm = {}
+    if fm_match:
+        try:
+            import yaml
+            fm = yaml.safe_load(fm_match.group(1)) or {}
+            has_valid_fm = isinstance(fm, dict)
+        except Exception:
+            pass
+
+    results.append({
+        "check": "Valid YAML frontmatter",
+        "passed": has_valid_fm,
+    })
+
+    for field in checks.get("has_frontmatter_fields", ["name", "description", "tools", "model"]):
+        results.append({
+            "check": f"Frontmatter has '{field}'",
+            "passed": field in fm,
+            "value": str(fm.get(field, ""))[:60] if field in fm else "missing",
+        })
 
     passed = sum(1 for r in results if r["passed"])
     return {

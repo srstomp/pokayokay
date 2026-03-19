@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Core eval runner for the auto-skill-improvement system.
+"""Core eval runner for the auto-improve system.
 
-Evaluates skill quality by running scenarios with and without the skill loaded,
-then scoring responses with LLM-as-judge. Uses claude CLI for API access.
+Evaluates skill and agent quality by running scenarios with and without the
+component loaded, then scoring responses with LLM-as-judge. Uses claude CLI
+for API access.
 
 Usage:
-    # Run baseline for a specific skill
-    python eval.py --baseline --skills-dir ./plugins/pokayokay/skills --skill api-design
-
-    # Run baseline for all skills that have eval.json
-    python eval.py --baseline --skills-dir ./plugins/pokayokay/skills
-
-    # Evaluate current skill quality (with skill loaded)
+    # Evaluate skills
     python eval.py --skills-dir ./plugins/pokayokay/skills --skill api-design
-
-    # Evaluate and compare with/without
     python eval.py --compare --skills-dir ./plugins/pokayokay/skills --skill planning
+
+    # Evaluate agents
+    python eval.py --agents-dir ./plugins/pokayokay/agents --agent yokay-spec-reviewer
+    python eval.py --compare --agents-dir ./plugins/pokayokay/agents
+
+    # Evaluate both
+    python eval.py --skills-dir ./plugins/pokayokay/skills --agents-dir ./plugins/pokayokay/agents -v
 """
 
 from __future__ import annotations
@@ -28,7 +28,10 @@ from pathlib import Path
 from typing import Optional
 
 from judge import claude_cli, judge_response
-from structural import check_skill_structure
+from structural import check_skill_structure, check_agent_structure
+
+
+# --- Loading ---
 
 
 def load_skill_content(skill_dir: Path) -> str:
@@ -48,6 +51,14 @@ def load_skill_content(skill_dir: Path) -> str:
     return content
 
 
+def load_agent_content(agents_dir: Path, agent_name: str) -> str:
+    """Load agent .md file content (the full system prompt)."""
+    agent_md = agents_dir / f"{agent_name}.md"
+    if not agent_md.exists():
+        return ""
+    return agent_md.read_text()
+
+
 def load_eval_config(skill_dir: Path) -> Optional[dict]:
     """Load eval.json from a skill directory."""
     eval_json = skill_dir / "eval.json"
@@ -56,13 +67,51 @@ def load_eval_config(skill_dir: Path) -> Optional[dict]:
     return json.loads(eval_json.read_text())
 
 
+def load_agent_eval_config(agents_dir: Path, agent_name: str) -> Optional[dict]:
+    """Load eval config for an agent from agents/eval/<name>.json."""
+    eval_json = agents_dir / "eval" / f"{agent_name}.json"
+    if not eval_json.exists():
+        return None
+    return json.loads(eval_json.read_text())
+
+
+def find_agents_with_evals(agents_dir: Path) -> list[str]:
+    """Find all agents that have eval configs in agents/eval/."""
+    eval_dir = agents_dir / "eval"
+    if not eval_dir.exists():
+        return []
+    agents = []
+    for eval_file in sorted(eval_dir.glob("*.json")):
+        agent_name = eval_file.stem
+        # Verify the agent .md exists
+        if (agents_dir / f"{agent_name}.md").exists():
+            agents.append(agent_name)
+    return agents
+
+
+# --- Response generation ---
+
+
 def generate_response(
     user_input: str,
     system_context: str = "",
     skill_content: str = "",
+    component_type: str = "skill",
     model: str = "haiku",
 ) -> str:
-    """Generate a response with optional skill content via claude CLI."""
+    """Generate a response with optional component content via claude CLI.
+
+    For skills: content is injected into system prompt as context.
+    For agents: content IS the system prompt (it's the agent's instructions).
+    """
+    if component_type == "agent" and skill_content:
+        # Agent content is the full system prompt
+        system = skill_content
+        if system_context:
+            system += f"\n\n{system_context}"
+        return claude_cli(user_input, system, model)
+
+    # Skill mode (original behavior)
     system_parts = []
     if skill_content:
         system_parts.append(f"You have the following skill loaded:\n\n{skill_content}")
@@ -81,6 +130,7 @@ def eval_scenario(
     eval_model: str,
     judge_model: str,
     with_skill: bool = True,
+    component_type: str = "skill",
 ) -> dict:
     """Evaluate a single scenario."""
     content = skill_content if with_skill else ""
@@ -89,6 +139,7 @@ def eval_scenario(
         user_input=scenario["input"],
         system_context=scenario.get("system_context", ""),
         skill_content=content,
+        component_type=component_type,
         model=eval_model,
     )
 
@@ -149,28 +200,77 @@ def eval_skill(
     verbose: bool = False,
     max_scenarios: Optional[int] = None,
 ) -> dict:
-    """Run full evaluation for a skill.
-
-    Args:
-        skill_dir: Path to skill directory
-        baseline: If True, run without skill loaded
-        compare: If True, run both with and without skill
-        verbose: Print detailed output
-        max_scenarios: Limit number of scenarios (for quick tests)
-
-    Returns:
-        Full evaluation result dict
-    """
+    """Run full evaluation for a skill. Delegates to _eval_component."""
     config = load_eval_config(skill_dir)
     if not config:
         return {"error": f"No eval.json found in {skill_dir}"}
 
-    skill_name = config["skill"]
+    content = load_skill_content(skill_dir)
+    structural_result = check_skill_structure(skill_dir, config.get("structural_checks", {}))
+
+    return _eval_component(
+        config=config,
+        content=content,
+        structural_result=structural_result,
+        component_type="skill",
+        component_path=str(skill_dir),
+        baseline=baseline,
+        compare=compare,
+        verbose=verbose,
+        max_scenarios=max_scenarios,
+    )
+
+
+def eval_agent(
+    agents_dir: Path,
+    agent_name: str,
+    baseline: bool = False,
+    compare: bool = False,
+    verbose: bool = False,
+    max_scenarios: Optional[int] = None,
+) -> dict:
+    """Run full evaluation for an agent."""
+    config = load_agent_eval_config(agents_dir, agent_name)
+    if not config:
+        return {"error": f"No eval config found for agent {agent_name}"}
+
+    content = load_agent_content(agents_dir, agent_name)
+    if not content:
+        return {"error": f"Agent file not found: {agents_dir / f'{agent_name}.md'}"}
+
+    agent_path = agents_dir / f"{agent_name}.md"
+    structural_result = check_agent_structure(agent_path, config.get("structural_checks", {}))
+
+    return _eval_component(
+        config=config,
+        content=content,
+        structural_result=structural_result,
+        component_type="agent",
+        component_path=str(agent_path),
+        baseline=baseline,
+        compare=compare,
+        verbose=verbose,
+        max_scenarios=max_scenarios,
+    )
+
+
+def _eval_component(
+    config: dict,
+    content: str,
+    structural_result: dict,
+    component_type: str,
+    component_path: str,
+    baseline: bool = False,
+    compare: bool = False,
+    verbose: bool = False,
+    max_scenarios: Optional[int] = None,
+) -> dict:
+    """Shared eval logic for skills and agents."""
+    component_name = config.get("agent", config.get("skill", "unknown"))
     eval_model = config.get("eval_model", "haiku")
     judge_model = config.get("judge_model", eval_model)
     scenarios = config.get("scenarios", [])
     scoring_weights = config.get("scoring", {}).get("weights", {})
-    structural_checks = config.get("structural_checks", {})
 
     # Map full model IDs to aliases for claude CLI
     model_aliases = {
@@ -185,15 +285,11 @@ def eval_skill(
         scenarios = scenarios[:max_scenarios]
 
     if verbose:
-        print(f"\nEvaluating skill: {skill_name}")
+        label = "agent" if component_type == "agent" else "skill"
+        print(f"\nEvaluating {label}: {component_name}")
         print(f"  Scenarios: {len(scenarios)}")
         print(f"  Model: {eval_model}")
-        print(f"  Mode: {'baseline' if baseline else 'compare' if compare else 'with_skill'}")
-
-    skill_content = load_skill_content(skill_dir)
-    structural_result = check_skill_structure(skill_dir, structural_checks)
-
-    if verbose:
+        print(f"  Mode: {'baseline' if baseline else 'compare' if compare else 'with_component'}")
         print(f"  Structural: {structural_result['passed']}/{structural_result['total']}")
 
     results_with = []
@@ -205,13 +301,15 @@ def eval_skill(
 
         if not baseline:
             result_with = eval_scenario(
-                scenario, skill_content, eval_model, judge_model, with_skill=True
+                scenario, content, eval_model, judge_model,
+                with_skill=True, component_type=component_type,
             )
             results_with.append(result_with)
 
         if baseline or compare:
             result_without = eval_scenario(
-                scenario, skill_content, eval_model, judge_model, with_skill=False
+                scenario, content, eval_model, judge_model,
+                with_skill=False, component_type=component_type,
             )
             results_without.append(result_without)
 
@@ -232,8 +330,9 @@ def eval_skill(
         composite_without = compute_composite_score(results_without, structural_result, scoring_weights)
 
     result = {
-        "skill": skill_name,
-        "skill_dir": str(skill_dir),
+        "skill": component_name,
+        "type": component_type,
+        "skill_dir": component_path,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "eval_model": eval_model,
         "judge_model": judge_model,
@@ -247,11 +346,11 @@ def eval_skill(
     }
 
     if verbose:
-        print(f"\n  Results for {skill_name}:")
+        print(f"\n  Results for {component_name}:")
         if composite_with is not None:
-            print(f"    With skill:    {composite_with:.4f}")
+            print(f"    With {component_type}:    {composite_with:.4f}")
         if composite_without is not None:
-            print(f"    Without skill: {composite_without:.4f}")
+            print(f"    Without {component_type}: {composite_without:.4f}")
         if result["delta"] is not None:
             print(f"    Delta:         {result['delta']:+.4f}")
         print(f"    Structural:    {structural_result['passed']}/{structural_result['total']}")
@@ -259,22 +358,25 @@ def eval_skill(
     return result
 
 
-def update_eval_log(skill_dir: Path, result: dict, entry_type: str = "Baseline"):
-    """Append an entry to the skill's eval-log.md."""
-    log_path = skill_dir / "eval-log.md"
+def _append_eval_log(log_path: Path, result: dict, entry_type: str = "Baseline"):
+    """Append an eval log entry to any path."""
+    component_name = result.get("skill", "unknown")
+    component_type = result.get("type", "skill")
 
     if not log_path.exists():
-        log_path.write_text(f"# {result['skill']} Eval Log\n\n")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(f"# {component_name} Eval Log\n\n")
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    label = component_type
 
     lines = [f"\n## {entry_type} ({timestamp})\n"]
     lines.append(f"- Model: {result['eval_model']}")
 
     if result["composite_with_skill"] is not None:
-        lines.append(f"- Composite (with skill): {result['composite_with_skill']:.4f}")
+        lines.append(f"- Composite (with {label}): {result['composite_with_skill']:.4f}")
     if result["composite_without_skill"] is not None:
-        lines.append(f"- Composite (without skill): {result['composite_without_skill']:.4f}")
+        lines.append(f"- Composite (without {label}): {result['composite_without_skill']:.4f}")
     if result["delta"] is not None:
         lines.append(f"- Delta: {result['delta']:+.4f}")
 
@@ -290,6 +392,12 @@ def update_eval_log(skill_dir: Path, result: dict, entry_type: str = "Baseline")
 
     with open(log_path, "a") as f:
         f.write("\n".join(lines))
+
+
+def update_eval_log(skill_dir: Path, result: dict, entry_type: str = "Baseline"):
+    """Append an entry to the skill's eval-log.md."""
+    log_path = skill_dir / "eval-log.md"
+    _append_eval_log(log_path, result, entry_type)
 
 
 def update_baseline_scores(skill_dir: Path, results_without: list[dict]):
@@ -316,51 +424,87 @@ def find_skills_with_evals(skills_dir: Path) -> list[Path]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate skill quality")
-    parser.add_argument("--skills-dir", required=True, help="Path to skills directory")
-    parser.add_argument("--skill", help="Specific skill to evaluate (default: all with eval.json)")
-    parser.add_argument("--baseline", action="store_true", help="Run without skill loaded")
-    parser.add_argument("--compare", action="store_true", help="Run both with and without skill")
-    parser.add_argument("--max-scenarios", type=int, help="Limit scenarios per skill (for quick tests)")
+    parser = argparse.ArgumentParser(description="Evaluate skill and agent quality")
+    parser.add_argument("--skills-dir", help="Path to skills directory")
+    parser.add_argument("--skill", help="Specific skill to evaluate")
+    parser.add_argument("--agents-dir", help="Path to agents directory")
+    parser.add_argument("--agent", help="Specific agent to evaluate")
+    parser.add_argument("--baseline", action="store_true", help="Run without component loaded")
+    parser.add_argument("--compare", action="store_true", help="Run both with and without component")
+    parser.add_argument("--max-scenarios", type=int, help="Limit scenarios per component (for quick tests)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--output", "-o", help="Write results JSON to file")
 
     args = parser.parse_args()
 
-    skills_dir = Path(args.skills_dir).resolve()
-    if not skills_dir.exists():
-        print(f"Error: skills directory not found: {skills_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    if args.skill:
-        skill_dirs = [skills_dir / args.skill]
-        if not skill_dirs[0].exists():
-            print(f"Error: skill not found: {skill_dirs[0]}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        skill_dirs = find_skills_with_evals(skills_dir)
-        if not skill_dirs:
-            print(f"No skills with eval.json found in {skills_dir}", file=sys.stderr)
-            sys.exit(1)
+    if not args.skills_dir and not args.agents_dir:
+        parser.error("At least one of --skills-dir or --agents-dir is required")
 
     all_results = []
-    for skill_dir in skill_dirs:
-        result = eval_skill(
-            skill_dir=skill_dir,
-            baseline=args.baseline,
-            compare=args.compare,
-            verbose=args.verbose,
-            max_scenarios=args.max_scenarios,
-        )
-        all_results.append(result)
 
-        # Update eval-log.md
-        entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
-        update_eval_log(skill_dir, result, entry_type)
+    # Evaluate skills
+    if args.skills_dir:
+        skills_dir = Path(args.skills_dir).resolve()
+        if not skills_dir.exists():
+            print(f"Error: skills directory not found: {skills_dir}", file=sys.stderr)
+            sys.exit(1)
 
-        # Update baseline scores in eval.json if running baseline
-        if args.baseline and result.get("scenarios_without_skill"):
-            update_baseline_scores(skill_dir, result["scenarios_without_skill"])
+        if args.skill:
+            skill_dirs = [skills_dir / args.skill]
+            if not skill_dirs[0].exists():
+                print(f"Error: skill not found: {skill_dirs[0]}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            skill_dirs = find_skills_with_evals(skills_dir)
+
+        for skill_dir in skill_dirs:
+            result = eval_skill(
+                skill_dir=skill_dir,
+                baseline=args.baseline,
+                compare=args.compare,
+                verbose=args.verbose,
+                max_scenarios=args.max_scenarios,
+            )
+            all_results.append(result)
+
+            entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
+            update_eval_log(skill_dir, result, entry_type)
+
+            if args.baseline and result.get("scenarios_without_skill"):
+                update_baseline_scores(skill_dir, result["scenarios_without_skill"])
+
+    # Evaluate agents
+    if args.agents_dir:
+        agents_dir = Path(args.agents_dir).resolve()
+        if not agents_dir.exists():
+            print(f"Error: agents directory not found: {agents_dir}", file=sys.stderr)
+            sys.exit(1)
+
+        if args.agent:
+            agent_names = [args.agent]
+        else:
+            agent_names = find_agents_with_evals(agents_dir)
+
+        for agent_name in agent_names:
+            result = eval_agent(
+                agents_dir=agents_dir,
+                agent_name=agent_name,
+                baseline=args.baseline,
+                compare=args.compare,
+                verbose=args.verbose,
+                max_scenarios=args.max_scenarios,
+            )
+            all_results.append(result)
+
+            # Agent eval logs go in agents/eval/<name>.eval-log.md
+            if "error" not in result:
+                entry_type = "Baseline" if args.baseline else "Compare" if args.compare else "Evaluation"
+                log_path = agents_dir / "eval" / f"{agent_name}.eval-log.md"
+                _append_eval_log(log_path, result, entry_type)
+
+    if not all_results:
+        print("No components with eval configs found.", file=sys.stderr)
+        sys.exit(1)
 
     # Print summary
     print("\n" + "=" * 60)
@@ -370,7 +514,8 @@ def main():
         if "error" in r:
             print(f"  {r.get('skill', '?')}: ERROR - {r['error']}")
             continue
-        line = f"  {r['skill']:20s}"
+        tag = f"[{r.get('type', 'skill')}]"
+        line = f"  {tag:8s} {r['skill']:20s}"
         if r["composite_with_skill"] is not None:
             line += f"  with={r['composite_with_skill']:.4f}"
         if r["composite_without_skill"] is not None:

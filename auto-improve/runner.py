@@ -35,7 +35,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from eval import eval_skill, find_skills_with_evals, load_eval_config, update_eval_log
+from eval import (
+    eval_agent, eval_skill, find_agents_with_evals, find_skills_with_evals,
+    load_eval_config, update_eval_log,
+)
 
 
 DASHBOARD_FILE = "dashboard.json"
@@ -160,9 +163,19 @@ def select_next_skill(
     pool = non_plateau if non_plateau else candidates
 
     if strategy == "deep":
-        # If there's a skill currently being worked on (in_progress), continue with it
-        # Otherwise pick lowest score
-        pass
+        # Stick with the most recently worked skill until it plateaus,
+        # then move to the lowest-scoring non-plateau skill
+        most_recent = None
+        most_recent_time = ""
+        for name in pool:
+            entry = dashboard["skills"].get(name, {})
+            last = entry.get("last_experiment", "")
+            if last > most_recent_time:
+                most_recent_time = last
+                most_recent = name
+        if most_recent:
+            return most_recent
+        # No experiment history yet — fall through to lowest score
 
     # Default (adaptive): lowest score first, break ties by staleness
     def sort_key(name):
@@ -218,42 +231,47 @@ def git_revert_skill(skill_dir: Path):
 
 
 def run_eval_only(
-    skills_dir: Path,
+    skills_dir: Optional[Path],
     auto_improve_dir: Path,
     skill_names: Optional[list] = None,
+    agents_dir: Optional[Path] = None,
+    agent_names: Optional[list] = None,
     compare: bool = False,
     verbose: bool = False,
     max_scenarios: Optional[int] = None,
 ):
     """Run evaluation without modifications. Updates dashboard and eval-logs."""
-    skill_dirs = find_skills_with_evals(skills_dir)
-    if skill_names:
-        skill_dirs = [d for d in skill_dirs if d.name in skill_names]
-
     dashboard = load_dashboard(auto_improve_dir)
 
-    for skill_dir in skill_dirs:
-        result = eval_skill(
-            skill_dir=skill_dir,
-            baseline=False,
-            compare=compare,
-            verbose=verbose,
-            max_scenarios=max_scenarios,
-        )
+    # Evaluate skills
+    if skills_dir:
+        skill_dirs = find_skills_with_evals(skills_dir)
+        if skill_names:
+            skill_dirs = [d for d in skill_dirs if d.name in skill_names]
 
-        if "error" not in result:
-            skill_name = result["skill"]
-            if skill_name not in dashboard["skills"]:
-                dashboard["skills"][skill_name] = {
-                    "score": result.get("composite_with_skill", 0.0),
-                    "experiments": 0,
-                    "kept": 0,
-                    "trend": "new",
-                    "last_experiment": datetime.now(timezone.utc).isoformat(),
-                }
-            else:
-                dashboard["skills"][skill_name]["score"] = result.get("composite_with_skill", 0.0)
-                dashboard["skills"][skill_name]["last_experiment"] = datetime.now(timezone.utc).isoformat()
+        for skill_dir in skill_dirs:
+            result = eval_skill(
+                skill_dir=skill_dir,
+                baseline=False,
+                compare=compare,
+                verbose=verbose,
+                max_scenarios=max_scenarios,
+            )
+            _update_dashboard_entry(dashboard, result)
+
+    # Evaluate agents
+    if agents_dir:
+        names = agent_names if agent_names else find_agents_with_evals(agents_dir)
+        for agent_name in names:
+            result = eval_agent(
+                agents_dir=agents_dir,
+                agent_name=agent_name,
+                baseline=False,
+                compare=compare,
+                verbose=verbose,
+                max_scenarios=max_scenarios,
+            )
+            _update_dashboard_entry(dashboard, result)
 
     # Recalculate portfolio average
     scores = [s["score"] for s in dashboard["skills"].values() if s["score"] > 0]
@@ -263,36 +281,56 @@ def run_eval_only(
     print(f"\nDashboard updated: {auto_improve_dir / DASHBOARD_FILE}")
 
 
+def _update_dashboard_entry(dashboard: dict, result: dict):
+    """Update a dashboard entry from an eval result."""
+    if "error" in result:
+        return
+    name = result["skill"]
+    if name not in dashboard["skills"]:
+        dashboard["skills"][name] = {
+            "score": result.get("composite_with_skill", 0.0),
+            "type": result.get("type", "skill"),
+            "experiments": 0,
+            "kept": 0,
+            "trend": "new",
+            "last_experiment": datetime.now(timezone.utc).isoformat(),
+        }
+    else:
+        dashboard["skills"][name]["score"] = result.get("composite_with_skill", 0.0)
+        dashboard["skills"][name]["last_experiment"] = datetime.now(timezone.utc).isoformat()
+
+
 def print_dashboard(auto_improve_dir: Path):
     """Print a human-readable portfolio summary."""
     dashboard = load_dashboard(auto_improve_dir)
 
-    print("\n" + "=" * 70)
-    print("SKILL PORTFOLIO DASHBOARD")
-    print("=" * 70)
+    print("\n" + "=" * 78)
+    print("COMPONENT PORTFOLIO DASHBOARD")
+    print("=" * 78)
 
     if not dashboard["skills"]:
-        print("  No skills evaluated yet. Run with --eval-only first.")
+        print("  No components evaluated yet. Run with --eval-only first.")
         return
 
     # Sort by score ascending
-    sorted_skills = sorted(
+    sorted_items = sorted(
         dashboard["skills"].items(),
         key=lambda x: x[1].get("score", 0),
     )
 
-    print(f"  {'Skill':25s} {'Score':>8s} {'Experiments':>12s} {'Kept':>6s} {'Trend':>12s}")
-    print("  " + "-" * 65)
+    print(f"  {'Type':8s} {'Name':25s} {'Score':>8s} {'Experiments':>12s} {'Kept':>6s} {'Trend':>12s}")
+    print("  " + "-" * 73)
 
-    for name, entry in sorted_skills:
+    for name, entry in sorted_items:
+        ctype = entry.get("type", "skill")
         score = entry.get("score", 0.0)
         experiments = entry.get("experiments", 0)
         kept = entry.get("kept", 0)
         trend = entry.get("trend", "new")
-        print(f"  {name:25s} {score:8.4f} {experiments:12d} {kept:6d} {trend:>12s}")
+        print(f"  {ctype:8s} {name:25s} {score:8.4f} {experiments:12d} {kept:6d} {trend:>12s}")
 
-    print("  " + "-" * 65)
-    print(f"  {'Portfolio Average':25s} {dashboard['portfolio_avg']:8.4f}")
+    print("  " + "-" * 73)
+    print(f"  {'Portfolio Average':34s} {dashboard['portfolio_avg']:8.4f}")
     print(f"  Total experiments: {dashboard['total_experiments']}")
     print(f"  Keep rate: {dashboard['keep_rate']:.1%}")
     print(f"  Total cost: ${dashboard['cost_total_usd']:.2f}")
@@ -300,60 +338,99 @@ def print_dashboard(auto_improve_dir: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Auto-skill improvement runner")
-    parser.add_argument("--skills-dir", required=True, help="Path to skills directory")
+    parser = argparse.ArgumentParser(description="Auto-improve runner for skills and agents")
+    parser.add_argument("--skills-dir", help="Path to skills directory")
     parser.add_argument("--skill", help="Target specific skill")
+    parser.add_argument("--agents-dir", help="Path to agents directory")
+    parser.add_argument("--agent", help="Target specific agent")
     parser.add_argument("--iterations", type=int, default=10, help="Number of improvement iterations")
     parser.add_argument("--strategy", choices=["adaptive", "breadth", "deep"], default="adaptive")
     parser.add_argument("--budget-usd", type=float, default=15.0, help="Maximum spend in USD")
-    parser.add_argument("--eval-only", action="store_true", help="Only evaluate, don't modify skills")
+    parser.add_argument("--eval-only", action="store_true", help="Only evaluate, don't modify components")
     parser.add_argument("--compare", action="store_true", help="Run with/without comparison")
-    parser.add_argument("--max-scenarios", type=int, help="Limit scenarios per skill (for quick tests)")
+    parser.add_argument("--max-scenarios", type=int, help="Limit scenarios per component (for quick tests)")
     parser.add_argument("--dashboard", action="store_true", help="Print portfolio dashboard")
     parser.add_argument("--verbose", "-v", action="store_true")
 
     args = parser.parse_args()
 
-    skills_dir = Path(args.skills_dir).resolve()
     auto_improve_dir = Path(__file__).parent.resolve()
 
     if args.dashboard:
         print_dashboard(auto_improve_dir)
         return
 
+    if not args.skills_dir and not args.agents_dir:
+        parser.error("At least one of --skills-dir or --agents-dir is required")
+
+    skills_dir = Path(args.skills_dir).resolve() if args.skills_dir else None
+    agents_dir = Path(args.agents_dir).resolve() if args.agents_dir else None
+
     if args.eval_only:
         skill_names = [args.skill] if args.skill else None
-        run_eval_only(skills_dir, auto_improve_dir, skill_names, args.compare, args.verbose, args.max_scenarios)
+        agent_names = [args.agent] if args.agent else None
+        run_eval_only(
+            skills_dir, auto_improve_dir, skill_names,
+            agents_dir, agent_names,
+            args.compare, args.verbose, args.max_scenarios,
+        )
         return
 
-    # Improvement loop
+    # Improvement loop — collect all available components
     dashboard = load_dashboard(auto_improve_dir)
-    skill_dirs = find_skills_with_evals(skills_dir)
-    available_skills = [d.name for d in skill_dirs]
-    focus_skills = [args.skill] if args.skill else None
+    available = []  # list of (name, type, path)
+
+    if skills_dir:
+        for d in find_skills_with_evals(skills_dir):
+            available.append((d.name, "skill", d))
+
+    if agents_dir:
+        for name in find_agents_with_evals(agents_dir):
+            available.append((name, "agent", agents_dir))
+
+    available_names = [a[0] for a in available]
+    component_map = {a[0]: (a[1], a[2]) for a in available}
+
+    focus = []
+    if args.skill:
+        focus.append(args.skill)
+    if args.agent:
+        focus.append(args.agent)
+    focus_names = focus if focus else None
 
     print(f"\nStarting improvement loop")
     print(f"  Strategy: {args.strategy}")
     print(f"  Iterations: {args.iterations}")
     print(f"  Budget: ${args.budget_usd:.2f}")
-    print(f"  Skills: {', '.join(focus_skills or available_skills)}")
+    print(f"  Components: {', '.join(focus_names or available_names)}")
 
+    total_cost = 0.0
     for iteration in range(1, args.iterations + 1):
-        skill_name = select_next_skill(dashboard, available_skills, args.strategy, focus_skills)
-        if not skill_name:
-            print("\n  No skills available to improve.")
+        name = select_next_skill(dashboard, available_names, args.strategy, focus_names)
+        if not name:
+            print("\n  No components available to improve.")
             break
 
-        skill_dir = skills_dir / skill_name
-        print(f"\n  [{iteration}/{args.iterations}] Evaluating {skill_name}...")
+        ctype, cpath = component_map[name]
+        print(f"\n  [{iteration}/{args.iterations}] Evaluating [{ctype}] {name}...")
 
-        result = eval_skill(
-            skill_dir=skill_dir,
-            baseline=False,
-            compare=False,
-            verbose=args.verbose,
-            max_scenarios=args.max_scenarios,
-        )
+        if ctype == "agent":
+            result = eval_agent(
+                agents_dir=cpath,
+                agent_name=name,
+                baseline=False,
+                compare=False,
+                verbose=args.verbose,
+                max_scenarios=args.max_scenarios,
+            )
+        else:
+            result = eval_skill(
+                skill_dir=cpath,
+                baseline=False,
+                compare=False,
+                verbose=args.verbose,
+                max_scenarios=args.max_scenarios,
+            )
 
         if "error" in result:
             print(f"    Error: {result['error']}")
@@ -363,14 +440,16 @@ def main():
         total_cost += cost
         score = result.get("composite_with_skill", 0.0)
 
-        # In eval-only mode (no external editor), just track scores
-        # The actual hypothesis → edit → eval → keep/discard loop
-        # requires Claude Code headless as the "improver brain"
         print(f"    Score: {score:.4f}, Cost: ${cost:.4f}, Total: ${total_cost:.2f}")
 
-        # Update dashboard
-        update_dashboard_for_skill(dashboard, skill_name, result, kept=False)
-        update_eval_log(skill_dir, result, f"Iteration {iteration}")
+        update_dashboard_for_skill(dashboard, name, result, kept=False)
+
+        if ctype == "agent":
+            log_path = cpath / "eval" / f"{name}.eval-log.md"
+            from eval import _append_eval_log
+            _append_eval_log(log_path, result, f"Iteration {iteration}")
+        else:
+            update_eval_log(cpath, result, f"Iteration {iteration}")
 
     save_dashboard(auto_improve_dir, dashboard)
     print(f"\nDashboard saved. Total cost: ${total_cost:.2f}")
