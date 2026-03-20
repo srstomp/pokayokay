@@ -8,6 +8,13 @@ description: Use when starting AI development sessions, resuming interrupted wor
 
 Orchestrate AI-assisted development with configurable human control, using ohno for task management via MCP.
 
+## When NOT to Use
+
+- **Planning work** — Use `planning` to create epics/stories/tasks before starting sessions
+- **Quick one-off tasks** — Use `/quick` for simple tasks that don't need the full subagent pipeline
+- **Revising a plan** — Use `plan-revision` to modify scope, dependencies, or task hierarchy
+- **Running a spike** — Use `spike` for time-boxed investigation before committing to implementation
+
 ## Key Principles
 
 - Fresh context per task via subagent dispatch (no context degradation)
