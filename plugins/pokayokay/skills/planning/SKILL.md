@@ -8,6 +8,13 @@ description: Use when analyzing PRD documents, concept briefs, or feature specs 
 
 Transform product requirements into actionable implementation plans with visual kanban tracking.
 
+## When NOT to Use
+
+- **Revising an existing plan** — Use `plan-revision` for modifying task hierarchies or scope changes
+- **Starting implementation** — Use `work-session` to begin executing tasks from a plan
+- **Quick one-off tasks** — Use `/quick` for tasks that don't need epic/story/task hierarchy
+- **Investigating feasibility** — Use `spike` for time-boxed technical investigation before committing to a plan
+
 ## Key Principles
 
 - All outputs go to `.claude/` folder (PROJECT.md, tasks.db, features.json, kanban.html)
