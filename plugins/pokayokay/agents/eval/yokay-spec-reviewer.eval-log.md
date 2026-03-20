@@ -474,3 +474,27 @@
   - Catches MUST criterion without test evidence: criteria=1.00, anti_slop=1.00
   - Flags extra work not in spec: criteria=1.00, anti_slop=1.00
   - Passes a clean implementation that meets all criteria: criteria=1.00, anti_slop=1.00
+
+## Compare (2026-03-20 00:56 UTC)
+
+- Model: haiku
+- Composite (with agent): 1.0000
+- Composite (without agent): 0.7783
+- Delta: +0.2217
+- Structural: 9/9
+- Scenarios:
+  - Catches MUST criterion without test evidence: criteria=1.00, anti_slop=1.00
+  - Flags extra work not in spec: criteria=1.00, anti_slop=1.00
+  - Passes a clean implementation that meets all criteria: criteria=1.00, anti_slop=1.00
+
+## Compare (2026-03-20 01:22 UTC)
+
+- Model: haiku
+- Composite (with agent): 1.0000
+- Composite (without agent): 0.7429
+- Delta: +0.2571
+- Structural: 9/9
+- Scenarios:
+  - Catches MUST criterion without test evidence: criteria=1.00, anti_slop=1.00
+  - Flags extra work not in spec: criteria=1.00, anti_slop=1.00
+  - Passes a clean implementation that meets all criteria: criteria=1.00, anti_slop=1.00

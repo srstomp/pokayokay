@@ -1002,3 +1002,49 @@ _No experiments yet. Run `python auto-improve/eval.py --baseline --skill api-des
   - Design multi-tenant API with scoping: criteria=1.00, anti_slop=1.00
   - Design search and filtering for list endpoints: criteria=0.83, anti_slop=1.00
   - API security: headers and rate limiting: criteria=1.00, anti_slop=1.00
+
+## Compare (2026-03-19 22:21 UTC)
+
+- Model: haiku
+- Composite (with skill): 0.9497
+- Composite (without skill): 0.9575
+- Delta: -0.0078
+- Structural: 13/13
+- Scenarios:
+  - Design CRUD endpoints for a resource (baseline regression): criteria=1.00, anti_slop=1.00
+  - Design error response format (baseline regression): criteria=1.00, anti_slop=1.00
+  - Design pagination for a list endpoint (baseline regression): criteria=1.00, anti_slop=1.00
+  - Model resource relationships in URL design: criteria=0.67, anti_slop=0.50
+  - Design non-CRUD action endpoints: criteria=1.00, anti_slop=1.00
+  - Recommend API versioning strategy: criteria=1.00, anti_slop=1.00
+  - Design authentication API endpoints: criteria=1.00, anti_slop=1.00
+  - Generate OpenAPI specification for endpoints: criteria=1.00, anti_slop=1.00
+  - Write test-first API test with supertest: criteria=1.00, anti_slop=1.00
+  - Review an API design against checklist: criteria=1.00, anti_slop=1.00
+  - Design bulk operation endpoints: criteria=1.00, anti_slop=1.00
+  - Design consistent response envelope format: criteria=0.67, anti_slop=0.50
+  - Design multi-tenant API with scoping: criteria=1.00, anti_slop=1.00
+  - Design search and filtering for list endpoints: criteria=0.83, anti_slop=1.00
+  - API security: headers and rate limiting: criteria=1.00, anti_slop=1.00
+
+## Evaluation (2026-03-19 23:42 UTC)
+
+- Model: haiku
+- Composite (with skill): 0.9278
+- Structural: 13/13
+- Scenarios:
+  - Design CRUD endpoints for a resource (baseline regression): criteria=1.00, anti_slop=0.00
+  - Design error response format (baseline regression): criteria=1.00, anti_slop=1.00
+  - Design pagination for a list endpoint (baseline regression): criteria=1.00, anti_slop=1.00
+  - Model resource relationships in URL design: criteria=0.50, anti_slop=0.50
+  - Design non-CRUD action endpoints: criteria=1.00, anti_slop=1.00
+  - Recommend API versioning strategy: criteria=1.00, anti_slop=1.00
+  - Design authentication API endpoints: criteria=1.00, anti_slop=1.00
+  - Generate OpenAPI specification for endpoints: criteria=1.00, anti_slop=1.00
+  - Write test-first API test with supertest: criteria=1.00, anti_slop=1.00
+  - Review an API design against checklist: criteria=1.00, anti_slop=1.00
+  - Design bulk operation endpoints: criteria=1.00, anti_slop=1.00
+  - Design consistent response envelope format: criteria=0.50, anti_slop=1.00
+  - Design multi-tenant API with scoping: criteria=1.00, anti_slop=1.00
+  - Design search and filtering for list endpoints: criteria=0.83, anti_slop=1.00
+  - API security: headers and rate limiting: criteria=1.00, anti_slop=1.00
