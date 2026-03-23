@@ -25,9 +25,11 @@ Yokay hooks are now **guaranteed** to execute via Claude Code's native hook syst
 │  │  - Triggers appropriate hooks        │                │
 │  └─────────────────────────────────────┘                │
 │         │                                                │
-│         ├── post-task  → sync.sh, commit.sh             │
-│         ├── post-story → test.sh (if story_completed)   │
-│         └── post-epic  → audit (if epic_completed)      │
+│         ├── post-task  → sync, commit, detect-spike,    │
+│         │                 capture-knowledge              │
+│         ├── post-story → test, story-integration,       │
+│         │                 audit-gate (if story_completed)│
+│         └── post-epic  → audit-gate (if epic_completed) │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -40,15 +42,18 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 
 | Hook | Trigger | Default Actions |
 |------|---------|-----------------|
-| pre-session | Session start | verify-clean |
+| pre-session | Session start | verify-clean, pre-flight (unattended), recover (if crashed) |
 | pre-task | Task start | check-blockers, suggest-skills, setup-worktree |
 | post-task | Task complete | sync, commit, detect-spike, capture-knowledge |
-| post-story | Story complete | test, mini-audit, audit-gate |
-| post-epic | Epic complete | full-audit, audit-gate |
-| on-error | Error occurs | log, block, recover |
-| pre-commit | Before commit | lint |
-| post-session | Session end | final-sync, summary |
+| post-story | Story complete | test, story-integration, audit-gate |
+| post-epic | Epic complete | audit-gate |
+| on-blocker | Task blocked | notification |
+| pre-commit | Before commit | lint, check-ref-sizes |
+| post-session | Session end | sync, session-summary, curate-memory, session-chain |
 | post-command | After audit commands | verify-tasks |
+| post-review | Review FAIL | graduate-rules (failure tracking) |
+| file-change | Edit/Write | WIP tracking |
+| bash-complete | Bash execution | WIP tracking (tests, commits, errors) |
 
 ## Execution
 
@@ -106,33 +111,7 @@ Continuing despite warnings.
 
 ## Configuration
 
-### Project Override
-
-Create `.yokay/hooks.yaml` to customize:
-
-```yaml
-hooks:
-  post-task:
-    actions:
-      - sync
-      - commit
-      - prisma-generate  # Custom action
-
-  pre-commit:
-    enabled: false  # Disable entirely
-```
-
-### Adding Custom Actions
-
-Put scripts in `.yokay/hooks/`:
-
-```bash
-# .yokay/hooks/prisma-generate.sh
-#!/bin/bash
-if git diff --name-only | grep -q 'schema.prisma'; then
-  npx prisma generate
-fi
-```
+Hook behavior is controlled by `bridge.py` and the `defaults.yaml` reference. Custom hook actions can be added as shell scripts in `hooks/actions/`.
 
 ## Mode Behavior
 
@@ -187,7 +166,6 @@ Post-command hooks verify that audit commands created expected tasks. They fire 
 | Command | Prefix | Trigger |
 |---------|--------|---------|
 | `/pokayokay:security` | `Security:` | Always |
-| `/pokayokay:a11y` | `A11y:` | Always |
 | `/pokayokay:test --audit` | `Test:` | With `--audit` flag |
 | `/pokayokay:observe --audit` | `Observability:` | With `--audit` flag |
 | `/pokayokay:arch --audit` | `Arch:` | With `--audit` flag |
@@ -226,21 +204,6 @@ If no tasks were created:
 Action: If findings were discovered, ensure tasks were created using ohno MCP create_task.
 ```
 
-### Disabling Post-Command Hooks
-
-In `.yokay/hooks.yaml`:
-
-```yaml
-hooks:
-  post-command:
-    enabled: false  # Disable all post-command hooks
-
-  # Or disable specific commands
-  post-command:
-    security:
-      enabled: false
-```
-
 ## Error Handling
 
 Hooks are **fail-safe**:
@@ -264,13 +227,16 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 
 | Claude Code Event | Matcher | yokay Hooks Triggered |
 |-------------------|---------|----------------------|
-| SessionStart | — | pre-session (verify-clean) |
-| SessionEnd | — | post-session (sync, summary) |
+| SessionStart | — | pre-session (verify-clean, pre-flight, recover) |
+| SessionEnd | — | post-session (sync, session-summary, curate-memory, session-chain) |
 | PostToolUse | `mcp__ohno__update_task_status` (done) | post-task, post-story (if boundary), post-epic (if boundary) |
-| PostToolUse | `mcp__ohno__update_task_status` (in_progress) | pre-task (check-blockers) |
+| PostToolUse | `mcp__ohno__update_task_status` (in_progress) | pre-task (check-blockers, suggest-skills, setup-worktree) |
 | PostToolUse | `mcp__ohno__set_blocker` | on-blocker |
+| PostToolUse | `Task` (reviewers) | token tracking, post-review-fail + graduate-rules (on FAIL) |
 | PostToolUse | `Skill` (audit commands) | post-command (verify-tasks) |
-| PreToolUse | `Bash` (git commit) | pre-commit |
+| PostToolUse | `Edit` / `Write` | WIP tracking (files modified) |
+| PostToolUse | `Bash` | WIP tracking (test results, commits, errors) |
+| PreToolUse | `Bash` (git commit/add) | pre-commit (lint, check-ref-sizes) |
 
 ### Boundary Metadata
 
@@ -299,6 +265,8 @@ The bridge script uses this to determine which hooks to run:
 |------|---------|
 | `actions/bridge.py` | Parses Claude Code hook input, routes to yokay hooks |
 | `actions/verify-clean.sh` | Checks for uncommitted changes (pre-session) |
+| `actions/pre-flight.sh` | Pre-flight validation for unattended mode (pre-session) |
+| `actions/recover.sh` | Crash recovery for stale sessions (pre-session) |
 | `actions/check-blockers.sh` | Checks for blocked tasks (pre-task) |
 | `actions/suggest-skills.sh` | Suggests relevant skills based on task content (pre-task) |
 | `actions/setup-worktree.sh` | Creates git worktree for task isolation (pre-task) |
@@ -306,33 +274,20 @@ The bridge script uses this to determine which hooks to run:
 | `actions/commit.sh` | Smart git commit |
 | `actions/detect-spike.sh` | Detects uncertainty signals, suggests spike conversion (post-task) |
 | `actions/capture-knowledge.sh` | Auto-suggests docs for spike/research tasks (post-task) |
+| `actions/test.sh` | Runs tests (safe, non-blocking) |
+| `actions/story-integration.sh` | Story-level integration checks (post-story) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
-| `actions/test.sh` | Runs tests (safe, non-blocking) |
-| `actions/lint.sh` | Runs linter |
+| `actions/lint.sh` | Runs linter (pre-commit) |
 | `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |
 | `actions/session-summary.sh` | Prints session summary with token costs (post-session) |
-| `actions/recover.sh` | Error recovery |
+| `actions/curate-memory.sh` | Enforces MEMORY.md section budgets (post-session) |
+| `actions/session-chain.sh` | Handles headless session chaining (post-session) |
+| `actions/graduate-rules.sh` | Promotes recurring failures to .claude/rules/ (post-review) |
 
-### Configuration Location
+### Configuration
 
-Claude Code hooks are configured in `.claude/settings.local.json`:
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "mcp__ohno__update_task_status",
-        "hooks": [{
-          "type": "command",
-          "command": "python3 \"$CLAUDE_PROJECT_DIR/hooks/actions/bridge.py\""
-        }]
-      }
-    ]
-  }
-}
-```
+Hooks are registered through the pokayokay plugin system and routed by `bridge.py`. The plugin registers hook handlers for PostToolUse, PreToolUse, SessionStart, and SessionEnd events.
 
 ## Related Commands
 

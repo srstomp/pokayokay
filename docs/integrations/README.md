@@ -94,11 +94,10 @@ Determine where in the pokayokay workflow your integration should activate:
 
 | Lifecycle Point | Hook Name | Use Case |
 |----------------|-----------|----------|
-| Before task starts | `pre-task-start.sh` | Validate task quality, check prerequisites |
-| After task completes | `post-task-complete.sh` | Run quality checks, deploy artifacts |
+| Before task starts | `pre-task` (bridge.py) | Validate task quality, check prerequisites |
+| After task completes | `post-task` (bridge.py) | Run quality checks, deploy artifacts |
 | Review fails | `post-review-fail.sh` | Capture failures, create fix tasks |
-| Review passes | `post-review-pass.sh` | Log success, update metrics |
-| Session ends | `post-session.sh` | Generate reports, cleanup |
+| Session ends | `post-session` (bridge.py) | Generate reports, cleanup |
 
 ### Step 2: Create Hook Script
 

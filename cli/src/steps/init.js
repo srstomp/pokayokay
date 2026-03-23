@@ -7,8 +7,8 @@ import { execute } from '../utils/execute.js';
  */
 function printCliHints() {
   console.log(chalk.cyan('\n  Useful commands:'));
-  console.log(chalk.dim('    npx @srstomp/ohno-cli status   View project status'));
-  console.log(chalk.dim('    npx @srstomp/ohno-cli serve    Start MCP server manually'));
+  console.log(chalk.dim('    npx @stevestomp/ohno-cli status   View project status'));
+  console.log(chalk.dim('    npx @stevestomp/ohno-cli serve    Start MCP server manually'));
 }
 
 /**

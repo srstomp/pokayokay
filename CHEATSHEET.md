@@ -133,7 +133,7 @@ npx @stevestomp/ohno-cli done <id> # Complete task
 | `.claude/PROJECT.md` | Project context |
 | `.claude/pokayokay.json` | Chaining config |
 | `.claude/pokayokay-chain-state.json` | Active chain state |
-| `.claude/settings.local.json` | Hook configuration |
+| `.claude/settings.local.json` | Permissions and MCP config |
 | `.claude/spikes/*.md` | Spike reports |
 | `.claude/rules/pokayokay/*.md` | Graduated failure rules |
 | `.ohno/` | ohno database and sessions |

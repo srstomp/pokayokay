@@ -373,12 +373,15 @@ Hooks guarantee critical actions execute at session lifecycle points, eliminatin
 
 | Hook | When | Default Actions |
 |------|------|-----------------|
-| pre-session | Session start | verify-clean |
-| pre-task | Task start | check-blockers |
-| post-task | Task complete | sync, commit |
-| post-story | Story complete | test, audit |
+| pre-session | Session start | verify-clean, pre-flight, recover |
+| pre-task | Task start | check-blockers, suggest-skills, setup-worktree |
+| post-task | Task complete | sync, commit, detect-spike, capture-knowledge |
+| post-story | Story complete | test, story-integration, audit-gate |
+| post-epic | Epic complete | audit-gate |
+| on-blocker | Task blocked | notification |
+| pre-commit | Before commit | lint, check-ref-sizes |
 | post-command | After audit commands | verify-tasks |
-| post-session | Session end | final sync, summary |
+| post-session | Session end | sync, session-summary, curate-memory, session-chain |
 
 ### Mode Behavior
 
@@ -388,9 +391,10 @@ Hooks guarantee critical actions execute at session lifecycle points, eliminatin
 
 ### Custom Hooks
 
-Create `.yokay/hooks.yaml` in your project to customize:
+Custom hook actions can be added as shell scripts in `plugins/pokayokay/hooks/actions/`:
 
 ```yaml
+# Example from defaults.yaml
 hooks:
   post-task:
     actions:

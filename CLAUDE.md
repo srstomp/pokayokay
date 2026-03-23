@@ -10,7 +10,7 @@ pokayokay is a Claude Code plugin that orchestrates AI-assisted development sess
 
 ```bash
 # Local development - load plugin from directory
-claude --plugin-dir ./pokayokay
+claude --plugin-dir ./plugins/pokayokay
 
 # Validate plugin manifest
 claude plugin validate plugins/pokayokay
@@ -50,17 +50,20 @@ Claude Code Hook Event
     bridge.py  ──→ Routes to appropriate hook action
         │
         ├── SessionStart  → verify-clean.sh, pre-flight.sh (unattended), recover.sh (if crashed)
-        ├── update_task_status(done) → sync.sh, commit.sh, detect-spike.sh
+        ├── update_task_status(done) → sync.sh, commit.sh, detect-spike.sh, capture-knowledge.sh
         │   └── if story_completed → test.sh, story-integration.sh, audit-gate.sh
         │   └── if epic_completed → audit-gate.sh
-        ├── update_task_status(in_progress) → check-blockers.sh, setup-worktree.sh
+        ├── update_task_status(in_progress) → check-blockers.sh, suggest-skills.sh, setup-worktree.sh
         ├── set_blocker → notification
-        ├── Task (any agent) → token tracking; reviewers → post-review-fail hook
-        ├── Bash (git commit) → lint.sh, check-ref-sizes.sh
-        └── SessionEnd → sync, session-summary (with token costs), session-chain
+        ├── Task (any agent) → token tracking; reviewers → post-review-fail + graduate-rules.sh
+        ├── Skill (post-command) → verify-tasks.sh
+        ├── Edit/Write → WIP tracking (files modified)
+        ├── Bash (PreToolUse, git commit) → lint.sh, check-ref-sizes.sh
+        ├── Bash (PostToolUse) → WIP tracking (test results, commits, errors)
+        └── SessionEnd → sync, session-summary, curate-memory.sh, session-chain
 ```
 
-Hook configuration is in `.claude/settings.local.json` under the `hooks` key.
+Hooks are registered through the plugin system and routed by `bridge.py`.
 
 ### Subagent Architecture
 

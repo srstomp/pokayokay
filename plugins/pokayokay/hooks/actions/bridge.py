@@ -822,7 +822,6 @@ def handle_pre_commit(tool_input: dict) -> dict:
 # Commands that should auto-create tasks and need verification
 AUDIT_COMMANDS = {
     "pokayokay:security": {"prefix": "Security:", "always": True},
-    "pokayokay:a11y": {"prefix": "A11y:", "always": True},
     "pokayokay:test": {"prefix": "Test:", "flag": "--audit"},
     "pokayokay:observe": {"prefix": "Observability:", "flag": "--audit"},
     "pokayokay:arch": {"prefix": "Arch:", "flag": "--audit"},

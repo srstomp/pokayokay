@@ -57,6 +57,7 @@ hooks:
         type: command
         command: "pokayokay:audit"
         args: ["--quick", "--story", "${STORY_ID}"]
+      # NOTE: audit-summary exists as a script but is not called by bridge.py
       - name: audit-summary
         type: script
         path: actions/audit-summary.sh
@@ -79,6 +80,8 @@ hooks:
         env:
           BOUNDARY_TYPE: epic
 
+  # NOTE: on-error is defined here as a reference spec but is NOT wired in bridge.py.
+  # Error handling currently uses bridge.py's inline logic instead.
   on-error:
     enabled: true
     actions:
@@ -146,13 +149,6 @@ hooks:
           path: actions/verify-tasks.sh
           env:
             TASK_PREFIX: "Security:"
-    a11y:
-      actions:
-        - name: verify-tasks
-          type: script
-          path: actions/verify-tasks.sh
-          env:
-            TASK_PREFIX: "A11y:"
     # Commands that create tasks only with --audit flag
     test:
       flag: "--audit"
@@ -179,7 +175,8 @@ hooks:
           env:
             TASK_PREFIX: "Arch:"
 
-# Mode-specific overrides
+# NOTE: Mode-specific overrides are defined here as a reference spec but are NOT wired in bridge.py.
+# Bridge.py does not read this file; mode behavior is handled inline.
 modes:
   supervised:
     post-task:

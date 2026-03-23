@@ -17,7 +17,7 @@
 - **Orchestrated Sessions** - Work across multiple sessions without losing context
 - **Human Checkpoints** - Choose your autonomy level: supervised, semi-auto, auto, or unattended
 - **Multi-Dimensional Auditing** - Verify accessibility, testing, security, docs, and observability
-- **23 Specialized Skills** - Route work to domain-specific workflows automatically
+- **21 Specialized Skills** - Route work to domain-specific workflows automatically
 - **Spike Protocol** - Time-boxed investigations with mandatory decisions
 
 ## Prerequisites
@@ -158,7 +158,7 @@ npx @stevestomp/ohno-cli serve
 
 ## Skills
 
-The plugin includes 23 specialized skills loaded on demand via commands or planner routing:
+The plugin includes 21 specialized skills loaded on demand via commands or planner routing:
 
 ### Orchestration (process skills - add structure Claude wouldn't do alone)
 - `work-session` - Coordinator workflow, modes, agent dispatch
@@ -367,14 +367,14 @@ pokayokay includes a **guaranteed hook system** that executes actions at key lif
 
 | Hook | Trigger | Actions |
 |------|---------|---------|
-| pre-session | Session starts | Verify working directory clean |
-| pre-task | Task starts | Check blockers, suggest skills |
+| pre-session | Session starts | Verify clean, pre-flight (unattended), recover |
+| pre-task | Task starts | Check blockers, suggest skills, setup worktree |
 | post-task | Task completes | Sync, commit, detect spike, capture knowledge |
-| post-story | Story completes | Run tests, audit gate |
-| post-epic | Epic completes | Full audit, audit gate |
-| on-blocker | Task blocked | Notification, suggest alternatives |
-| pre-commit | Before git commit | Run linter |
-| post-session | Session ends | Sync, print summary |
+| post-story | Story completes | Test, story integration, audit gate |
+| post-epic | Epic completes | Audit gate |
+| on-blocker | Task blocked | Notification |
+| pre-commit | Before git commit | Lint, check ref sizes |
+| post-session | Session ends | Sync, session summary, curate memory, session chain |
 
 ### Intelligent Hooks
 
@@ -387,7 +387,7 @@ Beyond lifecycle automation, hooks provide intelligent guidance:
 | `capture-knowledge` | post-task | Auto-suggests docs for spike/research tasks |
 | `audit-gate` | post-story/epic | Checks quality thresholds at boundaries |
 
-Hooks are configured in `.claude/settings.local.json` and executed by `bridge.py`. The ohno MCP server provides **boundary metadata** when tasks complete, enabling automatic detection of story/epic completion.
+Hooks are registered through the plugin system and routed by `bridge.py`. The ohno MCP server provides **boundary metadata** when tasks complete, enabling automatic detection of story/epic completion.
 
 Use `/pokayokay:hooks` to view and manage hook configuration.
 
@@ -418,7 +418,7 @@ See [GUIDE.md](GUIDE.md) for:
 
 ```bash
 git clone https://github.com/srstomp/pokayokay.git
-claude --plugin-dir ./pokayokay
+claude --plugin-dir ./plugins/pokayokay
 ```
 
 ## Dependencies
