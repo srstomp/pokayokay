@@ -17,6 +17,7 @@ You analyze PRD documents and produce structured implementation plans. Your outp
 
 ## Critical Rules
 
+- NEVER create horizontal-layer tasks. Each task must be a vertical slice (UI + API + DB for one feature). "Build all components" then "Wire all API calls" is WRONG. "Sake list page: query DB, render table, link to create form" is RIGHT.
 - NEVER create tasks without acceptance criteria (MUST/SHOULD/COULD with type tags).
 - NEVER create circular dependencies.
 - NEVER plan implementation details. Tasks describe WHAT, not HOW.
@@ -61,7 +62,25 @@ Use Read, Grep, and Glob to understand:
 Break features into:
 - **Epics**: Major feature areas (P0-P3 priority)
 - **Stories**: User-facing capabilities within each epic
-- **Tasks**: Implementable units (1-8 hours each)
+- **Tasks**: Vertical slices (1-8 hours each) — each task delivers one working feature end-to-end
+
+### Vertical Slice Rule
+
+Every task MUST be a vertical slice through all layers needed for one feature to work. A task is done when a user (or test) can exercise the feature end-to-end.
+
+```
+WRONG (horizontal layers):          RIGHT (vertical slices):
+Task 1: Build all components         Task 1: Sake list page (DB query +
+Task 2: Wire all tRPC calls                  table component + route)
+Task 3: Add all DB queries           Task 2: Create sake form (validation +
+Task 4: Connect all routes                   API endpoint + DB insert + form UI)
+                                     Task 3: Sake detail page (DB read +
+                                             detail component + route)
+```
+
+**Why**: Horizontal tasks produce files that don't connect. An agent builds components that reference APIs that don't exist yet, writes API calls to schemas that aren't wired. Vertical slices ensure each task produces working, testable code.
+
+**Exception**: Shared infrastructure that multiple features need (test setup, auth middleware, DB schema with shared tables) can be a standalone task IF it blocks multiple vertical slices.
 
 ### 4. Assign Skill Hints
 
@@ -84,10 +103,11 @@ Route tasks to appropriate skills based on content:
 ### 5. Map Dependencies
 
 Identify which tasks block others:
-- Schema before API endpoints
-- API before frontend
-- Auth before protected routes
+- Shared infrastructure before vertical slices that use it (auth, test setup, shared DB schema)
 - Spikes before dependent features
+- Design tasks before implementation tasks
+
+**Note**: With vertical slices, most feature tasks are independent of each other. Dependencies are primarily between infrastructure/spike tasks and feature slices, not between layers within a feature.
 
 ### 5b. Ensure Test Infrastructure
 
@@ -190,6 +210,20 @@ BAD:  "Implement authentication"
 GOOD: "POST /api/auth/register endpoint accepting {email, password, name}.
        Validate email format and uniqueness. Hash password with bcrypt (12 rounds).
        Return 201 with {id, email}. Return 409 for duplicate email."
+```
+
+### Anti-Pattern: Horizontal Layer Tasks
+
+```
+BAD (horizontal — each task is one layer):
+  Task 1: "Build sake card component"
+  Task 2: "Build data table component"
+  Task 3: "Wire tRPC client calls"
+  Task 4: "Add sake list route"
+
+GOOD (vertical — each task is one feature end-to-end):
+  Task 1: "Sake list page: query DB → render table → link to create form"
+  Task 2: "Create sake form: validation → API endpoint → DB insert → form UI"
 ```
 
 ### Acceptance Criteria Format

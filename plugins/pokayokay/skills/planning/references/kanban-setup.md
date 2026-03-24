@@ -283,9 +283,9 @@ db.create_story(
     assigned_skill="database-design"
 )
 
-# Create tasks
-db.create_task("task-001-01-01", "story-001-01", "Create GoalInput component", "frontend", 4)
-db.create_task("task-001-01-02", "story-001-01", "Add document upload", "frontend", 3)
+# Create tasks (vertical slices — each task is end-to-end for one feature)
+db.create_task("task-001-01-01", "story-001-01", "Goal input: form + API endpoint + DB insert", "feature", 4)
+db.create_task("task-001-01-02", "story-001-01", "Document upload: dropzone + upload API + storage", "feature", 3)
 
 # Add dependencies
 db.add_dependency("task-001-01-01", "task-001-01-02")

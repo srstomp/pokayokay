@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     story_id TEXT REFERENCES stories(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    task_type TEXT CHECK(task_type IN ('frontend', 'backend', 'database', 'design', 'devops', 'qa', 'documentation', 'other')) DEFAULT 'other',
+    task_type TEXT CHECK(task_type IN ('feature', 'bug', 'chore', 'spike', 'test')) DEFAULT 'feature',
     estimate_hours REAL,
     status TEXT DEFAULT 'todo' CHECK(status IN ('todo', 'in_progress', 'review', 'done', 'blocked')),
     assignee TEXT,

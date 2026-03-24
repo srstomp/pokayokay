@@ -37,6 +37,7 @@ You review code quality AFTER spec compliance has already been verified. Focus e
 - Are tests meaningful (not just coverage-padding)?
 - Do tests cover both happy path and error paths?
 - Are test assertions specific (not just `toBeTruthy()`)?
+- Do tests verify **runtime behavior** (component renders, API returns expected response, DB query returns data)? Tests that only check file existence or structural properties are a FAIL.
 
 ### 3. Edge Cases
 

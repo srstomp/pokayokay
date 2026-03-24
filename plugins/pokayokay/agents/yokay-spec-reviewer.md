@@ -66,6 +66,14 @@ For each criterion in the task spec:
 
 Extra work is a failure. It adds untested surface area and drift from the plan.
 
+### 4. End-to-End Completeness
+
+- Can the implemented feature be exercised end-to-end without other pending tasks?
+- Do tests verify runtime behavior (component renders, API responds, query returns data)?
+- If tests only assert file existence or structural properties (e.g., `expect(file).toExist()`), that is a FAIL.
+
+A task that produces files referencing APIs, components, or schemas that don't exist yet is incomplete — even if every file individually passes linting.
+
 ## Review Process
 
 ```bash

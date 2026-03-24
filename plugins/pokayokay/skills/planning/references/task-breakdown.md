@@ -24,17 +24,17 @@ Epic (1-4 weeks)
 | **Story** | User capability | 1-5 days | Team | Shippable increment |
 | **Task** | Implementation | 1-8 hours | Individual | Code/design complete |
 
-### Infrastructure-First Ordering
+### Vertical Slice Ordering
 
-Certain tasks must complete before implementation begins:
+Tasks are vertical slices — each delivers one working feature end-to-end. Shared infrastructure that multiple slices need comes first:
 
 | Infrastructure Task | When Required | Blocks |
 |-------------------|---------------|--------|
 | Test setup | No existing test framework detected | All feature/bug tasks |
-| Database schema | PRD includes data models | API and frontend tasks |
-| Auth setup | PRD includes protected routes | Protected feature tasks |
+| Shared DB schema | Multiple features need the same tables | Feature slices using those tables |
+| Auth middleware | Multiple features need authentication | Protected feature slices |
 
-The planner MUST check for these and create them as the first tasks with appropriate dependencies.
+The planner MUST check for shared infrastructure and create it as the first tasks. Feature-specific schema, API, and UI are part of each feature's vertical slice, NOT separate tasks.
 
 ---
 
@@ -297,17 +297,17 @@ mcp__ohno__create_task:
 4. **Connects To**: Dependencies with brief context
 5. **Patterns to Follow**: Where to find conventions in existing code
 
-### Task Types
+### Task Types (ohno)
 
-| Type | Examples | Skills |
-|------|----------|--------|
-| **Frontend** | Components, pages, styles | React, CSS, TypeScript |
-| **Backend** | API endpoints, services | Node, Python, databases |
-| **Database** | Schema, migrations, queries | SQL, ORM |
-| **Design** | Mockups, prototypes | Figma, design systems |
-| **DevOps** | CI/CD, infrastructure | Docker, AWS, Terraform |
-| **QA** | Test cases, automation | Jest, Cypress, Playwright |
-| **Documentation** | Docs, comments, README | Technical writing |
+Task types describe the **nature of work**, NOT the layer. Each task is still a vertical slice regardless of type.
+
+| Type | When to Use | Example |
+|------|-------------|---------|
+| **feature** | New user-facing capability | "Sake list page: DB query + table + route" |
+| **bug** | Fix broken behavior | "Fix sake creation returning 500 on duplicate name" |
+| **chore** | Infrastructure, setup, config | "Set up test framework and DB migrations" |
+| **spike** | Time-boxed investigation | "Spike: Can D1 handle multi-tenant isolation?" |
+| **test** | Test-only changes | "Add E2E tests for sake CRUD flow" |
 
 ### Task Sizing
 
@@ -327,35 +327,57 @@ mcp__ohno__create_task:
 - "Build dashboard" (multiple components)
 - "Implement search" (frontend + backend + optimization)
 
-**Decomposition strategy:**
-1. List all sub-components
-2. Identify dependencies between them
-3. Create task for each implementable unit
-4. Link dependencies
+**Decomposition strategy — vertical slices:**
+1. Identify the user-facing features (registration, login, protected access)
+2. For each feature, include ALL layers needed to make it work end-to-end
+3. Extract shared infrastructure only if multiple features need it
+4. Each task produces working, testable behavior
 
-**Example:**
+**Example (vertical slices):**
 ```
 Original: "Implement user authentication"
 
 Decomposed:
-- TASK-001: Create user database schema (2h)
-- TASK-002: Create User model and validation (3h)
-- TASK-003: Implement password hashing service (2h)
-- TASK-004: Create registration API endpoint (4h)
-- TASK-005: Create login API endpoint (4h)
-- TASK-006: Implement JWT token service (3h)
-- TASK-007: Create auth middleware (2h)
-- TASK-008: Build registration form component (4h)
-- TASK-009: Build login form component (3h)
-- TASK-010: Implement auth context/state (3h)
-- TASK-011: Add protected route wrapper (2h)
-- TASK-012: Write auth integration tests (4h)
+- TASK-001: Shared auth infrastructure (4h)
+  → User DB schema, password hashing utility, JWT token service
+  → Done when: utility functions pass unit tests
+
+- TASK-002: User registration end-to-end (6h)
+  → POST /api/auth/register endpoint + validation + DB insert
+  → Registration form component + client-side validation
+  → Wire form → API → DB → success/error response
+  → Done when: user can fill form, submit, see account created
+
+- TASK-003: User login end-to-end (5h)
+  → POST /api/auth/login endpoint + credential check + JWT issue
+  → Login form component + auth state/context
+  → Wire form → API → token storage → redirect
+  → Done when: user can log in and see authenticated state
+
+- TASK-004: Protected routes (3h)
+  → Auth middleware + protected route wrapper
+  → Redirect unauthenticated users to login
+  → Done when: visiting /dashboard redirects to /login if not authed
+```
+
+**Anti-example (horizontal layers — DO NOT DO THIS):**
+```
+BAD: 12 tasks split by layer:
+- Create user schema → Create model → Hashing service → Register API
+  → Login API → JWT service → Auth middleware → Register form
+  → Login form → Auth context → Protected routes → Integration tests
+
+Each task produces files that reference things that don't exist yet.
+The register form calls an API that hasn't been built. The API
+references a model that hasn't been created. Nothing works until
+ALL 12 tasks complete.
 ```
 
 ### Task Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
 |--------------|---------|-----|
+| Horizontal layers | Tasks produce disconnected files | Vertical slices (UI+API+DB per feature) |
 | Vague task | "Work on feature" | Specific deliverable |
 | No estimate | Can't plan | Add time estimate |
 | Missing type | Can't assign | Add frontend/backend/etc |
@@ -383,28 +405,27 @@ Questions to ask:
 3. Who else is touching related code?
 4. Are there external approvals needed?
 
-### Dependency Matrix
+### Dependency Matrix (Vertical Slice Example)
 
 | Task | Blocked By | Blocks |
 |------|------------|--------|
-| TASK-001: DB Schema | — | TASK-002, TASK-004 |
-| TASK-002: User Model | TASK-001 | TASK-004, TASK-005 |
-| TASK-004: Register API | TASK-001, TASK-002 | TASK-008 |
-| TASK-008: Register Form | TASK-004 | — |
+| TASK-001: Auth infrastructure | — | TASK-002, TASK-003, TASK-004 |
+| TASK-002: Registration e2e | TASK-001 | — |
+| TASK-003: Login e2e | TASK-001 | TASK-004 |
+| TASK-004: Protected routes | TASK-001, TASK-003 | — |
+
+With vertical slices, feature tasks are mostly independent after shared infrastructure. Registration and login can run in parallel.
 
 ### Critical Path Analysis
 
 The critical path is the longest chain of dependencies:
 
 ```
-DB Schema (2h) → User Model (3h) → Register API (4h) → Register Form (4h)
-                                                       Total: 13h minimum
+Auth infrastructure (4h) → Login e2e (5h) → Protected routes (3h)
+                                            Total: 12h minimum
 ```
 
-**Actions:**
-- Can't parallelize critical path
-- Allocate best resources to critical path
-- Monitor for blockers
+Registration (6h) runs in parallel with Login, so total wall-clock time is shorter than summing all tasks.
 
 ### Breaking Circular Dependencies
 

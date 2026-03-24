@@ -14,6 +14,7 @@
 
 | Anti-Pattern | Problem | Fix |
 |--------------|---------|-----|
+| Horizontal layer tasks | Each task builds one layer (all components, all APIs, all DB); produces disconnected files that don't work until every task completes | Vertical slices: each task delivers one feature end-to-end (UI + API + DB) |
 | Tasks > 8 hours | Too vague to estimate | Split into smaller tasks |
 | No acceptance criteria | Unclear "done" | Define measurable criteria |
 | Missing task types | Can't assign properly | Tag: frontend, backend, design, etc. |

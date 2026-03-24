@@ -5,6 +5,29 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-03-24
+
+### Changed
+- **Vertical Slice Task Decomposition** — Planner now requires every task to be a vertical slice (UI + API + DB for one feature), never horizontal layers (all components, then all APIs)
+  - New Critical Rule in `yokay-planner`: "NEVER create horizontal-layer tasks"
+  - New "Vertical Slice Rule" section with WRONG/RIGHT examples and exception for shared infrastructure
+  - Dependency mapping rewritten: shared infrastructure → vertical slices (not layer → layer)
+  - Task decomposition example replaced: 12-task horizontal auth → 4-task vertical auth
+- **Runtime Verification** — Agents must verify runtime behavior, not just file existence
+  - New Critical Rule in `yokay-implementer`: "NEVER write tests that only check file existence"
+  - `yokay-spec-reviewer` gains "End-to-End Completeness" check (section 4)
+  - `yokay-quality-reviewer` gains runtime behavior test quality check
+- **Keyword-Based Skill Routing** — Replaced layer-based routing (`backend → api-design`) with content keyword routing across `work.md`, `subagent-dispatch.md`, and `skill-routing.md`
+
+### Fixed
+- **Stale task types in reference docs** — `database-schema.md` had `frontend/backend/database/design/devops/qa/documentation` task types; actual ohno schema uses `feature/bug/chore/spike/test`. Fixed reference to match reality.
+- **Kanban template dropdown** — Filter options now match ohno's actual task types
+- **Kanban setup example** — Example tasks rewritten as vertical slices
+
+### Added
+- Anti-pattern: "Horizontal layer tasks" added to both `planning/anti-patterns.md` and `work-session/anti-patterns.md`
+- Anti-pattern: "File-existence-only tests" added to `work-session/anti-patterns.md`
+
 ## [0.18.1] - 2026-03-18
 
 ### Removed

@@ -700,25 +700,21 @@ Read task details via ohno MCP `get_task`.
 
 ### 2. Route to Skill (if needed)
 
-Based on task type, determine relevant skill for domain knowledge:
+Route by **keywords in task title/description**, not by layer. Each task is a vertical slice — skill routing picks the dominant domain.
 
-**Backend & API**:
-- API work → Load `api-design` skill
-- Database work → Load `database-design` skill
-- Architecture work → Load `architecture-review` skill
-- Third-party integration → Load `api-integration` skill
+**By keywords**:
+- "endpoint", "REST", "GraphQL" → Load `api-design` skill
+- "schema", "migration", "query" → Load `database-design` skill
+- "refactor", "module boundary" → Load `architecture-review` skill
+- "integrate", "third-party", "webhook" → Load `api-integration` skill
+- "pipeline", "deploy", "CI/CD" → Load `ci-cd` skill
+- "logging", "metrics", "tracing" → Load `observability` skill
+- "test", "coverage", "TDD" → Load `testing-strategy` skill
+- "security", "auth", "OWASP" → Load `security-audit` skill
 
-**DevOps & Infrastructure**:
-- CI/CD work → Load `ci-cd` skill
-- Observability work → Load `observability` skill
-
-**Quality & Security**:
-- Testing work → Load `testing-strategy` skill
-- Security work → Load `security-audit` skill
-
-**Investigation**:
-- Spike tasks → Load `spike` skill (enforce time-box)
-- Research tasks → Load `deep-research` skill
+**By task type**:
+- spike → Load `spike` skill (enforce time-box)
+- bug → Load `error-handling` skill
 
 ### 2.5 Design Task Routing (Conditional)
 

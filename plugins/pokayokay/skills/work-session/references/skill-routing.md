@@ -13,20 +13,15 @@ Check these in order:
 
 ## By Task Type
 
+ohno task types describe the **nature of work**, not the layer. Route by keywords in title/description, not by task type.
+
 | task_type | Primary Skill | Secondary Skills |
 |-----------|---------------|------------------|
-| feature | *(use keywords)* | testing-strategy |
+| feature | *(use keywords below)* | testing-strategy |
 | bug | error-handling | testing-strategy |
 | spike | spike | deep-research |
-| chore | *(use keywords)* | — |
-| docs | documentation | — |
-| test | testing-strategy | testing-strategy |
-| security | security-audit | — |
-| performance | performance-optimization | — |
-| backend | api-design | api-integration, error-handling |
-| database | database-design | — |
-| devops | ci-cd | — |
-| qa | testing-strategy | testing-strategy |
+| chore | *(use keywords below)* | — |
+| test | testing-strategy | — |
 
 ## By Keywords in Title/Description
 

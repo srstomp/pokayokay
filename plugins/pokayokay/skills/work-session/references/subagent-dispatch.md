@@ -254,9 +254,11 @@ Route the task to an appropriate skill based on characteristics.
 
 Check these in order:
 
-1. **Explicit skill hint** - Task or story may specify a skill
-2. **Task type mapping** - Use task_type field
-3. **Keyword analysis** - Parse title/description for patterns
+1. **Explicit skill hint** — Task or story may specify a skill
+2. **Task type** — Only for non-feature types (bug, spike, docs, test)
+3. **Keyword analysis** — Parse title/description for domain signals
+
+Route by **content keywords**, not by layer. A vertical slice task touching DB + API + UI should be routed based on the dominant domain, not "backend" or "frontend."
 
 See [skill-routing.md](skill-routing.md) for complete routing rules.
 
@@ -264,17 +266,13 @@ See [skill-routing.md](skill-routing.md) for complete routing rules.
 
 | task_type | Primary Skill | Secondary |
 |-----------|---------------|-----------|
-| feature | *(use keywords)* | testing-strategy |
+| feature | *(use keywords in title/description)* | testing-strategy |
 | bug | error-handling | testing-strategy |
 | spike | spike | deep-research |
-| docs | documentation | — |
-| test | testing-strategy | testing-strategy |
-| security | security-audit | — |
-| performance | performance-optimization | — |
-| backend | api-design | api-integration |
-| database | database-design | — |
-| devops | ci-cd | — |
-| qa | testing-strategy | testing-strategy |
+| chore | *(use keywords)* | — |
+| test | testing-strategy | — |
+
+**Keyword examples**: "schema" / "migration" → database-design, "endpoint" / "REST" → api-design, "deploy" / "pipeline" → ci-cd, "auth" / "encryption" → security-audit
 
 See [skill-routing.md](skill-routing.md) for keyword-based routing and multi-skill workflows
 
