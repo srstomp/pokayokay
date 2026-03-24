@@ -166,6 +166,8 @@ Return a JSON plan wrapped in a markdown code block:
               "task_type": "feature",
               "estimate_hours": 4,
               "skill": "api-design",
+              "strategy": "tdd",
+              "packages_touched": ["@project/api", "@project/db"],
               "description": "Full task description with:\n1. Behavior\n2. Input/output contract\n3. Connects-to and patterns to follow\n\n## Acceptance Criteria\n- [ ] [MUST/functional] Specific testable condition\n- [ ] [MUST/error] Error condition with expected response\n- [ ] [SHOULD/edge-case] Edge case handling",
               "depends_on": ["other-task-title"]
             }
@@ -191,6 +193,36 @@ Return a JSON plan wrapped in a markdown code block:
   ]
 }
 ```
+
+## Talos Integration Fields
+
+Every task MUST include these fields for Talos overnight execution:
+
+### `packages_touched` (required)
+
+List of workspace packages/directories the task will modify. Talos uses this to avoid co-scheduling tasks that touch the same packages in parallel worktrees (prevents merge conflicts).
+
+Identify packages by exploring the monorepo `workspaces` in `package.json`. Example for a monorepo with `packages/*` and `apps/*`:
+
+```
+"packages_touched": ["@sakeba/ui", "@sakeba/api"]     // modifies shared UI + API packages
+"packages_touched": ["apps/web"]                        // only modifies the web app
+"packages_touched": ["@sakeba/db", "@sakeba/api", "apps/admin"]  // full vertical slice
+```
+
+**Rules:**
+- Include every package the task will create or modify files in
+- Two tasks with overlapping `packages_touched` will NOT run in parallel
+- Tasks with no overlap CAN run in parallel — maximize this for overnight throughput
+
+### `strategy` (required)
+
+Per-task implementation strategy override. Talos defaults to the project-level strategy in `.auto-implement.json`, but the planner should set the optimal strategy per task:
+
+- `"tdd"` — RED/GREEN TDD with separate agents. Use for backend, API, business logic, and data tasks where meaningful failing tests can be written from acceptance criteria alone.
+- `"direct"` — Implement directly without RED/GREEN separation. Use for UI-heavy tasks (pages, components, layouts) where RED tests would be shallow "element exists" assertions.
+
+**Heuristic:** If the task is primarily about rendering UI or visual output, use `direct`. If it's primarily about data, logic, or API contracts, use `tdd`.
 
 ## Quality Requirements
 
