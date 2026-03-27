@@ -71,17 +71,18 @@ The `/work`, `/fix`, and `/hotfix` commands use a coordinator pattern that dispa
 
 1. **yokay-brainstormer** - Refines ambiguous tasks before implementation
 2. **yokay-browser-verifier** - Verifies UI changes in a real browser
-3. **yokay-explorer** - Fast codebase search (Haiku model, read-only)
-4. **yokay-fixer** - Auto-retry on test failures with targeted fixes
-5. **yokay-implementer** - Executes tasks with AC-first TDD (tests from acceptance criteria, not implementation)
-6. **yokay-planner** - PRD analysis with structured acceptance criteria (MUST/SHOULD/COULD)
-7. **yokay-quality-reviewer** - Code quality review with automated checks (coverage, lint, test-AC mapping)
-8. **yokay-reviewer** - Code review and analysis (read-only)
-9. **yokay-security-scanner** - OWASP vulnerability scanning (read-only)
-10. **yokay-spec-reviewer** - Checklist-based spec review with evidence table (file:line for each criterion)
-11. **yokay-spike-runner** - Time-boxed technical investigations
-12. **yokay-test-runner** - Test execution with concise output
-13. **yokay-auditor** - L0-L5 completeness scanning (read-only)
+3. **yokay-design-reviewer** - Pre-implementation design review; validates approach against codebase patterns and design skills (read-only)
+4. **yokay-explorer** - Fast codebase search (Haiku model, read-only)
+5. **yokay-fixer** - Auto-retry on test failures with targeted fixes
+6. **yokay-implementer** - Executes tasks with AC-first TDD, follows pre-validated approach from design reviewer
+7. **yokay-planner** - PRD analysis with structured acceptance criteria (MUST/SHOULD/COULD)
+8. **yokay-quality-reviewer** - Code quality review with automated checks (coverage, lint, test-AC mapping) + design compliance post-check
+9. **yokay-reviewer** - Code review and analysis (read-only)
+10. **yokay-security-scanner** - OWASP vulnerability scanning (read-only)
+11. **yokay-spec-reviewer** - Checklist-based spec review with evidence table (file:line for each criterion)
+12. **yokay-spike-runner** - Time-boxed technical investigations
+13. **yokay-test-runner** - Test execution with concise output
+14. **yokay-auditor** - L0-L5 completeness scanning (read-only)
 
 Agents are dispatched via the Task tool with `subagent_type` matching the agent filename (without .md).
 

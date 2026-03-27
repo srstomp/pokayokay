@@ -7,40 +7,42 @@ Guide for the coordinator to prepare and dispatch subagents.
 The coordinator delegates work to subagents at various stages:
 
 1. **Brainstorm** (conditional) - Refines ambiguous tasks before implementation
-2. **Implementer** - Implements the task following TDD
-3. **Spec Reviewer** - Verifies implementation matches spec
-4. **Quality Reviewer** - Verifies code quality standards
+2. **Design Review** (conditional) - Validates implementation approach before coding
+3. **Implementer** - Implements the task following TDD, with pre-validated approach
+4. **Spec Reviewer** - Verifies implementation matches spec
+5. **Quality Reviewer** - Verifies code quality standards and design compliance
 
 This reference covers:
 
 1. Extracting task details from ohno
 2. Brainstorm gate (conditional dispatch)
-3. Filling the implementer prompt template
-4. Two-stage review dispatch
-5. Error handling when ohno fails
+3. Design review gate (conditional dispatch)
+4. Filling the implementer prompt template
+5. Two-stage review dispatch (spec + quality with design compliance)
+6. Error handling when ohno fails
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    DISPATCH FLOW                            │
-│                                                             │
-│   ┌──────────┐     ┌──────────┐     ┌──────────┐          │
-│   │  GET     │ ──► │BRAINSTORM│ ──► │IMPLEMENTER│         │
-│   │  TASK    │     │ (maybe)  │     │           │         │
-│   └──────────┘     └──────────┘     └──────────┘          │
-│        │                │                │                 │
-│        ▼                ▼                ▼                 │
-│    ohno MCP         Refine if       Implement task        │
-│    get_task()       ambiguous       with TDD              │
-│                                                            │
-│                         ┌──────────┐     ┌──────────┐     │
-│                         │  SPEC    │ ──► │ QUALITY  │     │
-│                         │ REVIEWER │     │ REVIEWER │     │
-│                         └──────────┘     └──────────┘     │
-│                              │                │            │
-│                              ▼                ▼            │
-│                         Verify spec      Verify quality   │
-│                         compliance       standards        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       DISPATCH FLOW                              │
+│                                                                  │
+│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   │
+│   │  GET     │──►│BRAINSTORM│──►│  DESIGN  │──►│IMPLEMENTER│   │
+│   │  TASK    │   │ (maybe)  │   │  REVIEW  │   │(w/ approach)│  │
+│   └──────────┘   └──────────┘   │ (maybe)  │   └──────────┘   │
+│        │              │         └──────────┘        │           │
+│        ▼              ▼              │               ▼           │
+│    ohno MCP      Refine if      Validate        Implement       │
+│    get_task()    ambiguous      approach         with TDD        │
+│                                                                  │
+│                       ┌──────────┐     ┌──────────┐             │
+│                       │  SPEC    │ ──► │ QUALITY  │             │
+│                       │ REVIEWER │     │ REVIEWER │             │
+│                       └──────────┘     └──────────┘             │
+│                            │                │                    │
+│                            ▼                ▼                    │
+│                       Verify spec      Verify quality            │
+│                       compliance       + design compliance       │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -246,7 +248,74 @@ Proceeding directly to implementation.
 
 ---
 
-## Step 3: Determine Relevant Skill
+## Step 3: Design Review Gate (Conditional)
+
+Before dispatching the implementer, evaluate if the task needs design review.
+
+### Skip Conditions
+
+Design review is NOT needed when:
+
+```python
+def skip_design_review(task, skip_flag=False):
+    if skip_flag:
+        return True  # --skip-design flag
+    if task.task_type in ["chore", "docs"]:
+        return True  # Low design risk
+    ac_count = count_acceptance_criteria(task)
+    if ac_count < 3 and estimated_files_touched(task) <= 1:
+        return True  # Trivial change
+    return False
+```
+
+### Design Review Dispatch
+
+**Agent**: `yokay-design-reviewer`
+**Template**: `agents/templates/design-review-prompt.md`
+**Model**: sonnet (needs design reasoning)
+
+#### Template Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{TASK_ID}` | `task.id` | Task identifier |
+| `{TASK_TITLE}` | `task.title` | Task title |
+| `{TASK_DESCRIPTION}` | `task.description` | Full description |
+| `{ACCEPTANCE_CRITERIA}` | `task.acceptance_criteria` | Structured AC |
+| `{CONTEXT}` | Built from story + handoff + deps | Where this fits |
+| `{WORKING_DIRECTORY}` | Project root | Working directory path |
+
+### Processing Design Review Result
+
+```python
+if design_review.status == "APPROVED":
+    # Store approach for implementer dispatch
+    approach = design_review.output
+    # Proceed to implementer with {APPROACH} filled
+    proceed_to_implementation(approach=approach)
+
+elif design_review.status == "NEEDS_DISCUSSION":
+    # PAUSE for human decision
+    log_activity(task_id, "note", f"Design review needs discussion: {design_review.decision_needed}")
+    pause_for_human(design_review.options)
+```
+
+### Skip Flag
+
+The `--skip-design` flag bypasses the gate:
+
+```markdown
+## Skip Design Review
+
+User specified --skip-design flag.
+Proceeding directly to implementation without validated approach.
+
+*Warning: Implementer will choose its own approach.*
+```
+
+---
+
+## Step 4: Determine Relevant Skill
 
 Route the task to an appropriate skill based on characteristics.
 
@@ -297,7 +366,7 @@ No specialized skill applies to this task. Use Claude's built-in knowledge for i
 
 ---
 
-## Step 4: Fill the Implementer Prompt Template
+## Step 5: Fill the Implementer Prompt Template
 
 ### Template Location
 
@@ -315,6 +384,7 @@ plugins/pokayokay/agents/templates/implementer-prompt.md
 | `{ACCEPTANCE_CRITERIA}` | Structured AC from task description (see below) | MUST/SHOULD/COULD list |
 | `{CONTEXT}` | Built from multiple sources | Story + handoff + deps |
 | `{RELEVANT_SKILL}` | Routing decision | Skill name and guidance |
+| `{APPROACH}` | Design review output (Step 3) | Validated implementation approach, or empty if skipped |
 | `{WORKING_DIRECTORY}` | Project root | `/path/to/project` |
 
 ### Acceptance Criteria in Dispatch
@@ -416,7 +486,7 @@ If `acceptance_criteria` is empty or vague, coordinator should define:
 
 ---
 
-## Step 5: Dispatch the Subagent
+## Step 6: Dispatch the Subagent
 
 ### Using the Task Tool
 

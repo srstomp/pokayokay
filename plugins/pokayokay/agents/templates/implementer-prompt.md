@@ -31,6 +31,14 @@ You are being dispatched by the coordinator to implement a specific task. Read t
 
 > **On-demand references**: The skill above is a concise summary. If you need deeper guidance, read specific files from the skill's `references/` directory — the reference table lists what's available.
 
+### Implementation Approach
+
+{APPROACH}
+
+> **If an approach is provided above:** It was validated by the design reviewer. Follow it unless you discover something that makes it infeasible — in which case, report back with status NEEDS_REDESIGN instead of improvising.
+>
+> **If no approach is provided:** Design review was skipped for this task. Determine your own approach from codebase patterns — find a similar feature and follow its file structure and conventions.
+
 ---
 
 ## Working Environment
@@ -80,7 +88,7 @@ When you complete implementation, report back using this format:
 
 **Task ID**: {TASK_ID}
 **Task**: {TASK_TITLE}
-**Status**: Complete / Partial / Blocked
+**Status**: Complete / Partial / Blocked / NEEDS_REDESIGN
 
 ### What Was Implemented
 - [Bullet points of what you built]

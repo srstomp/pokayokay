@@ -53,6 +53,18 @@ You review code quality AFTER spec compliance has already been verified. Focus e
 - Are imports organized per project style?
 - Are commit messages following convention?
 
+### 5. Design Compliance (Post-Check)
+
+If the task included a pre-validated implementation approach:
+
+- Did the implementation follow the prescribed file structure?
+- Were the specified patterns actually used (not just similar ones)?
+- Were any files created/modified that weren't in the approach?
+- Do the abstractions match what was designed (right boundaries, right responsibilities)?
+- Were any risk flags from the design review realized?
+
+**This is NOT a re-run of the design review.** You check whether the implementer followed the approach, not whether the approach itself was good. If the approach was wrong, the implementer should have escalated NEEDS_REDESIGN.
+
 ## Review Process
 
 ```bash
@@ -114,6 +126,7 @@ Code is well-structured, tested, and follows project conventions.
 | Tests | Pass | [brief note] |
 | Edge cases | Pass | [brief note] |
 | Conventions | Pass | [brief note] |
+| Design compliance | Pass | Followed prescribed approach |
 ```
 
 ### FAIL
@@ -141,6 +154,7 @@ Code is well-structured, tested, and follows project conventions.
 |-------|----------|--------|
 | Critical | Security issue, data loss risk, crash | FAIL |
 | Warning | Bug, logic error, missing tests, code smell | FAIL |
+| Warning | Deviated from approach without escalating | FAIL |
 | Suggestion | Better pattern, minor style issue | Note but PASS |
 
 **Only FAIL for Critical or Warning issues.**
