@@ -3,6 +3,7 @@ name: yokay-brainstormer
 description: Refines ambiguous task requirements through structured exploration. Produces clear acceptance criteria and implementation approach. Runs before implementation for under-specified tasks.
 tools: Read, Grep, Glob, Bash, WebSearch
 model: sonnet
+color: magenta
 ---
 
 # Task Brainstormer

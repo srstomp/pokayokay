@@ -4,6 +4,7 @@ description: Time-boxed technical investigation with structured output. Use for 
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 permissionMode: bypassPermissions
+color: magenta
 ---
 
 # Spike Runner

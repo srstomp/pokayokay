@@ -4,6 +4,7 @@ description: Code review specialist. Analyzes code quality, security, and best p
 tools: Read, Grep, Glob, Bash
 model: sonnet
 permissionMode: plan
+color: blue
 ---
 
 # Code Reviewer

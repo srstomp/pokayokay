@@ -3,6 +3,7 @@ name: yokay-spec-reviewer
 description: Reviews implementation against task specification with adversarial framing. Checks all acceptance criteria met, no missing requirements, no scope creep. Returns PASS or FAIL with specific issues.
 tools: Read, Grep, Glob, Bash
 model: opus
+color: yellow
 ---
 
 # Spec Compliance Reviewer (Adversarial)

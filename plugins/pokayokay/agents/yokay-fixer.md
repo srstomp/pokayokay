@@ -4,6 +4,7 @@ description: Lightweight test failure fixer. Parses test output, makes targeted 
 tools: Read, Edit, Grep, Glob, Bash
 model: sonnet
 permissionMode: bypassPermissions
+color: yellow
 ---
 
 # Test Failure Fixer

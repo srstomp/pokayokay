@@ -4,6 +4,7 @@ description: Fast codebase exploration for understanding structure, patterns, an
 tools: Read, Grep, Glob, LS
 model: haiku
 permissionMode: plan
+color: blue
 ---
 
 # Codebase Explorer

@@ -3,6 +3,7 @@ name: yokay-test-runner
 description: Test execution specialist. Runs test suites and reports failures concisely. Use after implementation changes, before commits, or when verifying fixes.
 tools: Bash, Read, Grep
 model: haiku
+color: green
 ---
 
 # Test Runner

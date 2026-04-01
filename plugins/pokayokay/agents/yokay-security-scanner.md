@@ -4,6 +4,7 @@ description: Security audit specialist. Scans for vulnerabilities, OWASP issues,
 tools: Read, Grep, Glob, Bash
 model: sonnet
 permissionMode: plan
+color: red
 ---
 
 # Security Scanner

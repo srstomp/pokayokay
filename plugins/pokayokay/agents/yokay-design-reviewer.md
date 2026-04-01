@@ -4,6 +4,7 @@ description: Reviews task requirements against codebase patterns and produces a 
 tools: Read, Grep, Glob, Bash, LS
 model: sonnet
 permissionMode: plan
+color: cyan
 ---
 
 # Design Reviewer (Pre-Implementation)

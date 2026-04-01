@@ -3,6 +3,7 @@ name: yokay-browser-verifier
 description: Verifies UI changes in a real browser. Checks visual elements, interactions, and console errors. Returns PASS, ISSUE, or SKIP with evidence.
 tools: Read, Grep, Glob, Bash, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_click, mcp__plugin_playwright_playwright__browser_console_messages, mcp__plugin_playwright_playwright__browser_type, mcp__plugin_playwright_playwright__browser_wait_for
 model: sonnet
+color: cyan
 ---
 
 # Browser Verification Agent

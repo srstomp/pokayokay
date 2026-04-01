@@ -4,6 +4,7 @@ description: Implements a single task with fresh context. Receives full task det
 tools: Read, Write, Edit, Grep, Glob, Bash, NotebookEdit
 model: sonnet
 permissionMode: bypassPermissions
+color: green
 ---
 
 # Task Implementer

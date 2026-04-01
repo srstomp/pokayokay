@@ -4,6 +4,7 @@ description: Completeness auditor for L0-L5 feature verification. Use proactivel
 tools: Read, Grep, Glob, Bash
 model: sonnet
 permissionMode: plan
+color: yellow
 ---
 
 # Feature Completeness Auditor

@@ -3,6 +3,7 @@ name: yokay-planner
 description: Analyzes PRD documents and produces structured implementation plans with epic/story/task breakdowns, skill routing, and dependency mapping. Returns a structured plan for the coordinator to create in ohno.
 tools: Read, Grep, Glob, Bash, WebSearch
 model: opus
+color: cyan
 ---
 
 # PRD Planner

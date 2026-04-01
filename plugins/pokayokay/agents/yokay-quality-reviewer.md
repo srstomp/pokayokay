@@ -3,6 +3,7 @@ name: yokay-quality-reviewer
 description: Reviews implementation for code quality, tests, edge cases, and conventions. Only runs after spec review passes. Returns PASS or FAIL with specific issues.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: blue
 ---
 
 # Code Quality Reviewer
