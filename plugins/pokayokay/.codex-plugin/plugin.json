@@ -1,0 +1,47 @@
+{
+  "name": "pokayokay",
+  "version": "0.22.0",
+  "description": "AI-assisted development orchestration with task tracking, skills, hooks, and ohno integration.",
+  "author": {
+    "name": "Steve Stomp",
+    "url": "https://github.com/srstomp"
+  },
+  "homepage": "https://github.com/srstomp/pokayokay",
+  "repository": "https://github.com/srstomp/pokayokay",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "claude-code",
+    "development-workflows",
+    "task-management",
+    "skills",
+    "orchestration",
+    "ohno",
+    "hooks",
+    "audit"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Pokayokay",
+    "shortDescription": "Structured AI development workflows for Codex and Claude Code",
+    "longDescription": "Pokayokay orchestrates AI-assisted development sessions with task tracking, skills, hooks, worktree guidance, audits, and ohno integration. Codex support is additive and keeps Claude Code support intact.",
+    "developerName": "Steve Stomp",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/srstomp/pokayokay",
+    "privacyPolicyURL": "https://github.com/srstomp/pokayokay",
+    "termsOfServiceURL": "https://github.com/srstomp/pokayokay",
+    "defaultPrompt": [
+      "Plan this PRD with Pokayokay",
+      "Start a supervised work session",
+      "Audit this feature for gaps"
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

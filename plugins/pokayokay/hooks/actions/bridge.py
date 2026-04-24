@@ -111,6 +111,77 @@ def get_script_dir() -> Path:
     return Path(__file__).parent
 
 
+def get_project_dir() -> str:
+    """Get the active project directory across supported runtimes."""
+    return (
+        os.environ.get("YOKAY_PROJECT_DIR")
+        or os.environ.get("CODEX_WORKSPACE_DIR")
+        or os.environ.get("CLAUDE_PROJECT_DIR")
+        or os.getcwd()
+    )
+
+
+def normalize_tool_name(tool_name: str) -> str:
+    """Normalize runtime-specific tool aliases to the bridge's canonical names."""
+    aliases = {
+        "bash": "Bash",
+        "shell": "Bash",
+        "exec": "Bash",
+        "exec_command": "Bash",
+        "edit": "Edit",
+        "apply_patch": "Edit",
+        "write": "Write",
+        "skill": "Skill",
+        "task": "Task",
+        "agent": "Task",
+        "spawn_agent": "Task",
+        "mcp__ohno__update_task_status": "mcp__ohno__update_task_status",
+        "ohno.update_task_status": "mcp__ohno__update_task_status",
+        "update_task_status": "mcp__ohno__update_task_status",
+        "mcp__ohno__set_blocker": "mcp__ohno__set_blocker",
+        "ohno.set_blocker": "mcp__ohno__set_blocker",
+        "set_blocker": "mcp__ohno__set_blocker",
+    }
+
+    if tool_name in ("Bash", "Edit", "Write", "Skill", "Task"):
+        return tool_name
+
+    return aliases.get(str(tool_name).strip().lower(), tool_name)
+
+
+def normalize_hook_input(input_data: dict) -> dict:
+    """Normalize Claude/Codex hook payload aliases to one internal shape."""
+    normalized = dict(input_data)
+    raw_tool = (
+        input_data.get("tool_name")
+        or input_data.get("tool")
+        or input_data.get("toolName")
+        or ""
+    )
+    normalized["tool_name"] = normalize_tool_name(raw_tool)
+    normalized["tool_input"] = (
+        input_data.get("tool_input")
+        or input_data.get("input")
+        or input_data.get("arguments")
+        or {}
+    )
+    normalized["tool_response"] = (
+        input_data.get("tool_response")
+        or input_data.get("response")
+        or input_data.get("result")
+        or {}
+    )
+    normalized["hook_event_name"] = (
+        input_data.get("hook_event_name")
+        or input_data.get("hook_event")
+        or input_data.get("event")
+        or input_data.get("eventName")
+        or ""
+    )
+    normalized["runtime"] = input_data.get("runtime") or input_data.get("source") or "claude"
+    return normalized
+
+
 def check_rate_limit(hook_name: str) -> Optional[str]:
     """
     Check if a hook has exceeded its rate limit.
@@ -174,7 +245,7 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
             text=True,
             timeout=timeout,
             env=run_env,
-            cwd=os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+            cwd=get_project_dir()
         )
 
         return {
@@ -263,7 +334,7 @@ def handle_session_start(input_data: dict) -> dict:
 
 def load_pokayokay_config() -> dict:
     """Load pokayokay configuration from .claude/pokayokay.json."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     config_path = Path(project_dir) / ".claude" / "pokayokay.json"
 
     if not config_path.exists():
@@ -285,7 +356,7 @@ CHAIN_STATE_FILENAME = "pokayokay-chain-state.json"
 
 def _chain_state_path() -> Path:
     """Get path to the chain state file."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     return Path(project_dir) / ".claude" / CHAIN_STATE_FILENAME
 
 
@@ -346,7 +417,7 @@ TOKEN_USAGE_FILENAME = "pokayokay-token-usage.json"
 
 def _token_usage_path() -> Path:
     """Get path to the token usage file."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     return Path(project_dir) / ".claude" / TOKEN_USAGE_FILENAME
 
 
@@ -426,7 +497,7 @@ def _get_memory_dir() -> Optional[Path]:
     Checks Claude's project memory directory first, falls back to project-local.
     Returns None if neither can be determined.
     """
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     project_key = project_dir.replace("/", "-").lstrip("-")
     claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
     if claude_memory.exists():
@@ -441,7 +512,7 @@ def _write_chain_learnings(chain_state: dict, tasks_completed_count: int) -> Non
     """Write chain progress to memory at session end."""
     target_dir = _get_memory_dir()
     if target_dir is None:
-        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
+        target_dir = Path(get_project_dir()) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     learnings_file = target_dir / "chain-learnings.md"
@@ -495,7 +566,7 @@ def _write_spike_result(task_id: str, task_title: str, task_notes: str) -> None:
     """Write spike GO/NO-GO result to memory."""
     target_dir = _get_memory_dir()
     if target_dir is None:
-        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
+        target_dir = Path(get_project_dir()) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     spike_file = target_dir / "spike-results.md"
@@ -897,7 +968,7 @@ CATEGORY_PATH_SCOPES: Dict[str, str] = {
 
 def _failure_tracking_path() -> Path:
     """Get path to the review failure tracking file."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     return Path(project_dir) / ".claude" / FAILURE_TRACKING_FILENAME
 
 
@@ -942,7 +1013,7 @@ def write_recurring_failure_to_memory(category: str, count: int, recent_context:
     """Write a recurring failure pattern to memory/recurring-failures.md."""
     target_dir = _get_memory_dir()
     if target_dir is None:
-        target_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())) / "memory"
+        target_dir = Path(get_project_dir()) / "memory"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     failures_file = target_dir / "recurring-failures.md"
@@ -1099,7 +1170,7 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
 
     # Call post-review-fail hook (located in project root hooks/ directory)
     # This hook integrates with kaizen if installed, otherwise logs gracefully
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = get_project_dir()
     hook_path = Path(project_dir) / "hooks" / "post-review-fail.sh"
 
     if not hook_path.exists():
@@ -1174,7 +1245,7 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
             text=True,
             timeout=timeout,
             env=run_env,
-            cwd=os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+            cwd=get_project_dir()
         )
 
         return {
@@ -1375,6 +1446,7 @@ def main():
         print(json.dumps({"error": f"Invalid JSON input: {e}"}))
         sys.exit(2)
 
+    input_data = normalize_hook_input(input_data)
     tool_name = input_data.get("tool_name", "")
     tool_input = input_data.get("tool_input", {})
     tool_response = input_data.get("tool_response", {})

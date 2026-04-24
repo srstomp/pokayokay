@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import prompts from 'prompts';
 import { detectEnvironment } from './detect.js';
 import { installPlugin } from './steps/plugin.js';
 import { configureMcp } from './steps/mcp.js';
@@ -23,7 +24,13 @@ function printEnvironment(env) {
   if (env.claudeInstalled) {
     console.log(chalk.green(`  ✓ Claude Code: v${env.claudeVersion || 'installed'}`));
   } else {
-    console.log(chalk.red('  ✗ Claude Code: not found'));
+    console.log(chalk.dim('  ○ Claude Code: not found'));
+  }
+
+  if (env.codexInstalled) {
+    console.log(chalk.green(`  ✓ Codex: v${env.codexVersion || 'installed'}`));
+  } else {
+    console.log(chalk.dim('  ○ Codex: not found'));
   }
 
   console.log(chalk.green(`  ✓ Node.js: ${env.nodeVersion}`));
@@ -32,7 +39,7 @@ function printEnvironment(env) {
 /**
  * Print completion summary
  * @param {object} results - Step results with scopes
- * @param {boolean} needsRestart - Whether Claude Code needs restart
+ * @param {boolean} needsRestart - Whether configured runtimes need restart
  */
 function printSummary(results, needsRestart) {
   console.log(chalk.bold.green('\n  ✓ Setup complete!\n'));
@@ -84,12 +91,12 @@ function printSummary(results, needsRestart) {
 
   if (needsRestart) {
     console.log(chalk.yellow('\n  ⚠ Action required:'));
-    console.log('    Restart Claude Code to activate MCP server');
+    console.log('    Restart configured AI runtimes to activate MCP server');
   }
 
   console.log(chalk.bold('\n  Next steps:'));
   if (needsRestart) {
-    console.log("    1. Restart Claude Code");
+    console.log("    1. Restart your configured AI runtime");
     console.log("    2. Run '/pokayokay:plan docs/prd.md' to plan from a PRD");
     console.log("    3. Run '/pokayokay:work' to start a work session");
   } else {
@@ -98,6 +105,28 @@ function printSummary(results, needsRestart) {
   }
 
   console.log(chalk.dim("\n  Run 'npx pokayokay doctor' to verify installation anytime.\n"));
+}
+
+async function chooseInstallTargets(env) {
+  const availableTargets = [
+    env.claudeInstalled ? { title: 'Claude Code', value: 'claude' } : null,
+    env.codexInstalled ? { title: 'Codex', value: 'codex' } : null,
+  ].filter(Boolean);
+
+  if (availableTargets.length <= 1) {
+    return availableTargets.map((target) => target.value);
+  }
+
+  const { targets } = await prompts({
+    type: 'multiselect',
+    name: 'targets',
+    message: 'Install/configure Pokayokay for which runtimes?',
+    choices: availableTargets,
+    min: 1,
+    initial: [0, 1],
+  });
+
+  return targets && targets.length ? targets : env.defaultInstallTargets;
 }
 
 /**
@@ -111,11 +140,13 @@ export async function main() {
   printEnvironment(env);
 
   // Check prerequisites
-  if (!env.claudeInstalled) {
-    console.log(chalk.red('\n  Claude Code is required but not installed.'));
-    console.log('  Install from: https://claude.ai/code\n');
+  if (!env.claudeInstalled && !env.codexInstalled) {
+    console.log(chalk.red('\n  Claude Code or Codex is required but neither was found.'));
+    console.log('  Install at least one supported AI runtime, then re-run setup.\n');
     process.exit(1);
   }
+
+  env.installTargets = await chooseInstallTargets(env);
 
   // Run steps and track results with scopes
   const pluginResult = await installPlugin(env);

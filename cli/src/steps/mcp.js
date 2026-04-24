@@ -1,7 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import prompts from 'prompts';
 import chalk from 'chalk';
-import { readClaudeConfig, writeClaudeConfig } from '../utils/config.js';
+import {
+  readClaudeConfig,
+  writeClaudeConfig,
+  writeCodexMcpServer,
+} from '../utils/config.js';
 
 /**
  * Read .mcp.json or return empty object
@@ -36,9 +40,16 @@ export async function configureMcp(env) {
   console.log('  ohno tracks tasks, dependencies, and progress via MCP.');
   console.log('  Required for /work and /plan commands.\n');
 
-  if (env.mcpConfigured) {
-    console.log(chalk.green(`  ✓ ohno MCP server already configured (${env.mcpScope})`));
-    return { success: true, scope: env.mcpScope, needsRestart: false };
+  const targets = env.installTargets || env.defaultInstallTargets || ['claude'];
+  const needsClaude = targets.includes('claude');
+  const needsCodex = targets.includes('codex');
+
+  if ((!needsClaude || env.mcpConfigured) && (!needsCodex || env.codexMcpConfigured)) {
+    const scopes = [];
+    if (needsClaude) scopes.push(`Claude ${env.mcpScope}`);
+    if (needsCodex) scopes.push(`Codex ${env.codexMcpScope}`);
+    console.log(chalk.green(`  ✓ ohno MCP server already configured (${scopes.join(', ')})`));
+    return { success: true, scope: scopes.join(', '), needsRestart: false };
   }
 
   const { scope } = await prompts({
@@ -64,7 +75,9 @@ export async function configureMcp(env) {
   };
 
   try {
-    if (scope === 'global') {
+    const configuredScopes = [];
+
+    if (needsClaude && !env.mcpConfigured && scope === 'global') {
       // Add to global Claude config
       const config = readClaudeConfig(env.claudeConfigPath);
       config.mcpServers = config.mcpServers || {};
@@ -74,17 +87,34 @@ export async function configureMcp(env) {
       if (backupPath) {
         console.log(chalk.dim(`  Backed up config to ${backupPath}`));
       }
-    } else {
+      configuredScopes.push('Claude global');
+    } else if (needsClaude && !env.mcpConfigured) {
       // Add to project-local .mcp.json
       const config = readLocalMcpConfig();
       config.mcpServers = config.mcpServers || {};
       config.mcpServers.ohno = mcpEntry;
       writeLocalMcpConfig(config);
+      configuredScopes.push('Claude local');
     }
 
-    console.log(chalk.green(`  ✓ MCP server configured (${scope})`));
-    console.log(chalk.yellow('  ⚠ Restart Claude Code to activate'));
-    return { success: true, scope, needsRestart: true };
+    if (needsCodex && !env.codexMcpConfigured && scope === 'global') {
+      const backupPath = writeCodexMcpServer(env.codexConfigPath, 'ohno', mcpEntry);
+      if (backupPath) {
+        console.log(chalk.dim(`  Backed up Codex config to ${backupPath}`));
+      }
+      configuredScopes.push('Codex global');
+    } else if (needsCodex && !env.codexMcpConfigured) {
+      const config = readLocalMcpConfig();
+      config.mcpServers = config.mcpServers || {};
+      config.mcpServers.ohno = mcpEntry;
+      writeLocalMcpConfig(config);
+      configuredScopes.push('Codex local');
+    }
+
+    const resultScope = configuredScopes.join(', ') || scope;
+    console.log(chalk.green(`  ✓ MCP server configured (${resultScope})`));
+    console.log(chalk.yellow('  ⚠ Restart configured AI runtimes to activate MCP server'));
+    return { success: true, scope: resultScope, needsRestart: true };
   } catch (err) {
     console.log(chalk.red(`  ✗ Failed: ${err.message}`));
     return { success: false, scope: null, needsRestart: false };

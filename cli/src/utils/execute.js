@@ -51,3 +51,16 @@ export async function getClaudeVersion() {
   }
   return null;
 }
+
+/**
+ * Get Codex version.
+ * @returns {Promise<string|null>} Version string or null if not installed
+ */
+export async function getCodexVersion() {
+  const result = await execute('codex', ['--version']);
+  if (result.success) {
+    const match = result.stdout.match(/v?(\d+\.\d+\.\d+)/);
+    return match ? match[1] : result.stdout.trim();
+  }
+  return null;
+}
