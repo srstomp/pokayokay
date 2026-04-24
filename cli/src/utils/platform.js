@@ -26,6 +26,22 @@ export function getClaudeConfigPath() {
 }
 
 /**
+ * Get Codex config directory path.
+ * @returns {string} Path to Codex config directory
+ */
+export function getCodexConfigDir() {
+  return join(homedir(), '.codex');
+}
+
+/**
+ * Get Codex config.toml path.
+ * @returns {string} Path to Codex config.toml
+ */
+export function getCodexConfigPath() {
+  return join(getCodexConfigDir(), 'config.toml');
+}
+
+/**
  * Get platform display name
  * @returns {string} Human-readable platform name
  */

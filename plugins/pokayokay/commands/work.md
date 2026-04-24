@@ -30,7 +30,7 @@ Example arguments:
 - `--continue` → resume from WIP, inherit previous scope
 - `--all` → work on all available tasks (no scope filter)
 
-Note: `-p` is reserved for the claude CLI `--prompt` flag. Use `-n` for parallel count.
+Note: `-p` is commonly reserved by AI runtime CLIs for prompt input. Use `-n` for parallel count.
 
 ## Worktree Argument Parsing
 
@@ -49,7 +49,7 @@ Headless mode enables automatic session chaining when context fills up.
 
 ### Configuration
 
-Read headless config from `.claude/pokayokay.json` (create if missing):
+Read headless config from `.pokayokay/config.json` when present, falling back to `.claude/pokayokay.json` for existing Claude Code projects:
 
 ```json
 {
@@ -117,9 +117,13 @@ When a session reaches context limits:
      "tasks_remaining": 8
    }
    ```
-4. SessionEnd hook spawns next session:
+4. SessionEnd hook spawns or prepares the next session using the active runtime:
    ```bash
+   # Claude Code
    claude --headless --prompt="/work --continue --epic epic-abc123"
+
+   # Codex
+   codex --prompt="/work --continue --epic epic-abc123"
    ```
 
 ### Chain Reporting
@@ -205,7 +209,7 @@ degrades from repeated compaction.
 ### Detection
 
 Context pressure is detected when **any** of these occur:
-1. Claude Code compacts the conversation (you'll see "Compacting conversation..." in output)
+1. The active runtime compacts the conversation (for example, Claude Code shows "Compacting conversation..." in output)
 2. A system reminder mentions context limits
 3. You notice repeated information loss from prior context
 
@@ -222,7 +226,7 @@ When context pressure is detected during a chained session:
    ```
 4. **Save coordinator state** to chain state file:
    ```
-   Read existing .claude/pokayokay-chain-state.json
+   Read existing .pokayokay/pokayokay-chain-state.json, falling back to .claude/pokayokay-chain-state.json
    Update with:
      adaptive_n: current parallel count
      batches_completed: count
@@ -230,14 +234,14 @@ When context pressure is detected during a chained session:
      failed_tasks: [task IDs that failed/blocked]
      conflict_tasks: [task IDs with git conflicts]
      last_session_summary: "Completed X tasks, Y failed, Z conflicts"
-   Write back to .claude/pokayokay-chain-state.json
+   Write back to .pokayokay/pokayokay-chain-state.json
    ```
 5. **Log session summary**:
    ```
    add_task_activity(task_id, "note", "Session ending: context pressure detected, chaining to next session")
    ```
 6. **End the session** — output a brief summary and stop. This triggers:
-   - SessionEnd hook → bridge.py reads chain state → session-chain.sh spawns next session
+   - SessionEnd hook → bridge.py reads chain state → session-chain.sh spawns/prepares the next runtime session
 
 ### Why Proactive?
 
@@ -254,13 +258,13 @@ With proactive shutdown:
 ### Non-Chained Sessions
 
 In supervised or semi-auto sessions (no chain state file), compaction is handled
-normally by Claude Code. The coordinator does NOT need to proactively end — the user
+normally by the active runtime. The coordinator does NOT need to proactively end — the user
 is present and can decide.
 
 ## Session Start
 
 ### 0. Load Configuration
-Read `.claude/pokayokay.json` for headless and work settings.
+Read `.pokayokay/config.json` for headless and work settings. If it does not exist, fall back to `.claude/pokayokay.json` so existing Claude Code projects keep working.
 
 ### 0.5 Load Project Learnings
 MEMORY.md is already in your system prompt. Additionally check topic files when relevant:
@@ -281,7 +285,7 @@ When starting a NEW auto or unattended session with scope (not `--continue`), wr
 so that SessionEnd hooks can spawn continuation sessions:
 
 ```
-Write .claude/pokayokay-chain-state.json:
+Write .pokayokay/pokayokay-chain-state.json:
 {
   "chain_id": "chain-<current-unix-timestamp>",
   "chain_index": 0,
@@ -314,7 +318,7 @@ Use ohno MCP `get_session_context` to understand:
 
 When `--continue` flag is set, resume from previous WIP instead of starting fresh:
 
-1. **Restore coordinator state**: Read `.claude/pokayokay-chain-state.json`. If it contains extended fields (`adaptive_n`, `failed_tasks`, etc.), restore them:
+1. **Restore coordinator state**: Read `.pokayokay/pokayokay-chain-state.json`, falling back to `.claude/pokayokay-chain-state.json`. If it contains extended fields (`adaptive_n`, `failed_tasks`, etc.), restore them:
    - `adaptive_state.current_n = chain_state.adaptive_n` (instead of reset to 2)
    - `adaptive_state.batches_completed = chain_state.batches_completed`
    - `adaptive_state.batches_failed = chain_state.batches_failed`
@@ -1835,7 +1839,7 @@ When session ends with remaining work in scope:
 1. SessionEnd hook calls `session-chain.sh`
 2. Script checks remaining ready tasks via ohno
 3. If tasks remain and chain limit not reached:
-   - Spawns: `claude --headless --prompt="/work --continue <scope-flag>"`
+   - Spawns/prepares the next session using the active runtime, for example `claude --headless --prompt="/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
 4. If chain complete or limit reached:
    - Generates report to `.ohno/reports/chain-{id}-report.md`
    - Notifies via configured method
@@ -1843,7 +1847,7 @@ When session ends with remaining work in scope:
 
 #### Chain State File
 
-Chain state is communicated between the coordinator and hooks via `.claude/pokayokay-chain-state.json`.
+Chain state is communicated between the coordinator and hooks via `.pokayokay/pokayokay-chain-state.json`, with `.claude/pokayokay-chain-state.json` retained as a legacy fallback.
 
 **The coordinator MUST write this file at session start** when running auto mode with scope.
 Use the Write tool to create it:
@@ -2016,7 +2020,9 @@ If you discover a bug while working on a feature:
 /work semi-auto --epic epic-4fcd1e3c
 
 # Overnight unattended run (NEVER pauses, for headless CLI use)
-# Run with: claude --headless --dangerously-skip-permissions --prompt="..."
+# Run with your active runtime's non-interactive mode, for example:
+# claude --headless --dangerously-skip-permissions --prompt="..."
+# codex --prompt="..."
 /work unattended -n auto --all
 ```
 
