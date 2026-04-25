@@ -5,6 +5,38 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Codex Runtime Support** — Pokayokay can now be installed/configured for Codex alongside existing Claude Code support
+  - Added Codex plugin manifest, ohno MCP config, and hook config while preserving the existing Claude plugin manifest
+  - Setup wizard detects Claude Code, Codex, or both and configures the selected runtimes
+  - Added Codex `config.toml` MCP helpers for `~/.codex/config.toml`
+  - Hook bridge now normalizes Claude-style and Codex-style hook payloads before routing to existing handlers
+  - Added focused compatibility tests for Codex plugin files, CLI dual-runtime helpers, and hook normalization
+
+## [0.22.0] - 2026-04-05
+
+### Added
+- **Pre-Implementation Design Review** — New `yokay-design-reviewer` agent validates implementation approach against codebase patterns and design skills before the implementer starts coding
+  - Read-only, skill-aware agent that searches for and consults relevant design skills
+  - New `design-review-prompt.md` dispatch template
+  - Implementer receives pre-validated approach via `{APPROACH}` template variable
+  - New `NEEDS_REDESIGN` escalation status when approach is infeasible
+  - Quality reviewer expanded with design compliance post-check
+  - Pipeline: Brainstorm? → **Design Review (new)** → Implementer → Spec Review → Quality Review (+design)
+  - Agent count: 13 → 14
+- **Agent Color Coding** — All 14 agents now have `color` frontmatter for UI identification
+  - Magenta (creative): brainstormer, design-reviewer
+  - Cyan (planning): planner, explorer
+  - Green (execution): implementer, fixer, spike-runner, test-runner, browser-verifier
+  - Yellow (validation): spec-reviewer, quality-reviewer, auditor
+  - Blue (review): reviewer
+  - Red (security): security-scanner
+- **Talos Integration Fields** — Planner now outputs `packages_touched` and `strategy` per task
+  - `packages_touched` enables conflict-aware parallel batching in Talos
+  - `strategy` (tdd/direct) enables per-task override for mixed frontend/backend slices
+
 ## [0.19.0] - 2026-03-24
 
 ### Changed
@@ -27,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Anti-pattern: "Horizontal layer tasks" added to both `planning/anti-patterns.md` and `work-session/anti-patterns.md`
 - Anti-pattern: "File-existence-only tests" added to `work-session/anti-patterns.md`
+
+### Docs
+- Audited and fixed documentation accuracy across 15 files: corrected `--plugin-dir` paths, updated hook flow diagrams with 7 missing actions from v0.13-v0.16, fixed npm scope, removed stale fork-test artifacts from NO-GO `context:fork` spike
 
 ## [0.18.1] - 2026-03-18
 
