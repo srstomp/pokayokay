@@ -12,6 +12,11 @@ The coordinator delegates work to subagents at various stages:
 4. **Spec Reviewer** - Verifies implementation matches spec
 5. **Quality Reviewer** - Verifies code quality standards and design compliance
 
+Use subagents deliberately. They preserve the coordinator's context and can run
+in parallel, but each agent does its own model/tool work. For small changes,
+prefer `/quick` or inline execution. For broad exploration, prefer the focused
+explorer/test-runner agents before using full implementer/reviewer pipelines.
+
 This reference covers:
 
 1. Extracting task details from ohno
@@ -20,6 +25,7 @@ This reference covers:
 4. Filling the implementer prompt template
 5. Two-stage review dispatch (spec + quality with design compliance)
 6. Error handling when ohno fails
+7. Token/context budgeting for dispatch decisions
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -559,4 +565,3 @@ The coordinator should:
    # Get task via CLI
    npx @stevestomp/ohno-cli task task-abc123
    ```
-

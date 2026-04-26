@@ -12,6 +12,7 @@ import {
 import {
   isMcpConfigured,
   readCodexConfig,
+  writeCodexHookBridgeConfig,
   writeCodexConfig,
   writeCodexMcpServer,
   upsertCodexMcpServer,
@@ -100,6 +101,29 @@ console.log('Test 5: writeCodexMcpServer is idempotent on CRLF-encoded configs')
     console.log('  PASS: CRLF-encoded section is upserted in place');
   } finally {
     rmSync(crlfDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
+{
+  const hooksDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-hooks-'));
+  try {
+    const configPath = join(hooksDir, 'config.toml');
+    writeFileSync(configPath, 'model = "gpt-5.3-codex"\n\n[features]\nfoo = true\n');
+
+    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+
+    const result = readFileSync(configPath, 'utf8');
+    assert.match(result, /model = "gpt-5\.3-codex"/);
+    assert.match(result, /\[features\]\nfoo = true\ncodex_hooks = true/);
+    assert.equal((result.match(/BEGIN pokayokay hooks/g) || []).length, 1);
+    assert.equal((result.match(/bridge\.py/g) || []).length, 4);
+    assert.match(result, /\[\[hooks\.PermissionRequest\]\]/);
+    assert.match(result, /matcher = "Bash\|apply_patch\|Edit\|Write"/);
+    console.log('  PASS: Codex hook wiring is appended once and preserves config');
+  } finally {
+    rmSync(hooksDir, { recursive: true, force: true });
   }
 }
 

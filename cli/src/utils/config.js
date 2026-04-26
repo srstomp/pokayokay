@@ -161,6 +161,75 @@ function codexMcpSection(serverName, serverConfig) {
   return `${lines.join('\n')}\n`;
 }
 
+const POKAYOKAY_HOOKS_START = '# BEGIN pokayokay hooks';
+const POKAYOKAY_HOOKS_END = '# END pokayokay hooks';
+
+function removePokayokayHooksBlock(content) {
+  const blockPattern = new RegExp(
+    `\\n?${POKAYOKAY_HOOKS_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${POKAYOKAY_HOOKS_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n?`,
+    'g'
+  );
+  return content.replace(blockPattern, '\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+}
+
+function enableCodexHooksFeature(content) {
+  const featureLine = 'codex_hooks = true';
+  const featuresPattern = /(\[features\]\n)([\s\S]*?)(?=\n\[[^\]]+\]|\s*$)/;
+
+  if (featuresPattern.test(content)) {
+    return content.replace(featuresPattern, (_match, header, body) => {
+      const nextBody = /^\s*codex_hooks\s*=.*$/m.test(body)
+        ? body.replace(/^\s*codex_hooks\s*=.*$/m, featureLine)
+        : `${body.trimEnd()}\n${featureLine}\n`;
+      return `${header}${nextBody}`;
+    });
+  }
+
+  const separator = content.trim().length ? '\n\n' : '';
+  return `[features]\n${featureLine}\n${separator}${content.trimEnd()}`;
+}
+
+function codexHookBridgeBlock(pluginPath) {
+  const bridgePath = `${String(pluginPath).replace(/\/$/, '')}/hooks/actions/bridge.py`;
+  const command = quoteTomlString(bridgePath);
+
+  return [
+    POKAYOKAY_HOOKS_START,
+    '[[hooks.SessionStart]]',
+    'matcher = "startup|resume|clear"',
+    '[[hooks.SessionStart.hooks]]',
+    'type = "command"',
+    `command = ${command}`,
+    'timeout = 30',
+    'statusMessage = "Preparing pokayokay session"',
+    '',
+    '[[hooks.PreToolUse]]',
+    'matcher = "Bash|apply_patch|Edit|Write"',
+    '[[hooks.PreToolUse.hooks]]',
+    'type = "command"',
+    `command = ${command}`,
+    'timeout = 30',
+    'statusMessage = "Checking pokayokay tool policy"',
+    '',
+    '[[hooks.PermissionRequest]]',
+    'matcher = "Bash|apply_patch|Edit|Write"',
+    '[[hooks.PermissionRequest.hooks]]',
+    'type = "command"',
+    `command = ${command}`,
+    'timeout = 10',
+    'statusMessage = "Reviewing pokayokay approval policy"',
+    '',
+    '[[hooks.PostToolUse]]',
+    'matcher = "Bash|apply_patch|Edit|Write|mcp__ohno__.*"',
+    '[[hooks.PostToolUse.hooks]]',
+    'type = "command"',
+    `command = ${command}`,
+    'timeout = 30',
+    'statusMessage = "Recording pokayokay work state"',
+    POKAYOKAY_HOOKS_END,
+  ].join('\n');
+}
+
 /**
  * Write a minimal Codex config.toml from a parsed config object.
  * @param {string} configPath - Path to config.toml
@@ -206,6 +275,26 @@ export function writeCodexMcpServer(configPath, serverName, serverConfig) {
   }
 
   writeFileSync(configPath, `${next.trimEnd()}\n`);
+  return backupPath;
+}
+
+/**
+ * Upsert Codex hook configuration for the pokayokay bridge while preserving
+ * unrelated config.toml content. This enables Codex's hook feature and keeps
+ * the pokayokay hook block idempotent with visible ownership markers.
+ * @param {string} configPath - Path to Codex config.toml
+ * @param {string} pluginPath - Absolute path to the pokayokay plugin root
+ * @returns {string|null} Backup path if created, null otherwise
+ */
+export function writeCodexHookBridgeConfig(configPath, pluginPath) {
+  const backupPath = backupExisting(configPath);
+  const rawExisting = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
+  const existing = rawExisting.replace(/\r\n/g, '\n');
+  const withoutOldBlock = removePokayokayHooksBlock(existing);
+  const withFeature = enableCodexHooksFeature(withoutOldBlock);
+  const next = `${withFeature.trimEnd()}\n\n${codexHookBridgeBlock(pluginPath)}\n`;
+
+  writeFileSync(configPath, next);
   return backupPath;
 }
 

@@ -195,6 +195,87 @@ def normalize_hook_input(input_data: dict) -> dict:
     return normalized
 
 
+def get_bash_command(tool_input: dict) -> str:
+    """Extract the shell command from runtime-specific tool input shapes."""
+    if not isinstance(tool_input, dict):
+        return ""
+    return str(
+        tool_input.get("command")
+        or tool_input.get("cmd")
+        or tool_input.get("shell_command")
+        or tool_input.get("command_line")
+        or ""
+    ).strip()
+
+
+def is_dangerous_command(command: str) -> bool:
+    """Return true for commands pokayokay should never auto-approve."""
+    lowered = f" {command.lower()} "
+    dangerous_fragments = (
+        " rm -rf ",
+        " git reset --hard ",
+        " git checkout -- ",
+        " git clean -fd",
+        " git push ",
+        " gh pr merge ",
+        " gh pr close ",
+        " npm publish",
+        " npx wrangler deploy",
+        " pulumi up",
+        " cdk deploy",
+    )
+    return any(fragment in lowered for fragment in dangerous_fragments)
+
+
+def is_readonly_or_pokayokay_command(command: str) -> bool:
+    """Return true for low-risk commands the pokayokay hook can approve."""
+    safe_prefixes = (
+        "git status",
+        "git diff",
+        "git log",
+        "git branch",
+        "git rev-parse",
+        "rg ",
+        "ls",
+        "pwd",
+        "sed -n",
+        "cat plugins/pokayokay/",
+        "bash plugins/pokayokay/tests/",
+        "node plugins/pokayokay/tests/",
+        "npx @stevestomp/ohno-cli ",
+    )
+    return command.startswith(safe_prefixes) or command.endswith("/hooks/actions/bridge.py")
+
+
+def handle_permission_request(tool_name: str, tool_input: dict) -> dict:
+    """
+    Handle Codex PermissionRequest events.
+
+    The bridge only auto-decides commands that are clearly low-risk or clearly
+    dangerous. Everything else falls through to Codex's normal approval prompt.
+    """
+    if tool_name != "Bash":
+        return {"skip": True, "reason": "no automatic decision for non-Bash approval"}
+
+    command = get_bash_command(tool_input)
+    if not command:
+        return {"skip": True, "reason": "no command in approval request"}
+
+    if is_dangerous_command(command):
+        return {
+            "permission_decision": "deny",
+            "reason": "Blocked by pokayokay policy: destructive or deployment command requires explicit human handling.",
+        }
+
+    if is_readonly_or_pokayokay_command(command):
+        return {
+            "permission_decision": "allow",
+            "reason": "Approved by pokayokay policy: read-only, test, or task-tracking command.",
+        }
+
+    return {"skip": True, "reason": "approval left to runtime"}
+
+
 def check_rate_limit(hook_name: str) -> Optional[str]:
     """
     Check if a hook has exceeded its rate limit.
@@ -1517,6 +1598,9 @@ def main():
     elif hook_event == "SessionEnd":
         result = handle_session_end(input_data)
 
+    elif hook_event == "PermissionRequest":
+        result = handle_permission_request(tool_name, tool_input)
+
     elif tool_name == "mcp__ohno__update_task_status":
         status = tool_input.get("status", "")
         if status in ("done", "archived"):
@@ -1557,10 +1641,29 @@ def main():
 
     # Output result
     if result and not result.get("skip"):
+        if hook_event == "PermissionRequest":
+            decision = result.get("permission_decision")
+            if decision in ("allow", "deny"):
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PermissionRequest",
+                        "decision": {
+                            "behavior": decision
+                        }
+                    }
+                }
+                if decision == "deny":
+                    output["hookSpecificOutput"]["decision"]["message"] = result.get(
+                        "reason",
+                        "Blocked by pokayokay policy.",
+                    )
+                print(json.dumps(output))
+            else:
+                print(json.dumps({}))
         if hook_event == "SessionEnd":
             # SessionEnd doesn't support hookSpecificOutput - just output empty
             print(json.dumps({}))
-        else:
+        elif hook_event != "PermissionRequest":
             # Format for Claude Code hook output
             output = {
                 "hookSpecificOutput": {

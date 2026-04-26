@@ -95,5 +95,31 @@ echo '{"runtime":"codex","tool_name":"Bash","tool_input":{"cmd":"git commit -m h
   python3 "$BRIDGE" > /dev/null
 assert_last_commit_hash "def5678"
 
+echo "Test 6: PermissionRequest safely approves read-only commands"
+ALLOW_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git status --short"}}' |
+  python3 "$BRIDGE")
+echo "$ALLOW_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  const decision = parsed.hookSpecificOutput && parsed.hookSpecificOutput.decision;
+  if (!decision || decision.behavior !== "allow") throw new Error("expected allow decision");
+});
+'
+
+echo "Test 7: PermissionRequest denies dangerous commands"
+DENY_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/pokayokay-danger"}}' |
+  python3 "$BRIDGE")
+echo "$DENY_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  const decision = parsed.hookSpecificOutput && parsed.hookSpecificOutput.decision;
+  if (!decision || decision.behavior !== "deny") throw new Error("expected deny decision");
+});
+'
+
 echo ""
 echo "All bridge runtime normalization tests passed!"

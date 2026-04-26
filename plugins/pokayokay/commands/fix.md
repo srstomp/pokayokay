@@ -1,7 +1,7 @@
 ---
 description: Diagnose and fix a bug with structured workflow
 argument-hint: <bug-description-or-task-id>
-skill: error-handling
+skill: systematic-debugging
 ---
 
 # Bug Fix Workflow
@@ -21,6 +21,11 @@ Check `$ARGUMENTS` for `--thorough` flag:
 3. **Fix with minimal change**: Avoid scope creep
 4. **Verify the fix**: Confirm bug is resolved
 5. **Add regression test**: Prevent recurrence
+
+Use `systematic-debugging` before edits and `verification-before-completion`
+before reporting success. `error-handling` remains the implementation skill
+for error-boundary, retry, API-error, and recovery-pattern changes after root
+cause is known.
 
 ## Steps
 
@@ -53,6 +58,8 @@ Investigate:
 - Add logging to trace execution
 - Check recent changes (`git log`)
 - Review related tests
+- Compare against a nearby working example
+- State one hypothesis and the evidence for it before editing
 
 Document findings:
 ```markdown
@@ -137,6 +144,10 @@ Task tool:
    - Does the change match the root cause from Step 3?
    - Is it minimal? No unrelated changes?
    - Is the regression test meaningful (not a trivial assertion)?
+
+4. **Use `verification-before-completion`:**
+   - Cite the exact command(s), exit status, and relevant pass/fail counts.
+   - If verification fails, do not mark the task done.
 
 ### 7. Complete Task
 ```bash

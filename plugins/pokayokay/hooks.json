@@ -22,7 +22,18 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|bash|exec_command",
+        "matcher": "Bash|apply_patch|Edit|Write|bash|exec_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/actions/bridge.py"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
         "hooks": [
           {
             "type": "command",
@@ -33,7 +44,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": ".*",
+        "matcher": "Bash|apply_patch|Edit|Write|mcp__ohno__.*",
         "hooks": [
           {
             "type": "command",

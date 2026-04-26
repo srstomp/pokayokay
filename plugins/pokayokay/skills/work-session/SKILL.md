@@ -22,6 +22,10 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 - Smart worktree isolation by task type (feature/bug → worktree, chore/docs → in-place)
 - Hooks handle lifecycle automatically (sync, commit, tests)
 - ohno MCP provides session continuity across conversations
+- Evidence before completion claims (`verification-before-completion`)
+- Root-cause-first bug handling (`systematic-debugging`)
+- Explicit branch finish choice: merge, PR, keep, or discard (`finishing-branch`)
+- Token-aware dispatch: stay inline for tiny work, use focused agents when isolation or parallelism is worth the cost
 
 ## Quick Start Checklist
 
@@ -54,6 +58,8 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 | [hook-integration.md](references/hook-integration.md) | Work loop with hooks, mode-specific behavior |
 | [ohno-integration.md](references/ohno-integration.md) | MCP tools and CLI commands reference |
 | [error-recovery.md](references/error-recovery.md) | Build failures, blocked tasks |
+| [approval-policy.md](references/approval-policy.md) | Runtime approval defaults for safe pokayokay automation |
+| [token-budgeting.md](references/token-budgeting.md) | Token/context budgeting rules for agents, skills, parallelism, and handoffs |
 | [anti-patterns.md](references/anti-patterns.md) | Common mistakes and fixes |
 | [bug-fix-pipeline.md](references/bug-fix-pipeline.md) | Agent pipeline for `/fix --thorough` and `/hotfix` commands |
 | [pre-flight-checks.md](references/pre-flight-checks.md) | Checks run before unattended/headless sessions |

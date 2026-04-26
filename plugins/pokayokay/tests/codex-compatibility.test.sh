@@ -66,5 +66,22 @@ if (!hooks.PostToolUse) throw new Error("PostToolUse hook missing");
 ' "$HOOKS"
 echo "  PASS: Codex hooks config parses"
 
+echo "Test 5: Claude plugin hook config exists at hooks/hooks.json"
+CLAUDE_HOOKS="$PLUGIN/hooks/hooks.json"
+if [[ ! -f "$CLAUDE_HOOKS" ]]; then
+  echo "  FAIL: hooks/hooks.json missing"
+  exit 1
+fi
+
+node -e '
+const fs = require("fs");
+const hooks = JSON.parse(fs.readFileSync(process.argv[1], "utf8")).hooks || {};
+const serialized = JSON.stringify(hooks);
+if (!serialized.includes("bridge.py")) throw new Error("bridge.py not referenced");
+if (!hooks.PostToolUse) throw new Error("PostToolUse hook missing");
+if (!hooks.SessionStart) throw new Error("SessionStart hook missing");
+' "$CLAUDE_HOOKS"
+echo "  PASS: Claude hooks config parses"
+
 echo ""
 echo "All Codex compatibility file tests passed!"
