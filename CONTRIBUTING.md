@@ -6,7 +6,9 @@ Thanks for your interest in contributing to pokayokay! This guide will help you 
 
 1. Fork and clone the repository
 2. Install dependencies: `cd cli && npm install`
-3. Load the plugin locally: `claude --plugin-dir ./plugins/pokayokay`
+3. Load the plugin locally:
+   - **Claude Code:** `claude --plugin-dir ./plugins/pokayokay`
+   - **Codex:** the manifest at `plugins/pokayokay/.codex-plugin/plugin.json` is loaded automatically when you point Codex at this checkout. The setup wizard (`npx pokayokay`) can also write a local marketplace entry for you.
 
 ## Development
 

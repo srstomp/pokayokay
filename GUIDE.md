@@ -688,7 +688,7 @@ Starts or continues an orchestrated work session with configurable human control
 - `--epic <id>` / `--story <id>` / `--all` - Scope which tasks to work on
 
 > **Note:** `-p` is reserved for the Claude CLI `--prompt` flag. Use `-n` for parallel count.
-> Headless session chaining is configured in `.claude/pokayokay.json`, not via a flag. See README for details.
+> Headless session chaining is configured in `.pokayokay/config.json` (with `.claude/pokayokay.json` retained as a legacy fallback for existing Claude Code projects), not via a flag. See README for details.
 
 **Examples:**
 ```bash
@@ -865,7 +865,7 @@ The audit catches these gaps and creates remediation tasks automatically.
 3. All previous decisions and progress are preserved
 
 ### Headless session chaining
-1. Configure chaining in `.claude/pokayokay.json` (see README)
+1. Configure chaining in `.pokayokay/config.json` (see README). `.claude/pokayokay.json` is read as a legacy fallback so existing Claude Code projects keep working.
 2. Run `/pokayokay:work auto --story story-abc123` with a scope
 3. When context fills, session exits gracefully and a new one spawns automatically
 4. Chain reports are generated to `.ohno/reports/`
@@ -935,15 +935,23 @@ Then create tasks with `/pokayokay:plan` or manually.
 
 ### "Skill not found"
 
-Ensure the plugin is installed:
+Ensure the plugin is installed for your active runtime.
+
+**Claude Code:**
 ```bash
 claude plugin list
-```
-
-If not listed, reinstall:
-```bash
+# If not listed:
 claude plugin marketplace add srstomp/pokayokay
 claude plugin install pokayokay@srstomp-pokayokay
+```
+
+**Codex** (or to set up both runtimes at once):
+```bash
+# Re-run the wizard from a checkout of the pokayokay repo
+git clone https://github.com/srstomp/pokayokay && cd pokayokay
+npx pokayokay
+# Then activate in Codex:
+codex plugin install pokayokay
 ```
 
 ### Session context lost

@@ -2,8 +2,14 @@
 
 ## Setup
 ```bash
+# Recommended: interactive wizard for Claude Code, Codex, or both
+npx pokayokay
+
+# Or manually for Claude Code:
 claude plugin marketplace add srstomp/pokayokay
 claude plugin install pokayokay@srstomp-pokayokay
+
+# Initialize task management
 npx @stevestomp/ohno-cli init
 ```
 
@@ -130,10 +136,11 @@ npx @stevestomp/ohno-cli done <id> # Complete task
 ## Files
 | Path | Purpose |
 |------|---------|
-| `.claude/PROJECT.md` | Project context |
-| `.claude/pokayokay.json` | Chaining config |
-| `.claude/pokayokay-chain-state.json` | Active chain state |
-| `.claude/settings.local.json` | Permissions and MCP config |
+| `.claude/PROJECT.md` | Project context (Claude Code) |
+| `.pokayokay/config.json` | Chaining config (primary; `.claude/pokayokay.json` legacy fallback) |
+| `.pokayokay/pokayokay-chain-state.json` | Active chain state (primary; `.claude/` legacy fallback) |
+| `.claude/settings.local.json` | Claude Code permissions and MCP config |
+| `~/.codex/config.toml` | Codex runtime + MCP config |
 | `.claude/spikes/*.md` | Spike reports |
-| `.claude/rules/pokayokay/*.md` | Graduated failure rules |
+| `.claude/rules/pokayokay/*.md` | Graduated failure rules (Claude Code) |
 | `.ohno/` | ohno database and sessions |

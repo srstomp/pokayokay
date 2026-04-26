@@ -5,15 +5,29 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.23.0] - 2026-04-26
 
 ### Added
 - **Codex Runtime Support** — Pokayokay can now be installed/configured for Codex alongside existing Claude Code support
-  - Added Codex plugin manifest, ohno MCP config, and hook config while preserving the existing Claude plugin manifest
-  - Setup wizard detects Claude Code, Codex, or both and configures the selected runtimes
-  - Added Codex `config.toml` MCP helpers for `~/.codex/config.toml`
-  - Hook bridge now normalizes Claude-style and Codex-style hook payloads before routing to existing handlers
-  - Added focused compatibility tests for Codex plugin files, CLI dual-runtime helpers, and hook normalization
+  - Added Codex plugin manifest (`plugins/pokayokay/.codex-plugin/plugin.json`), plugin-local ohno MCP config, and Codex hook config while preserving the existing Claude plugin manifest
+  - Setup wizard (`npx pokayokay`) detects Claude Code, Codex, or both and configures the selected runtimes
+  - Added Codex `config.toml` MCP helpers for `~/.codex/config.toml` with idempotent CRLF-tolerant upserts
+  - Hook bridge now normalizes Claude-style and Codex-style hook payloads (top-level keys, tool aliases, and inner shell-command field aliases like `cmd` → `command`) before routing to existing handlers
+  - Output extraction falls through to Codex's `tool_response.output` when Claude's `content` envelope is absent
+  - Detect Codex installs via `~/.agents/plugins/marketplace.json` so doctor/setup do not falsely report Codex as not installed after a successful run
+  - Added focused compatibility tests for Codex plugin files, CLI dual-runtime helpers (Codex MCP read/write/upsert, CRLF idempotence), and hook payload normalization (Claude + Codex shapes, Codex Bash payloads with `cmd` field)
+
+### Changed
+- **Runtime-agnostic state directory** — chain state, token usage, review failure tracking, and pokayokay config now read `.pokayokay/<file>` first and fall back to `.claude/<file>` for legacy Claude Code projects. New writes default to `.pokayokay/`; pre-existing files in `.claude/` are preserved in place. `delete_chain_state()` cleans up both locations.
+- **Plugin install messaging** — Codex install reports "✓ Codex marketplace entry written" with the activation hint to run `codex plugin install pokayokay`, replacing the misleading "Plugin installed" line that was shown for marketplace-only writes.
+
+### Fixed
+- **Codex shell hooks silently no-op'd** — `normalize_hook_input` now mirrors Codex's `tool_input.cmd` (and `shell_command` / `command_line` aliases) to `tool_input.command` so pre-commit lint and WIP commit/test/error capture see Codex Bash calls.
+- **`extract_output_text` short-circuit** — the previous default of `content = []` made the `output`/`text` fallback unreachable, hiding Codex's response shape.
+- **`.pokayokay/` not gitignored** — added alongside `.claude/` so newly-created runtime state never lands in version control.
+- **Marketplace entry path** — Codex marketplace entries now use an absolute path resolved through `locatePluginSource()` (cwd → CLI sibling fallback) and fail fast with an actionable "clone the repo and re-run" message instead of writing a broken relative path.
+- **User-owned marketplace JSON preserved** — if `~/.agents/plugins/marketplace.json` is invalid JSON, it is copied to `marketplace.json.backup-<timestamp>` before being replaced with a fresh default.
+- **Bash test trap hardening** — `bridge-runtime-normalization.test.sh` uses `trap 'rm -rf -- "$TEST_DIR"' EXIT` (single-quoted, double-quoted variable, `--` guard) to avoid word-splitting/leading-dash hazards.
 
 ## [0.22.0] - 2026-04-05
 
