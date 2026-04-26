@@ -37,7 +37,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "*",
+        "matcher": "Bash|Edit|Write|Skill|Task|mcp__ohno__update_task_status|mcp__ohno__set_blocker",
         "hooks": [
           {
             "type": "command",

@@ -208,7 +208,7 @@ export async function installPlugin(env) {
       console.log(chalk.dim('    Run `codex plugin install pokayokay` to activate it in Codex.'));
       installedScopes.push('Codex marketplace entry', 'Codex hook bridge');
     } catch (err) {
-      console.log(chalk.red(`  ✗ Failed to write Codex marketplace entry:\n    ${err.message.replace(/\n/g, '\n    ')}`));
+      console.log(chalk.red(`  ✗ Failed to complete Codex setup:\n    ${err.message.replace(/\n/g, '\n    ')}`));
       // If Claude was already installed in this run, keep that progress; only
       // fail the whole step when nothing else succeeded.
       if (installedScopes.length === 0) {

@@ -174,7 +174,7 @@ function removePokayokayHooksBlock(content) {
 
 function enableCodexHooksFeature(content) {
   const featureLine = 'codex_hooks = true';
-  const featuresPattern = /(\[features\]\n)([\s\S]*?)(?=\n\[[^\]]+\]|\s*$)/;
+  const featuresPattern = /(\[features\](?:\n|$))([\s\S]*?)(?=\n\[[^\]]+\]|\s*$)/;
 
   if (featuresPattern.test(content)) {
     return content.replace(featuresPattern, (_match, header, body) => {
@@ -207,7 +207,7 @@ function codexHookBridgeBlock(pluginPath) {
     'statusMessage = "Preparing pokayokay session"',
     '',
     '[[hooks.PreToolUse]]',
-    'matcher = "Bash"',
+    'matcher = "Bash|bash|exec_command"',
     '[[hooks.PreToolUse.hooks]]',
     'type = "command"',
     `command = ${command}`,
