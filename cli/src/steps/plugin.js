@@ -2,7 +2,7 @@ import prompts from 'prompts';
 import chalk from 'chalk';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { execute } from '../utils/execute.js';
 
 function ensureCodexMarketplaceEntry() {
@@ -28,11 +28,16 @@ function ensureCodexMarketplaceEntry() {
     }
   }
 
+  // The marketplace file lives under the user home directory, so a relative
+  // plugin path would be ambiguous. Resolve to an absolute path against the
+  // current working directory (the project root the user ran setup from).
+  const pluginPath = resolve(process.cwd(), 'plugins', 'pokayokay');
+
   const entry = {
     name: 'pokayokay',
     source: {
       source: 'local',
-      path: './plugins/pokayokay'
+      path: pluginPath
     },
     policy: {
       installation: 'AVAILABLE',
@@ -73,26 +78,49 @@ export async function installPlugin(env) {
     return { success: true, scope: scopes.join(', ') };
   }
 
-  const { scope } = await prompts({
-    type: 'select',
-    name: 'scope',
-    message: `Install pokayokay plugin for ${targets.join(' + ')}?`,
-    choices: [
-      { title: 'Global (recommended)', description: 'Available in all projects', value: 'global' },
-      { title: 'Project-local', description: 'Only this project', value: 'local' },
-      { title: 'Skip', value: 'skip' }
-    ],
-    initial: 0
-  });
+  const claudeWorkPending = needsClaude && !env.pluginInstalled;
+  const codexWorkPending = needsCodex && !env.codexPluginInstalled;
 
-  if (scope === 'skip' || !scope) {
-    console.log(chalk.yellow('  ○ Skipped plugin installation'));
-    return { success: false, scope: null };
+  // The scope prompt only affects the Claude install flow (`--local` vs global).
+  // Codex always writes a marketplace entry under ~/.agents/plugins/marketplace.json.
+  let scope = 'global';
+  if (claudeWorkPending) {
+    const promptMessage = codexWorkPending
+      ? 'Install pokayokay plugin (scope applies to Claude; Codex marketplace entry is global)?'
+      : 'Install pokayokay plugin for Claude?';
+    const response = await prompts({
+      type: 'select',
+      name: 'scope',
+      message: promptMessage,
+      choices: [
+        { title: 'Global (recommended)', description: 'Available in all projects', value: 'global' },
+        { title: 'Project-local', description: 'Only this project', value: 'local' },
+        { title: 'Skip', value: 'skip' }
+      ],
+      initial: 0
+    });
+    scope = response.scope;
+    if (scope === 'skip' || !scope) {
+      console.log(chalk.yellow('  ○ Skipped plugin installation'));
+      return { success: false, scope: null };
+    }
+  } else if (codexWorkPending) {
+    // Codex-only flow: confirm intent, no scope question.
+    const { proceed } = await prompts({
+      type: 'confirm',
+      name: 'proceed',
+      message: 'Write pokayokay marketplace entry for Codex (~/.agents/plugins/marketplace.json)?',
+      initial: true
+    });
+    if (!proceed) {
+      console.log(chalk.yellow('  ○ Skipped Codex marketplace entry'));
+      return { success: false, scope: null };
+    }
   }
 
   const installedScopes = [];
 
-  if (needsClaude && !env.pluginInstalled) {
+  if (claudeWorkPending) {
     // Add marketplace (ignore errors if already added)
     console.log('  Adding Claude marketplace...');
     const addResult = await execute('claude', ['plugin', 'marketplace', 'add', 'srstomp/pokayokay']);
@@ -117,16 +145,19 @@ export async function installPlugin(env) {
       return { success: false, scope: null };
     }
 
+    console.log(chalk.green(`  ✓ Claude plugin installed (${scope})`));
     installedScopes.push(`Claude ${scope}`);
   }
 
-  if (needsCodex && !env.codexPluginInstalled) {
+  if (codexWorkPending) {
     const marketplacePath = ensureCodexMarketplaceEntry();
+    // Be explicit: we only wrote a marketplace entry. Codex still needs to
+    // load/activate it (the user does this with `codex plugin install`).
     console.log(chalk.green(`  ✓ Codex marketplace entry written to ${marketplacePath}`));
-    installedScopes.push('Codex marketplace');
+    console.log(chalk.dim('    Run `codex plugin install pokayokay` to activate it in Codex.'));
+    installedScopes.push('Codex marketplace entry');
   }
 
   const resultScope = installedScopes.join(', ') || scope;
-  console.log(chalk.green(`  ✓ Plugin installed (${resultScope})`));
   return { success: true, scope: resultScope };
 }

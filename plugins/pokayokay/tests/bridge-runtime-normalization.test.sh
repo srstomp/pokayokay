@@ -4,7 +4,7 @@
 set -euo pipefail
 
 TEST_DIR=$(mktemp -d)
-trap "rm -rf $TEST_DIR" EXIT
+trap 'rm -rf -- "$TEST_DIR"' EXIT
 
 BRIDGE="$(cd "$(dirname "$0")/.." && pwd)/hooks/actions/bridge.py"
 

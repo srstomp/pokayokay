@@ -332,11 +332,47 @@ def handle_session_start(input_data: dict) -> dict:
     }
 
 
-def load_pokayokay_config() -> dict:
-    """Load pokayokay configuration from .claude/pokayokay.json."""
-    project_dir = get_project_dir()
-    config_path = Path(project_dir) / ".claude" / "pokayokay.json"
+# ==========================================================================
+# Runtime-agnostic state directory resolution
+# ==========================================================================
+#
+# Reads prefer ``.pokayokay/`` and fall back to ``.claude/`` so existing
+# Claude Code projects keep working. Writes go to whichever directory holds
+# the file already (preserves user choice); when neither exists, writes go
+# to ``.pokayokay/`` because it is runtime-agnostic.
 
+PRIMARY_STATE_DIR = ".pokayokay"
+LEGACY_STATE_DIR = ".claude"
+
+
+def _resolve_state_path(filename: str) -> Path:
+    """Return the path that should be read/written for a state file.
+
+    Prefers an existing file in ``.pokayokay/``, then ``.claude/``. When
+    neither file exists, returns the runtime-agnostic ``.pokayokay/`` path.
+    """
+    project_dir = Path(get_project_dir())
+    primary = project_dir / PRIMARY_STATE_DIR / filename
+    legacy = project_dir / LEGACY_STATE_DIR / filename
+
+    if primary.exists():
+        return primary
+    if legacy.exists():
+        return legacy
+    return primary
+
+
+def load_pokayokay_config() -> dict:
+    """Load pokayokay configuration.
+
+    Reads ``.pokayokay/config.json`` when present, falling back to
+    ``.claude/pokayokay.json`` for legacy Claude Code projects.
+    """
+    project_dir = Path(get_project_dir())
+    primary = project_dir / PRIMARY_STATE_DIR / "config.json"
+    legacy = project_dir / LEGACY_STATE_DIR / "pokayokay.json"
+
+    config_path = primary if primary.exists() else legacy
     if not config_path.exists():
         return {}
 
@@ -355,13 +391,12 @@ CHAIN_STATE_FILENAME = "pokayokay-chain-state.json"
 
 
 def _chain_state_path() -> Path:
-    """Get path to the chain state file."""
-    project_dir = get_project_dir()
-    return Path(project_dir) / ".claude" / CHAIN_STATE_FILENAME
+    """Get path to the chain state file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(CHAIN_STATE_FILENAME)
 
 
 def load_chain_state() -> dict:
-    """Load chain state from .claude/pokayokay-chain-state.json.
+    """Load chain state from .pokayokay/ or .claude/ (legacy fallback).
 
     Returns:
         Chain state dict with keys: chain_id, chain_index, scope_type,
@@ -379,7 +414,10 @@ def load_chain_state() -> dict:
 
 
 def save_chain_state(state: dict) -> None:
-    """Save chain state to .claude/pokayokay-chain-state.json.
+    """Save chain state to the active state directory.
+
+    Writes to whichever directory already holds the file; otherwise writes
+    to the runtime-agnostic ``.pokayokay/`` location.
 
     Uses atomic write (temp file + rename) to prevent corruption.
     """
@@ -399,13 +437,17 @@ def save_chain_state(state: dict) -> None:
 
 
 def delete_chain_state() -> None:
-    """Remove the chain state file (chain is done)."""
-    state_path = _chain_state_path()
-    try:
-        if state_path.exists():
-            state_path.unlink()
-    except OSError:
-        pass  # Best-effort cleanup
+    """Remove the chain state file from both possible locations."""
+    project_dir = Path(get_project_dir())
+    for candidate in (
+        project_dir / PRIMARY_STATE_DIR / CHAIN_STATE_FILENAME,
+        project_dir / LEGACY_STATE_DIR / CHAIN_STATE_FILENAME,
+    ):
+        try:
+            if candidate.exists():
+                candidate.unlink()
+        except OSError:
+            pass  # Best-effort cleanup
 
 
 # ==========================================================================
@@ -416,9 +458,8 @@ TOKEN_USAGE_FILENAME = "pokayokay-token-usage.json"
 
 
 def _token_usage_path() -> Path:
-    """Get path to the token usage file."""
-    project_dir = get_project_dir()
-    return Path(project_dir) / ".claude" / TOKEN_USAGE_FILENAME
+    """Get path to the token usage file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(TOKEN_USAGE_FILENAME)
 
 
 def load_token_usage() -> dict:
@@ -967,9 +1008,8 @@ CATEGORY_PATH_SCOPES: Dict[str, str] = {
 
 
 def _failure_tracking_path() -> Path:
-    """Get path to the review failure tracking file."""
-    project_dir = get_project_dir()
-    return Path(project_dir) / ".claude" / FAILURE_TRACKING_FILENAME
+    """Get path to the review failure tracking file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(FAILURE_TRACKING_FILENAME)
 
 
 def load_failure_tracking() -> dict:
