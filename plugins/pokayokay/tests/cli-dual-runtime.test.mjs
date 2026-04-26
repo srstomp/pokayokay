@@ -122,6 +122,7 @@ console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
     assert.match(result, /\[features\]\nfoo = true\ncodex_hooks = true/);
     assert.equal((result.match(/BEGIN pokayokay hooks/g) || []).length, 1);
     assert.equal((result.match(/bridge\.py/g) || []).length, 5);
+    assert.match(result, /matcher = "startup\|resume\|clear\|compact"/);
     assert.match(result, /\[\[hooks\.SessionEnd\]\]/);
     assert.match(result, /matcher = "Bash"/);
     assert.match(result, /\[\[hooks\.PermissionRequest\]\]/);
@@ -146,6 +147,17 @@ console.log('Test 7: writeCodexHookBridgeConfig normalizes Windows-style paths')
   } finally {
     rmSync(hooksDir, { recursive: true, force: true });
   }
+}
+
+console.log('Test 8: installPlugin reports Codex hook bridge scope');
+{
+  const pluginStepSource = readFileSync(new URL('../../../cli/src/steps/plugin.js', import.meta.url), 'utf8');
+  assert.match(
+    pluginStepSource,
+    /installedScopes\.push\('Codex marketplace entry', 'Codex hook bridge'\)/,
+    'Codex install summary should include both marketplace and hook bridge work'
+  );
+  console.log('  PASS: Codex install summary includes hook bridge wiring');
 }
 
 console.log('');

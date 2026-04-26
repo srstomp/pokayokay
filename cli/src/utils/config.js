@@ -199,7 +199,7 @@ function codexHookBridgeBlock(pluginPath) {
   return [
     POKAYOKAY_HOOKS_START,
     '[[hooks.SessionStart]]',
-    'matcher = "startup|resume|clear"',
+    'matcher = "startup|resume|clear|compact"',
     '[[hooks.SessionStart.hooks]]',
     'type = "command"',
     `command = ${command}`,
