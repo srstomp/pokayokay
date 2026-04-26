@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,6 +13,7 @@ import {
   isMcpConfigured,
   readCodexConfig,
   writeCodexConfig,
+  writeCodexMcpServer,
   upsertCodexMcpServer,
 } from '../../../cli/src/utils/config.js';
 import { selectDefaultInstallTargets } from '../../../cli/src/detect.js';
@@ -74,6 +75,33 @@ assert.deepEqual(selectDefaultInstallTargets({ claudeInstalled: true, codexInsta
 assert.deepEqual(selectDefaultInstallTargets({ claudeInstalled: true, codexInstalled: false }), ['claude']);
 assert.deepEqual(selectDefaultInstallTargets({ claudeInstalled: false, codexInstalled: true }), ['codex']);
 console.log('  PASS: runtime target defaults are dual-runtime aware');
+
+console.log('Test 5: writeCodexMcpServer is idempotent on CRLF-encoded configs');
+// On Windows, ~/.codex/config.toml may use CRLF line endings. Without the
+// CRLF normalization in config.js, the section-replacement regex would
+// miss the existing block and append a duplicate `[mcp_servers.<name>]`
+// section. This test pins down that idempotence.
+{
+  const crlfDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-crlf-'));
+  try {
+    const configPath = join(crlfDir, 'config.toml');
+    const initial = '[mcp_servers.ohno]\ncommand = "npx"\nargs = ["old"]\n';
+    writeFileSync(configPath, initial.replace(/\n/g, '\r\n'));
+
+    writeCodexMcpServer(configPath, 'ohno', {
+      command: 'npx',
+      args: ['@stevestomp/ohno-mcp'],
+    });
+
+    const result = readFileSync(configPath, 'utf8');
+    const occurrences = (result.match(/\[mcp_servers\.ohno\]/g) || []).length;
+    assert.equal(occurrences, 1, 'CRLF input should not produce a duplicate section');
+    assert.match(result, /args = \["@stevestomp\/ohno-mcp"\]/);
+    console.log('  PASS: CRLF-encoded section is upserted in place');
+  } finally {
+    rmSync(crlfDir, { recursive: true, force: true });
+  }
+}
 
 console.log('');
 console.log('All CLI dual-runtime tests passed!');

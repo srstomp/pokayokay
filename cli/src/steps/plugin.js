@@ -1,11 +1,50 @@
 import prompts from 'prompts';
 import chalk from 'chalk';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execute } from '../utils/execute.js';
 
+/**
+ * Find the on-disk pokayokay plugin source. The published CLI package ships
+ * only `bin/` and `src/`, so a relative path under `process.cwd()` only works
+ * when the user runs from a checkout of the pokayokay repo. Try the cwd
+ * first; fall back to a sibling of the CLI source (covers `npm link` and
+ * monorepo-style installs); return null if nothing is found so the caller
+ * can surface a clear error instead of writing a broken marketplace entry.
+ *
+ * @returns {string|null} Absolute path to the plugin directory, or null.
+ */
+function locatePluginSource() {
+  const cwdCandidate = resolve(process.cwd(), 'plugins', 'pokayokay');
+  if (existsSync(join(cwdCandidate, '.codex-plugin', 'plugin.json'))) {
+    return cwdCandidate;
+  }
+
+  // cli/src/steps/plugin.js → cli/src/steps → cli/src → cli → repo root → plugins/pokayokay
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  const repoCandidate = resolve(moduleDir, '..', '..', '..', 'plugins', 'pokayokay');
+  if (existsSync(join(repoCandidate, '.codex-plugin', 'plugin.json'))) {
+    return repoCandidate;
+  }
+
+  return null;
+}
+
 function ensureCodexMarketplaceEntry() {
+  const pluginPath = locatePluginSource();
+  if (!pluginPath) {
+    const cwd = process.cwd();
+    throw new Error(
+      `Could not find the pokayokay plugin source. Looked in:\n` +
+      `  - ${join(cwd, 'plugins', 'pokayokay')} (cwd)\n` +
+      `  - sibling of the CLI install (npm package layout)\n` +
+      `Run setup from a checkout of the pokayokay repo, e.g.:\n` +
+      `  git clone https://github.com/srstomp/pokayokay && cd pokayokay && npx pokayokay`
+    );
+  }
+
   const agentsDir = join(homedir(), '.agents', 'plugins');
   const marketplacePath = join(agentsDir, 'marketplace.json');
   mkdirSync(agentsDir, { recursive: true });
@@ -24,14 +63,19 @@ function ensureCodexMarketplaceEntry() {
       marketplace.plugins = marketplace.plugins || [];
       marketplace.interface = marketplace.interface || { displayName: 'Local Plugins' };
     } catch {
-      // Replace invalid marketplace JSON with a valid local marketplace.
+      // The existing marketplace is invalid JSON. Preserve user-owned state
+      // by copying it to a timestamped backup before we overwrite it with a
+      // fresh default — a transient parse/write issue should never silently
+      // erase entries.
+      const backupPath = `${marketplacePath}.backup-${Date.now()}`;
+      try {
+        copyFileSync(marketplacePath, backupPath);
+        console.log(chalk.yellow(`  ⚠ Invalid marketplace JSON; backed up to ${backupPath}`));
+      } catch (backupErr) {
+        console.log(chalk.yellow(`  ⚠ Invalid marketplace JSON; backup failed (${backupErr.message})`));
+      }
     }
   }
-
-  // The marketplace file lives under the user home directory, so a relative
-  // plugin path would be ambiguous. Resolve to an absolute path against the
-  // current working directory (the project root the user ran setup from).
-  const pluginPath = resolve(process.cwd(), 'plugins', 'pokayokay');
 
   const entry = {
     name: 'pokayokay',
@@ -150,12 +194,21 @@ export async function installPlugin(env) {
   }
 
   if (codexWorkPending) {
-    const marketplacePath = ensureCodexMarketplaceEntry();
-    // Be explicit: we only wrote a marketplace entry. Codex still needs to
-    // load/activate it (the user does this with `codex plugin install`).
-    console.log(chalk.green(`  ✓ Codex marketplace entry written to ${marketplacePath}`));
-    console.log(chalk.dim('    Run `codex plugin install pokayokay` to activate it in Codex.'));
-    installedScopes.push('Codex marketplace entry');
+    try {
+      const marketplacePath = ensureCodexMarketplaceEntry();
+      // Be explicit: we only wrote a marketplace entry. Codex still needs to
+      // load/activate it (the user does this with `codex plugin install`).
+      console.log(chalk.green(`  ✓ Codex marketplace entry written to ${marketplacePath}`));
+      console.log(chalk.dim('    Run `codex plugin install pokayokay` to activate it in Codex.'));
+      installedScopes.push('Codex marketplace entry');
+    } catch (err) {
+      console.log(chalk.red(`  ✗ Failed to write Codex marketplace entry:\n    ${err.message.replace(/\n/g, '\n    ')}`));
+      // If Claude was already installed in this run, keep that progress; only
+      // fail the whole step when nothing else succeeded.
+      if (installedScopes.length === 0) {
+        return { success: false, scope: null };
+      }
+    }
   }
 
   const resultScope = installedScopes.join(', ') || scope;

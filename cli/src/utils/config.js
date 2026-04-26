@@ -186,7 +186,12 @@ export function writeCodexConfig(configPath, config) {
  */
 export function writeCodexMcpServer(configPath, serverName, serverConfig) {
   const backupPath = backupExisting(configPath);
-  const existing = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
+  const rawExisting = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
+  // Normalize line endings to LF so Windows-edited config.toml files
+  // (CRLF) are still recognized by the section-replacement regex; without
+  // this, a pre-existing `[mcp_servers.<name>]` block on CRLF would not
+  // match and we'd append a duplicate section.
+  const existing = rawExisting.replace(/\r\n/g, '\n');
   const section = codexMcpSection(serverName, serverConfig);
   const header = `[mcp_servers.${serverName}]`;
   const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
