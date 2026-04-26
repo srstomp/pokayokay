@@ -16,7 +16,7 @@ When running with `--parallel N`, multiple implementers run simultaneously.
 |----------|------------|
 | Git conflicts | Auto-rebase, manual fallback |
 | No shared learning | Agents already isolated in sequential mode |
-| Higher token usage | N concurrent contexts |
+| Higher token usage | Use `-n 2` or `-n auto` first; reserve 4-5 for independent backlog batches |
 
 ## Recommended Settings
 
@@ -26,6 +26,22 @@ When running with `--parallel N`, multiple implementers run simultaneously.
 | Independent tasks | 2-3 |
 | Large backlog | 3-4 |
 | Maximum | 5 |
+
+## Token Budget Guidance
+
+Parallelism trades tokens for wall-clock time. Each implementer gathers its own
+context, runs its own tools, and may trigger its own review/fix loop. Use
+parallel mode when the tasks are independent enough that duplicated context is
+cheaper than waiting.
+
+Prefer sequential execution when:
+- Tasks touch the same package, schema, migration, or design surface
+- Acceptance criteria are vague and need brainstorming first
+- The likely review/fix loop is larger than the implementation
+- You are in a constrained token/cost environment
+
+Prefer `-n auto` when you want pokayokay to start conservatively and scale only
+after batches complete cleanly.
 
 ## Dependency Handling
 

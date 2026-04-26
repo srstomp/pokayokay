@@ -95,5 +95,79 @@ echo '{"runtime":"codex","tool_name":"Bash","tool_input":{"cmd":"git commit -m h
   python3 "$BRIDGE" > /dev/null
 assert_last_commit_hash "def5678"
 
+echo "Test 6: PermissionRequest safely approves read-only commands"
+ALLOW_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git status --short"}}' |
+  python3 "$BRIDGE")
+echo "$ALLOW_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  const decision = parsed.hookSpecificOutput && parsed.hookSpecificOutput.decision;
+  if (!decision || decision.behavior !== "allow") throw new Error("expected allow decision");
+});
+'
+
+echo "Test 7: PermissionRequest denies dangerous commands"
+DENY_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/pokayokay-danger"}}' |
+  python3 "$BRIDGE")
+echo "$DENY_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  const decision = parsed.hookSpecificOutput && parsed.hookSpecificOutput.decision;
+  if (!decision || decision.behavior !== "deny") throw new Error("expected deny decision");
+});
+'
+
+echo "Test 8: PermissionRequest leaves shell-control commands to runtime"
+CONTROL_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git status --short; touch /tmp/pokayokay-danger"}}' |
+  python3 "$BRIDGE")
+echo "$CONTROL_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for shell-control command");
+});
+'
+
+echo "Test 9: PermissionRequest leaves absolute-path reads to runtime"
+ABS_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"sed -n 1,20p /etc/passwd"}}' |
+  python3 "$BRIDGE")
+echo "$ABS_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for absolute-path read");
+});
+'
+
+echo "Test 10: PermissionRequest leaves Windows absolute-path reads to runtime"
+WIN_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"sed -n 1,20p C:\\Users\\steve\\.ssh\\config"}}' |
+  python3 "$BRIDGE")
+echo "$WIN_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for Windows absolute-path read");
+});
+'
+
+echo "Test 11: PermissionRequest leaves backslash parent traversal to runtime"
+TRAVERSAL_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"ls ..\\..\\outside"}}' |
+  python3 "$BRIDGE")
+echo "$TRAVERSAL_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for backslash traversal");
+});
+'
+
 echo ""
 echo "All bridge runtime normalization tests passed!"

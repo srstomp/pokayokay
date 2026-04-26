@@ -11,6 +11,7 @@ Output: JSON with additionalContext for Claude
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -193,6 +194,161 @@ def normalize_hook_input(input_data: dict) -> dict:
                     break
 
     return normalized
+
+
+def get_bash_command(tool_input: dict) -> str:
+    """Extract the shell command from runtime-specific tool input shapes."""
+    if not isinstance(tool_input, dict):
+        return ""
+    return str(
+        tool_input.get("command")
+        or tool_input.get("cmd")
+        or tool_input.get("shell_command")
+        or tool_input.get("command_line")
+        or ""
+    ).strip()
+
+
+def is_dangerous_command(command: str) -> bool:
+    """Return true for commands pokayokay should never auto-approve."""
+    lowered = f" {command.lower()} "
+    dangerous_fragments = (
+        " rm -rf ",
+        " git reset --hard ",
+        " git checkout -- ",
+        " git clean -fd",
+        " git push ",
+        " gh pr merge ",
+        " gh pr close ",
+        " npm publish",
+        " npx wrangler deploy",
+        " pulumi up",
+        " cdk deploy",
+    )
+    return any(fragment in lowered for fragment in dangerous_fragments)
+
+
+def has_shell_control_operator(command: str) -> bool:
+    """Return true when a command contains shell composition or redirection."""
+    shell_controls = (";", "&&", "||", "|", "<", ">", "`", "$(", "\n", "\r")
+    return any(control in command for control in shell_controls)
+
+
+def tokenize_shell_command(command: str) -> List[str]:
+    """Tokenize a simple command, returning an empty list if it is not simple."""
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return []
+
+
+def is_safe_relative_token(token: str) -> bool:
+    """Return true when a token cannot reference paths outside the workspace."""
+    normalized_token = token.replace("\\", "/")
+    has_windows_drive_prefix = (
+        len(token) >= 2
+        and token[0].isalpha()
+        and token[1] == ":"
+    )
+    return not (
+        normalized_token.startswith("/")
+        or token.startswith("\\")
+        or token.startswith("~")
+        or has_windows_drive_prefix
+        or normalized_token == ".."
+        or normalized_token.startswith("../")
+        or "/../" in normalized_token
+        or normalized_token.endswith("/..")
+    )
+
+
+def all_tokens_workspace_safe(tokens: List[str]) -> bool:
+    """Conservatively reject tokens that look like out-of-workspace paths."""
+    return all(is_safe_relative_token(token) for token in tokens)
+
+
+def has_windows_path_escape(command: str) -> bool:
+    """Return true when the raw command contains Windows path escape forms."""
+    normalized_command = command.replace("\\", "/")
+    return (
+        "..\\" in command
+        or "\\\\" in command
+        or "/../" in normalized_command
+        or " ../" in normalized_command
+        or normalized_command.endswith("/..")
+    )
+
+
+def is_readonly_or_pokayokay_command(command: str) -> bool:
+    """Return true for low-risk commands the pokayokay hook can approve."""
+    if has_shell_control_operator(command) or has_windows_path_escape(command):
+        return False
+
+    tokens = tokenize_shell_command(command)
+    if not tokens:
+        return False
+
+    if command.endswith("/hooks/actions/bridge.py") and len(tokens) == 1:
+        return True
+
+    executable = tokens[0]
+    args = tokens[1:]
+
+    if executable == "pwd":
+        return len(tokens) == 1
+
+    if executable == "git" and args:
+        safe_git_subcommands = {"status", "diff", "log", "branch", "rev-parse"}
+        return args[0] in safe_git_subcommands and all_tokens_workspace_safe(args[1:])
+
+    if executable in {"rg", "ls"}:
+        return all_tokens_workspace_safe(args)
+
+    if executable == "sed" and args[:1] == ["-n"]:
+        return len(args) >= 2 and all_tokens_workspace_safe(args[1:])
+
+    if executable == "cat" and args:
+        return all(
+            token.startswith("plugins/pokayokay/") and is_safe_relative_token(token)
+            for token in args
+        )
+
+    if executable in {"bash", "node"} and len(args) == 1:
+        return args[0].startswith("plugins/pokayokay/tests/") and is_safe_relative_token(args[0])
+
+    if executable == "npx" and len(args) >= 1:
+        return args[0] == "@stevestomp/ohno-cli" and all_tokens_workspace_safe(args[1:])
+
+    return False
+
+
+def handle_permission_request(tool_name: str, tool_input: dict) -> dict:
+    """
+    Handle Codex PermissionRequest events.
+
+    The bridge only auto-decides commands that are clearly low-risk or clearly
+    dangerous. Everything else falls through to Codex's normal approval prompt.
+    """
+    if tool_name != "Bash":
+        return {"skip": True, "reason": "no automatic decision for non-Bash approval"}
+
+    command = get_bash_command(tool_input)
+    if not command:
+        return {"skip": True, "reason": "no command in approval request"}
+
+    if is_dangerous_command(command):
+        return {
+            "permission_decision": "deny",
+            "reason": "Blocked by pokayokay policy: destructive or deployment command requires explicit human handling.",
+        }
+
+    if is_readonly_or_pokayokay_command(command):
+        return {
+            "permission_decision": "allow",
+            "reason": "Approved by pokayokay policy: read-only, test, or task-tracking command.",
+        }
+
+    return {"skip": True, "reason": "approval left to runtime"}
 
 
 def check_rate_limit(hook_name: str) -> Optional[str]:
@@ -1517,6 +1673,9 @@ def main():
     elif hook_event == "SessionEnd":
         result = handle_session_end(input_data)
 
+    elif hook_event == "PermissionRequest":
+        result = handle_permission_request(tool_name, tool_input)
+
     elif tool_name == "mcp__ohno__update_task_status":
         status = tool_input.get("status", "")
         if status in ("done", "archived"):
@@ -1557,10 +1716,29 @@ def main():
 
     # Output result
     if result and not result.get("skip"):
+        if hook_event == "PermissionRequest":
+            decision = result.get("permission_decision")
+            if decision in ("allow", "deny"):
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PermissionRequest",
+                        "decision": {
+                            "behavior": decision
+                        }
+                    }
+                }
+                if decision == "deny":
+                    output["hookSpecificOutput"]["decision"]["message"] = result.get(
+                        "reason",
+                        "Blocked by pokayokay policy.",
+                    )
+                print(json.dumps(output))
+            else:
+                print(json.dumps({}))
         if hook_event == "SessionEnd":
             # SessionEnd doesn't support hookSpecificOutput - just output empty
             print(json.dumps({}))
-        else:
+        elif hook_event != "PermissionRequest":
             # Format for Claude Code hook output
             output = {
                 "hookSpecificOutput": {

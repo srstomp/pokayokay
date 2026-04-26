@@ -12,6 +12,7 @@ import {
 import {
   isMcpConfigured,
   readCodexConfig,
+  writeCodexHookBridgeConfig,
   writeCodexConfig,
   writeCodexMcpServer,
   upsertCodexMcpServer,
@@ -101,6 +102,88 @@ console.log('Test 5: writeCodexMcpServer is idempotent on CRLF-encoded configs')
   } finally {
     rmSync(crlfDir, { recursive: true, force: true });
   }
+}
+
+console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
+{
+  const hooksDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-hooks-'));
+  try {
+    const configPath = join(hooksDir, 'config.toml');
+    writeFileSync(configPath, 'model = "gpt-5.3-codex"\n\n[features]\nfoo = true\n');
+
+    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+    const firstResult = readFileSync(configPath, 'utf8');
+    const backupPath = writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+
+    const result = readFileSync(configPath, 'utf8');
+    assert.equal(result, firstResult, 'second identical write should not change config');
+    assert.equal(backupPath, null, 'second identical write should not create backup');
+    assert.match(result, /model = "gpt-5\.3-codex"/);
+    assert.match(result, /\[features\]\nfoo = true\ncodex_hooks = true/);
+    assert.equal((result.match(/BEGIN pokayokay hooks/g) || []).length, 1);
+    assert.equal((result.match(/bridge\.py/g) || []).length, 5);
+    assert.match(result, /matcher = "startup\|resume\|clear\|compact"/);
+    assert.match(result, /\[\[hooks\.SessionEnd\]\]/);
+    assert.match(result, /\[\[hooks\.PermissionRequest\]\]/);
+    const preToolUseBlock = result.match(/\[\[hooks\.PreToolUse\]\][\s\S]*?(?=\n\[\[hooks\.|\n# END pokayokay hooks|$)/);
+    assert.ok(preToolUseBlock, 'PreToolUse block should exist');
+    assert.match(preToolUseBlock[0], /matcher = "Bash\|bash\|exec_command"/);
+    assert.doesNotMatch(preToolUseBlock[0], /matcher = "Bash\|apply_patch\|Edit\|Write"/);
+    const permissionRequestBlock = result.match(/\[\[hooks\.PermissionRequest\]\][\s\S]*?(?=\n\[\[hooks\.|\n# END pokayokay hooks|$)/);
+    assert.ok(permissionRequestBlock, 'PermissionRequest block should exist');
+    assert.match(permissionRequestBlock[0], /matcher = "Bash"/);
+    assert.doesNotMatch(permissionRequestBlock[0], /matcher = "Bash\|apply_patch\|Edit\|Write"/);
+    console.log('  PASS: Codex hook wiring is appended once and preserves config');
+  } finally {
+    rmSync(hooksDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 7: writeCodexHookBridgeConfig reuses [features] at EOF');
+{
+  const eofFeaturesDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-features-eof-'));
+  try {
+    const configPath = join(eofFeaturesDir, 'config.toml');
+    writeFileSync(configPath, '[features]');
+
+    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+
+    const result = readFileSync(configPath, 'utf8');
+    assert.equal((result.match(/\[features\]/g) || []).length, 1, 'should not duplicate [features]');
+    assert.match(result, /\[features\]\ncodex_hooks = true/);
+    console.log('  PASS: EOF [features] section is updated in place');
+  } finally {
+    rmSync(eofFeaturesDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 8: writeCodexHookBridgeConfig normalizes Windows-style paths');
+{
+  const hooksDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-windows-hooks-'));
+  try {
+    const configPath = join(hooksDir, 'config.toml');
+    writeCodexHookBridgeConfig(configPath, 'C:\\Users\\steve\\pokayokay\\plugins\\pokayokay\\');
+
+    const result = readFileSync(configPath, 'utf8');
+    assert.match(result, /C:\\\\Users\\\\steve\\\\pokayokay\\\\plugins\\\\pokayokay\\\\hooks\\\\actions\\\\bridge\.py/);
+    assert.doesNotMatch(result, /\\\\\/hooks/);
+    console.log('  PASS: Windows path remains consistently escaped in TOML');
+  } finally {
+    rmSync(hooksDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 9: installPlugin reports Codex hook bridge scope');
+{
+  const pluginStepSource = readFileSync(new URL('../../../cli/src/steps/plugin.js', import.meta.url), 'utf8');
+  assert.match(
+    pluginStepSource,
+    /installedScopes\.push\('Codex marketplace entry', 'Codex hook bridge'\)/,
+    'Codex install summary should include both marketplace and hook bridge work'
+  );
+  assert.match(pluginStepSource, /Failed to complete Codex setup/);
+  assert.doesNotMatch(pluginStepSource, /Failed to write Codex marketplace entry/);
+  console.log('  PASS: Codex install summary includes hook bridge wiring');
 }
 
 console.log('');

@@ -237,6 +237,7 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 | PostToolUse | `Edit` / `Write` | WIP tracking (files modified) |
 | PostToolUse | `Bash` | WIP tracking (test results, commits, errors) |
 | PreToolUse | `Bash` (git commit/add) | pre-commit (lint, check-ref-sizes) |
+| PermissionRequest | `Bash` (Codex) | conservative allow/deny decisions for read-only, test, ohno, and dangerous commands |
 
 ### Boundary Metadata
 
@@ -287,7 +288,7 @@ The bridge script uses this to determine which hooks to run:
 
 ### Configuration
 
-Hooks are registered through the pokayokay plugin system and routed by `bridge.py`. The plugin registers hook handlers for PostToolUse, PreToolUse, SessionStart, and SessionEnd events.
+Hooks are registered through the pokayokay plugin system and routed by `bridge.py`. The plugin registers hook handlers for PostToolUse, PreToolUse, SessionStart, SessionEnd, and Codex PermissionRequest events.
 
 ## Related Commands
 

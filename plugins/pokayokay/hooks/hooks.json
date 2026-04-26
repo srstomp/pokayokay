@@ -2,10 +2,12 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/actions/bridge.py"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
+            "timeout": 30
           }
         ]
       }
@@ -15,40 +17,32 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/actions/bridge.py"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
+            "timeout": 30
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|bash|exec_command",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./hooks/actions/bridge.py"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/actions/bridge.py"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
+            "timeout": 30
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write|mcp__ohno__.*",
+        "matcher": "Bash|Edit|Write|Skill|Task|mcp__ohno__update_task_status|mcp__ohno__set_blocker",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/actions/bridge.py"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
+            "timeout": 30
           }
         ]
       }

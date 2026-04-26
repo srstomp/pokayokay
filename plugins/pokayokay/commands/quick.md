@@ -19,6 +19,13 @@ Create and immediately work on: `$ARGUMENTS`
 
 ## Steps
 
+### 0. Discipline Gates
+
+If the quick task changes behavior, use `testing-strategy` patterns and write
+the test first. For bugs, use `systematic-debugging` before editing. Before
+any "done", "fixed", or "passing" claim, use `verification-before-completion`
+and cite the fresh command result.
+
 ### 1. Parse Task Description
 From `$ARGUMENTS`, extract:
 - **Title**: First sentence or phrase
@@ -43,8 +50,9 @@ If user says continue, proceed inline.
 Do the work directly. Follow this checklist:
 
 - [ ] Write a test first if behavior is changing
+- [ ] For bug fixes: reproduce and document root cause before editing
 - [ ] Implement the change
-- [ ] Run tests to verify nothing broke
+- [ ] Run fresh verification commands and read the output
 - [ ] Self-review the diff (`git diff`) — is it minimal and correct?
 - [ ] No scope creep — only do what was asked
 - [ ] Commit with conventional message

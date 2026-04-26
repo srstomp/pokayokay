@@ -5,6 +5,8 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execute } from '../utils/execute.js';
+import { getCodexConfigPath } from '../utils/platform.js';
+import { writeCodexHookBridgeConfig } from '../utils/config.js';
 
 /**
  * Find the on-disk pokayokay plugin source. The published CLI package ships
@@ -196,13 +198,17 @@ export async function installPlugin(env) {
   if (codexWorkPending) {
     try {
       const marketplacePath = ensureCodexMarketplaceEntry();
+      const pluginPath = locatePluginSource();
+      const configPath = getCodexConfigPath();
+      writeCodexHookBridgeConfig(configPath, pluginPath);
       // Be explicit: we only wrote a marketplace entry. Codex still needs to
       // load/activate it (the user does this with `codex plugin install`).
       console.log(chalk.green(`  ✓ Codex marketplace entry written to ${marketplacePath}`));
+      console.log(chalk.green(`  ✓ Codex hook bridge wired in ${configPath}`));
       console.log(chalk.dim('    Run `codex plugin install pokayokay` to activate it in Codex.'));
-      installedScopes.push('Codex marketplace entry');
+      installedScopes.push('Codex marketplace entry', 'Codex hook bridge');
     } catch (err) {
-      console.log(chalk.red(`  ✗ Failed to write Codex marketplace entry:\n    ${err.message.replace(/\n/g, '\n    ')}`));
+      console.log(chalk.red(`  ✗ Failed to complete Codex setup:\n    ${err.message.replace(/\n/g, '\n    ')}`));
       // If Claude was already installed in this run, keep that progress; only
       // fail the whole step when nothing else succeeded.
       if (installedScopes.length === 0) {

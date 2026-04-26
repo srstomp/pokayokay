@@ -20,6 +20,7 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 ## Key Principles
 
 - Test behavior, not implementation — test what code does, not how
+- For behavior changes, write the failing test first and verify it fails for the expected reason
 - Follow the testing pyramid — more unit tests, fewer E2E
 - Use meaningful coverage metrics — branch coverage over line coverage
 - Prevent flaky tests — no arbitrary waits, no test interdependence
@@ -33,6 +34,7 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 5. Add contract tests against OpenAPI spec (if applicable)
 6. Add E2E tests for critical user journeys only
 7. Set up CI to run tests on every PR
+8. Before completion claims, run `verification-before-completion` and cite the fresh command result
 
 ## What NOT to Test
 

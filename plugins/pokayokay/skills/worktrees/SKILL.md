@@ -22,7 +22,7 @@ Guide for managing git worktrees in pokayokay.
 
 - **Story-based reuse** — Tasks in the same story share a worktree for related changes
 - **Auto dependency install** — Dependencies install automatically on worktree creation
-- **Clean completion** — Choose merge, PR, keep, or discard when done
+- **Clean completion** — Use `finishing-branch` to choose merge, PR, keep, or discard with verification evidence
 - **Isolation** — All worktrees live in `.worktrees/` (auto-ignored by git)
 
 ## Quick Start Checklist
@@ -30,7 +30,7 @@ Guide for managing git worktrees in pokayokay.
 1. Task type determines worktree vs in-place (see table above)
 2. Story worktrees are reused across related tasks
 3. Dependencies auto-install based on detected lockfiles
-4. On completion: merge to main, create PR, keep, or discard
+4. On completion: use `finishing-branch` to verify and choose merge, PR, keep, or discard
 5. Troubleshoot with `git worktree list` if issues arise
 
 ## References
