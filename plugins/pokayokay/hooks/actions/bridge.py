@@ -244,13 +244,21 @@ def tokenize_shell_command(command: str) -> List[str]:
 
 def is_safe_relative_token(token: str) -> bool:
     """Return true when a token cannot reference paths outside the workspace."""
+    normalized_token = token.replace("\\", "/")
+    has_windows_drive_prefix = (
+        len(token) >= 2
+        and token[0].isalpha()
+        and token[1] == ":"
+    )
     return not (
-        token.startswith("/")
+        normalized_token.startswith("/")
+        or token.startswith("\\")
         or token.startswith("~")
-        or token == ".."
-        or token.startswith("../")
-        or "/../" in token
-        or token.endswith("/..")
+        or has_windows_drive_prefix
+        or normalized_token == ".."
+        or normalized_token.startswith("../")
+        or "/../" in normalized_token
+        or normalized_token.endswith("/..")
     )
 
 
@@ -259,9 +267,21 @@ def all_tokens_workspace_safe(tokens: List[str]) -> bool:
     return all(is_safe_relative_token(token) for token in tokens)
 
 
+def has_windows_path_escape(command: str) -> bool:
+    """Return true when the raw command contains Windows path escape forms."""
+    normalized_command = command.replace("\\", "/")
+    return (
+        "..\\" in command
+        or "\\\\" in command
+        or "/../" in normalized_command
+        or " ../" in normalized_command
+        or normalized_command.endswith("/..")
+    )
+
+
 def is_readonly_or_pokayokay_command(command: str) -> bool:
     """Return true for low-risk commands the pokayokay hook can approve."""
-    if has_shell_control_operator(command):
+    if has_shell_control_operator(command) or has_windows_path_escape(command):
         return False
 
     tokens = tokenize_shell_command(command)

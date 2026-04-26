@@ -22,7 +22,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write|bash|exec_command",
+        "matcher": "Bash|bash|exec_command",
         "hooks": [
           {
             "type": "command",
@@ -33,7 +33,7 @@
     ],
     "PermissionRequest": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",

@@ -145,5 +145,29 @@ process.stdin.on("end", () => {
 });
 '
 
+echo "Test 10: PermissionRequest leaves Windows absolute-path reads to runtime"
+WIN_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"sed -n 1,20p C:\\Users\\steve\\.ssh\\config"}}' |
+  python3 "$BRIDGE")
+echo "$WIN_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for Windows absolute-path read");
+});
+'
+
+echo "Test 11: PermissionRequest leaves backslash parent traversal to runtime"
+TRAVERSAL_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"ls ..\\..\\outside"}}' |
+  python3 "$BRIDGE")
+echo "$TRAVERSAL_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for backslash traversal");
+});
+'
+
 echo ""
 echo "All bridge runtime normalization tests passed!"

@@ -63,6 +63,11 @@ const hooks = JSON.parse(fs.readFileSync(process.argv[1], "utf8")).hooks || {};
 const serialized = JSON.stringify(hooks);
 if (!serialized.includes("bridge.py")) throw new Error("bridge.py not referenced");
 if (!hooks.PostToolUse) throw new Error("PostToolUse hook missing");
+if (!hooks.SessionEnd) throw new Error("SessionEnd hook missing");
+const preMatcher = hooks.PreToolUse && hooks.PreToolUse[0] && hooks.PreToolUse[0].matcher;
+if (preMatcher !== "Bash|bash|exec_command") throw new Error("PreToolUse should only match Bash tool aliases");
+const permissionMatcher = hooks.PermissionRequest && hooks.PermissionRequest[0] && hooks.PermissionRequest[0].matcher;
+if (permissionMatcher !== "Bash") throw new Error("PermissionRequest should only match Bash");
 ' "$HOOKS"
 echo "  PASS: Codex hooks config parses"
 
