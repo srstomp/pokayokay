@@ -179,6 +179,19 @@ def normalize_hook_input(input_data: dict) -> dict:
         or ""
     )
     normalized["runtime"] = input_data.get("runtime") or input_data.get("source") or "claude"
+
+    # Codex passes shell commands as ``tool_input.cmd``; the rest of the
+    # bridge (handle_pre_commit, handle_bash_execution, parse_error) expects
+    # ``tool_input.command``. Mirror inner field aliases so Codex shell calls
+    # exercise the same code paths as Claude Code Bash calls.
+    tool_input = normalized.get("tool_input")
+    if isinstance(tool_input, dict) and normalized["tool_name"] == "Bash":
+        if "command" not in tool_input:
+            for alias in ("cmd", "shell_command", "command_line"):
+                if alias in tool_input:
+                    tool_input["command"] = tool_input[alias]
+                    break
+
     return normalized
 
 
@@ -1317,17 +1330,20 @@ def should_update_wip(force: bool = False) -> bool:
 
 
 def extract_output_text(tool_response) -> str:
-    """Extract text output from tool response (handles various formats)."""
+    """Extract text output from tool response (handles Claude and Codex formats)."""
     if isinstance(tool_response, str):
         return tool_response
     if isinstance(tool_response, dict):
-        content = tool_response.get("content", [])
-        if isinstance(content, list):
-            return "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
-        if isinstance(content, str):
+        # Claude Code shape: {"content": [{"text": "..."}]} or {"content": "..."}
+        content = tool_response.get("content")
+        if isinstance(content, list) and content:
+            joined = "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
+            if joined:
+                return joined
+        if isinstance(content, str) and content:
             return content
-        # Try direct text field
-        return tool_response.get("text", tool_response.get("output", ""))
+        # Codex / fallback shape: {"output": "..."} or {"text": "..."}
+        return tool_response.get("output") or tool_response.get("text") or ""
     return ""
 
 

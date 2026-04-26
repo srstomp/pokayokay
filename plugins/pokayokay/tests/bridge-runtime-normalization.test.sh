@@ -46,6 +46,22 @@ assert_last_file() {
   fi
 }
 
+assert_last_commit_hash() {
+  local expected="$1"
+  if [[ ! -f "$TEST_DIR/wip_calls/last_call.json" ]]; then
+    echo "  FAIL: no WIP update captured"
+    exit 1
+  fi
+  local hash
+  hash=$(jq -r '.last_commit // empty' "$TEST_DIR/wip_calls/last_call.json" 2>/dev/null || echo "")
+  if [[ "$hash" == "$expected" ]]; then
+    echo "  PASS: captured commit $expected"
+  else
+    echo "  FAIL: expected commit $expected, got '$hash'"
+    exit 1
+  fi
+}
+
 echo "Test 1: Existing Claude-style payload still works"
 echo '{"tool_name":"Edit","tool_input":{"file_path":"src/claude.ts"},"tool_response":{},"hook_event_name":"PostToolUse"}' |
   python3 "$BRIDGE" > /dev/null
@@ -63,6 +79,21 @@ export CODEX_WORKSPACE_DIR="$TEST_DIR"
 echo '{"runtime":"codex","tool_name":"write","tool_input":{"file_path":"src/workspace.ts"},"tool_response":{},"hook_event":"PostToolUse"}' |
   python3 "$BRIDGE" > /dev/null
 assert_last_file "src/workspace.ts"
+
+echo "Test 4: Codex Bash payload (cmd field) produces a real commit-hash WIP update"
+# Codex passes shell commands as tool_input.cmd; the bridge must remap to
+# tool_input.command so handle_bash_execution / extract_commit_hash actually
+# parse the git output. Without the alias the WIP update would skip silently.
+rm -f "$TEST_DIR/wip_calls/last_call.json"
+echo '{"runtime":"codex","tool":"exec_command","input":{"cmd":"git commit -m test"},"response":{"output":"[main abc1234] commit message"},"event":"PostToolUse"}' |
+  python3 "$BRIDGE" > /dev/null
+assert_last_commit_hash "abc1234"
+
+echo "Test 5: Codex Bash payload still routes when tool_name is the canonical Bash"
+rm -f "$TEST_DIR/wip_calls/last_call.json"
+echo '{"runtime":"codex","tool_name":"Bash","tool_input":{"cmd":"git commit -m hello"},"tool_response":{"output":"[feat def5678] another"},"hook_event_name":"PostToolUse"}' |
+  python3 "$BRIDGE" > /dev/null
+assert_last_commit_hash "def5678"
 
 echo ""
 echo "All bridge runtime normalization tests passed!"
