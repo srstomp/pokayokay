@@ -27,6 +27,8 @@ npm-debug.log*
 
 # Claude Code local state
 .claude/
+# Runtime-agnostic local state (Codex / dual-runtime)
+.pokayokay/
 .mcp.json
 
 docs/
