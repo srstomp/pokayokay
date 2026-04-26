@@ -18,18 +18,30 @@ export async function doctor() {
   const env = await detectEnvironment();
   let requiredGood = true;
 
-  // Claude Code
+  // Supported runtimes
   if (env.claudeInstalled) {
     console.log(chalk.green(`  ✓ Claude Code installed (v${env.claudeVersion || 'unknown'})`));
   } else {
-    console.log(chalk.red('  ✗ Claude Code not installed'));
+    console.log(chalk.dim('  ○ Claude Code not installed'));
     console.log(chalk.dim('    Install from: https://claude.ai/code'));
+  }
+
+  if (env.codexInstalled) {
+    console.log(chalk.green(`  ✓ Codex installed (v${env.codexVersion || 'unknown'})`));
+  } else {
+    console.log(chalk.dim('  ○ Codex not installed'));
+  }
+
+  if (!env.claudeInstalled && !env.codexInstalled) {
     requiredGood = false;
   }
 
   // Plugin
-  if (env.pluginInstalled) {
-    console.log(chalk.green(`  ✓ pokayokay plugin active (${env.pluginScope})`));
+  if (env.pluginInstalled || env.codexPluginInstalled) {
+    const scopes = [];
+    if (env.pluginInstalled) scopes.push(`Claude ${env.pluginScope}`);
+    if (env.codexPluginInstalled) scopes.push(`Codex ${env.codexPluginScope}`);
+    console.log(chalk.green(`  ✓ pokayokay plugin active (${scopes.join(', ')})`));
   } else {
     console.log(chalk.red('  ✗ pokayokay plugin not installed'));
     console.log(chalk.dim('    Run: npx pokayokay'));
@@ -37,8 +49,11 @@ export async function doctor() {
   }
 
   // MCP
-  if (env.mcpConfigured) {
-    console.log(chalk.green(`  ✓ ohno MCP server configured (${env.mcpScope})`));
+  if (env.mcpConfigured || env.codexMcpConfigured) {
+    const scopes = [];
+    if (env.mcpConfigured) scopes.push(`Claude ${env.mcpScope}`);
+    if (env.codexMcpConfigured) scopes.push(`Codex ${env.codexMcpScope}`);
+    console.log(chalk.green(`  ✓ ohno MCP server configured (${scopes.join(', ')})`));
   } else {
     console.log(chalk.red('  ✗ ohno MCP server not configured'));
     console.log(chalk.dim('    Run: npx pokayokay'));

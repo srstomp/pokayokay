@@ -9,7 +9,7 @@
 
 # pokayokay
 
-**AI-assisted development orchestration** - A Claude Code plugin that orchestrates AI-assisted development sessions with configurable human oversight, bridging the gap between hands-on control and full automation through skills, hooks, agents, and integration with ohno for task management.
+**AI-assisted development orchestration** - A Claude Code and Codex plugin that orchestrates AI-assisted development sessions with configurable human oversight, bridging the gap between hands-on control and full automation through skills, hooks, agents, and integration with ohno for task management.
 
 ## Features
 
@@ -22,7 +22,7 @@
 
 ## Prerequisites
 
-- **Claude Code** v1.0.0 or later
+- **Claude Code** v1.0.0 or later, or **Codex**
 - **Node.js** v18 or later (for ohno CLI)
 - **Git** (for version control integration)
 
@@ -35,7 +35,7 @@ npx pokayokay
 ```
 
 This interactive wizard will:
-1. Install the pokayokay Claude Code plugin
+1. Install the pokayokay plugin for Claude Code, Codex, or both
 2. Configure the ohno MCP server
 3. Initialize ohno in your project
 4. Optionally set up kaizen integration
@@ -46,6 +46,8 @@ Run `npx pokayokay doctor` anytime to verify your installation.
 
 <details>
 <summary>Click to expand manual steps</summary>
+
+Claude Code:
 
 ```bash
 # 1. Add the marketplace (one-time setup)
@@ -62,9 +64,19 @@ Or from inside Claude Code REPL:
 /plugin install pokayokay@srstomp-pokayokay
 ```
 
+Codex:
+
+```bash
+# From this repository, validate/load the Codex plugin from plugins/pokayokay.
+# The setup wizard can also create a local Codex marketplace entry.
+npx pokayokay
+```
+
 #### Required: ohno MCP Server
 
-Add to your MCP configuration (`~/.claude/settings.json`):
+Add to your MCP configuration.
+
+Claude Code (`~/.claude/settings.json`):
 
 ```json
 {
@@ -75,6 +87,14 @@ Add to your MCP configuration (`~/.claude/settings.json`):
     }
   }
 }
+```
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.ohno]
+command = "npx"
+args = ["@stevestomp/ohno-mcp"]
 ```
 
 #### Initialize ohno
@@ -91,7 +111,7 @@ npx @stevestomp/ohno-cli init
 # 1. Run setup wizard (if not done already)
 npx pokayokay
 
-# 2. Restart Claude Code to activate MCP server
+# 2. Restart your configured AI runtime to activate MCP server
 
 # 3. Plan from a PRD
 /pokayokay:plan docs/prd.md
@@ -262,7 +282,7 @@ Loads tasks with saved WIP data from ohno, skips brainstorming for resumed tasks
 
 ### Headless Session Chaining
 
-When context fills during auto-mode work, sessions can automatically chain — finishing gracefully and spawning a new session that resumes from WIP. This is configured in `.claude/pokayokay.json`, not via a command flag:
+When context fills during auto-mode work, sessions can automatically chain — finishing gracefully and spawning a new session that resumes from WIP. This is configured in `.pokayokay/config.json`, with `.claude/pokayokay.json` still supported for existing Claude Code projects:
 
 ```json
 {
