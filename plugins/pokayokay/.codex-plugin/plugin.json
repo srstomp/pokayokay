@@ -1,6 +1,6 @@
 {
   "name": "pokayokay",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "AI-assisted development orchestration with task tracking, skills, hooks, and ohno integration.",
   "author": {
     "name": "Steve Stomp",
