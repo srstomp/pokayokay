@@ -85,8 +85,17 @@ else
 fi
 
 # 6. Chain state file valid (if --continue)
-CHAIN_STATE="${PROJECT_DIR}/.claude/pokayokay-chain-state.json"
-if [ -f "$CHAIN_STATE" ]; then
+# Prefer .pokayokay/, fall back to .claude/ for legacy projects.
+CHAIN_STATE_PRIMARY="${PROJECT_DIR}/.pokayokay/pokayokay-chain-state.json"
+CHAIN_STATE_LEGACY="${PROJECT_DIR}/.claude/pokayokay-chain-state.json"
+if [ -f "$CHAIN_STATE_PRIMARY" ]; then
+    CHAIN_STATE="$CHAIN_STATE_PRIMARY"
+elif [ -f "$CHAIN_STATE_LEGACY" ]; then
+    CHAIN_STATE="$CHAIN_STATE_LEGACY"
+else
+    CHAIN_STATE=""
+fi
+if [ -n "$CHAIN_STATE" ]; then
     if python3 -c "import json; json.load(open('$CHAIN_STATE'))" 2>/dev/null; then
         echo "CHECK=chain_state OK"
     else

@@ -15,8 +15,13 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
   UNCOMMITTED=$(git status --short 2>/dev/null)
 fi
 
-# Read token usage from bridge-managed state file
-TOKEN_FILE=".claude/pokayokay-token-usage.json"
+# Read token usage from bridge-managed state file.
+# Prefer .pokayokay/, fall back to .claude/ for legacy projects.
+if [ -f ".pokayokay/pokayokay-token-usage.json" ]; then
+  TOKEN_FILE=".pokayokay/pokayokay-token-usage.json"
+else
+  TOKEN_FILE=".claude/pokayokay-token-usage.json"
+fi
 AGENT_COUNT=0
 TOTAL_TOKENS=0
 TOKEN_DETAILS=""

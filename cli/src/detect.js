@@ -31,7 +31,8 @@ function detectClaudePluginInstalled() {
 }
 
 /**
- * Check if pokayokay is available to Codex through common local plugin paths.
+ * Check if pokayokay is available to Codex through common local plugin paths
+ * or the local marketplace file written by `installPlugin()`.
  * @returns {object} { installed: boolean, scope: 'global'|'local'|null }
  */
 function detectCodexPluginInstalled() {
@@ -43,6 +44,22 @@ function detectCodexPluginInstalled() {
   for (const p of globalPaths) {
     if (existsSync(p)) {
       return { installed: true, scope: 'global', path: p };
+    }
+  }
+
+  // Setup writes a marketplace entry to ~/.agents/plugins/marketplace.json.
+  // Treat presence of the pokayokay entry as "installed" so doctor/setup
+  // do not repeatedly report Codex as not installed after a successful run.
+  const marketplacePath = join(homedir(), '.agents', 'plugins', 'marketplace.json');
+  if (existsSync(marketplacePath)) {
+    try {
+      const data = JSON.parse(readFileSync(marketplacePath, 'utf-8'));
+      const plugins = Array.isArray(data?.plugins) ? data.plugins : [];
+      if (plugins.some((p) => p && p.name === 'pokayokay')) {
+        return { installed: true, scope: 'global', path: marketplacePath };
+      }
+    } catch {
+      // Invalid JSON — ignore and continue with the other detectors.
     }
   }
 
