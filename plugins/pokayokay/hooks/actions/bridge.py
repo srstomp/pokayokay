@@ -11,6 +11,7 @@ Output: JSON with additionalContext for Claude
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -227,24 +228,78 @@ def is_dangerous_command(command: str) -> bool:
     return any(fragment in lowered for fragment in dangerous_fragments)
 
 
+def has_shell_control_operator(command: str) -> bool:
+    """Return true when a command contains shell composition or redirection."""
+    shell_controls = (";", "&&", "||", "|", "<", ">", "`", "$(", "\n", "\r")
+    return any(control in command for control in shell_controls)
+
+
+def tokenize_shell_command(command: str) -> List[str]:
+    """Tokenize a simple command, returning an empty list if it is not simple."""
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return []
+
+
+def is_safe_relative_token(token: str) -> bool:
+    """Return true when a token cannot reference paths outside the workspace."""
+    return not (
+        token.startswith("/")
+        or token.startswith("~")
+        or token == ".."
+        or token.startswith("../")
+        or "/../" in token
+        or token.endswith("/..")
+    )
+
+
+def all_tokens_workspace_safe(tokens: List[str]) -> bool:
+    """Conservatively reject tokens that look like out-of-workspace paths."""
+    return all(is_safe_relative_token(token) for token in tokens)
+
+
 def is_readonly_or_pokayokay_command(command: str) -> bool:
     """Return true for low-risk commands the pokayokay hook can approve."""
-    safe_prefixes = (
-        "git status",
-        "git diff",
-        "git log",
-        "git branch",
-        "git rev-parse",
-        "rg ",
-        "ls",
-        "pwd",
-        "sed -n",
-        "cat plugins/pokayokay/",
-        "bash plugins/pokayokay/tests/",
-        "node plugins/pokayokay/tests/",
-        "npx @stevestomp/ohno-cli ",
-    )
-    return command.startswith(safe_prefixes) or command.endswith("/hooks/actions/bridge.py")
+    if has_shell_control_operator(command):
+        return False
+
+    tokens = tokenize_shell_command(command)
+    if not tokens:
+        return False
+
+    if command.endswith("/hooks/actions/bridge.py") and len(tokens) == 1:
+        return True
+
+    executable = tokens[0]
+    args = tokens[1:]
+
+    if executable == "pwd":
+        return len(tokens) == 1
+
+    if executable == "git" and args:
+        safe_git_subcommands = {"status", "diff", "log", "branch", "rev-parse"}
+        return args[0] in safe_git_subcommands and all_tokens_workspace_safe(args[1:])
+
+    if executable in {"rg", "ls"}:
+        return all_tokens_workspace_safe(args)
+
+    if executable == "sed" and args[:1] == ["-n"]:
+        return len(args) >= 2 and all_tokens_workspace_safe(args[1:])
+
+    if executable == "cat" and args:
+        return all(
+            token.startswith("plugins/pokayokay/") and is_safe_relative_token(token)
+            for token in args
+        )
+
+    if executable in {"bash", "node"} and len(args) == 1:
+        return args[0].startswith("plugins/pokayokay/tests/") and is_safe_relative_token(args[0])
+
+    if executable == "npx" and len(args) >= 1:
+        return args[0] == "@stevestomp/ohno-cli" and all_tokens_workspace_safe(args[1:])
+
+    return False
 
 
 def handle_permission_request(tool_name: str, tool_input: dict) -> dict:

@@ -121,5 +121,29 @@ process.stdin.on("end", () => {
 });
 '
 
+echo "Test 8: PermissionRequest leaves shell-control commands to runtime"
+CONTROL_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git status --short; touch /tmp/pokayokay-danger"}}' |
+  python3 "$BRIDGE")
+echo "$CONTROL_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for shell-control command");
+});
+'
+
+echo "Test 9: PermissionRequest leaves absolute-path reads to runtime"
+ABS_OUTPUT=$(echo '{"runtime":"codex","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"sed -n 1,20p /etc/passwd"}}' |
+  python3 "$BRIDGE")
+echo "$ABS_OUTPUT" | node -e '
+let data = "";
+process.stdin.on("data", (chunk) => data += chunk);
+process.stdin.on("end", () => {
+  const parsed = JSON.parse(data);
+  if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for absolute-path read");
+});
+'
+
 echo ""
 echo "All bridge runtime normalization tests passed!"

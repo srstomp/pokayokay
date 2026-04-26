@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 
 /**
  * Read Claude config file, return empty object if not found
@@ -190,7 +190,10 @@ function enableCodexHooksFeature(content) {
 }
 
 function codexHookBridgeBlock(pluginPath) {
-  const bridgePath = `${String(pluginPath).replace(/\/$/, '')}/hooks/actions/bridge.py`;
+  const pluginRoot = String(pluginPath).replace(/[\\/]+$/, '');
+  const bridgePath = pluginRoot.includes('\\')
+    ? win32.join(pluginRoot, 'hooks', 'actions', 'bridge.py')
+    : join(pluginRoot, 'hooks', 'actions', 'bridge.py');
   const command = quoteTomlString(bridgePath);
 
   return [
@@ -287,13 +290,17 @@ export function writeCodexMcpServer(configPath, serverName, serverConfig) {
  * @returns {string|null} Backup path if created, null otherwise
  */
 export function writeCodexHookBridgeConfig(configPath, pluginPath) {
-  const backupPath = backupExisting(configPath);
   const rawExisting = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
   const existing = rawExisting.replace(/\r\n/g, '\n');
   const withoutOldBlock = removePokayokayHooksBlock(existing);
   const withFeature = enableCodexHooksFeature(withoutOldBlock);
   const next = `${withFeature.trimEnd()}\n\n${codexHookBridgeBlock(pluginPath)}\n`;
 
+  if (existing === next) {
+    return null;
+  }
+
+  const backupPath = backupExisting(configPath);
   writeFileSync(configPath, next);
   return backupPath;
 }

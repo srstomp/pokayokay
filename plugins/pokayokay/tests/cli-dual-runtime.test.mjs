@@ -112,9 +112,12 @@ console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
     writeFileSync(configPath, 'model = "gpt-5.3-codex"\n\n[features]\nfoo = true\n');
 
     writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
-    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+    const firstResult = readFileSync(configPath, 'utf8');
+    const backupPath = writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
 
     const result = readFileSync(configPath, 'utf8');
+    assert.equal(result, firstResult, 'second identical write should not change config');
+    assert.equal(backupPath, null, 'second identical write should not create backup');
     assert.match(result, /model = "gpt-5\.3-codex"/);
     assert.match(result, /\[features\]\nfoo = true\ncodex_hooks = true/);
     assert.equal((result.match(/BEGIN pokayokay hooks/g) || []).length, 1);
@@ -122,6 +125,22 @@ console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
     assert.match(result, /\[\[hooks\.PermissionRequest\]\]/);
     assert.match(result, /matcher = "Bash\|apply_patch\|Edit\|Write"/);
     console.log('  PASS: Codex hook wiring is appended once and preserves config');
+  } finally {
+    rmSync(hooksDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 7: writeCodexHookBridgeConfig normalizes Windows-style paths');
+{
+  const hooksDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-windows-hooks-'));
+  try {
+    const configPath = join(hooksDir, 'config.toml');
+    writeCodexHookBridgeConfig(configPath, 'C:\\Users\\steve\\pokayokay\\plugins\\pokayokay\\');
+
+    const result = readFileSync(configPath, 'utf8');
+    assert.match(result, /C:\\\\Users\\\\steve\\\\pokayokay\\\\plugins\\\\pokayokay\\\\hooks\\\\actions\\\\bridge\.py/);
+    assert.doesNotMatch(result, /\\\\\/hooks/);
+    console.log('  PASS: Windows path remains consistently escaped in TOML');
   } finally {
     rmSync(hooksDir, { recursive: true, force: true });
   }
