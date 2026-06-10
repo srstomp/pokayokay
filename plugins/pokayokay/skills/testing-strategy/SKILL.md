@@ -70,3 +70,8 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 | [api-test-ci-pipelines.md](references/api-test-ci-pipelines.md) | CI pipeline strategy, GitHub Actions, parallel execution |
 | [api-test-ci-environments.md](references/api-test-ci-environments.md) | Environment config, test reporting, database services, E2E environments |
 | [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for TDD discipline |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

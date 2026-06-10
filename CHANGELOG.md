@@ -5,6 +5,55 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-06-10
+
+### Added
+- **Runtime notes for Codex** — the nine dispatch-referencing skills
+  (work-session, spike, planning, security-audit, feature-audit,
+  browser-verification, error-handling, testing-strategy, cloud-infrastructure)
+  and the subagent-dispatch reference now document both runtimes: Task-tool
+  dispatch with `subagent_type: "pokayokay:yokay-<name>"` on Claude Code, and
+  inline execution of the agent's role (Behavioral Defaults, Critical Rules,
+  Output Contract) on Codex, where subagent dispatch does not exist.
+- **AGENTS.md** — accurate Codex guidance for this repository: the Codex
+  surface (skills, ohno MCP, bridge.py hooks), correct install/dev commands,
+  and how to run the work pipeline inline without subagent dispatch.
+
+### Changed
+- **Implementer model: sonnet → opus** — `yokay-implementer` now runs on Opus.
+  Opus is markedly stronger at long-horizon agentic coding, and a single pass
+  that survives review is cheaper than a Sonnet pass plus a fixer/review retry
+  cycle. Explorer and test-runner stay on Haiku; other agents are unchanged.
+
+### Fixed
+- **Command frontmatter parsing** — `/work` and `/plan` had unquoted
+  `argument-hint` values starting with `[`, which fail YAML parsing and
+  silently dropped all frontmatter (including the `skill:` binding) at
+  runtime. Values are now quoted.
+- **Codex install docs** — replace the removed `codex plugin install pokayokay`
+  step with `codex plugin marketplace add .` from the pokayokay repository
+  checkout, and clarify that the npm package is the setup CLI rather than the
+  Codex plugin payload.
+- **Claude marketplace alias** — update install examples and setup code to use
+  `pokayokay@pokayokay`, matching the configured marketplace alias.
+- **Codex setup detection** — detect pokayokay through Codex's current
+  `~/.codex/config.toml` marketplace entry while preserving the legacy
+  `~/.agents/plugins/marketplace.json` fallback.
+
+## [0.24.0] - 2026-04-26
+
+### Added
+- **Disciplined workflow gates** — verification-before-completion enforced in
+  the implementer, fixer, brainstormer, and quality reviewer; new
+  finishing-branch, systematic-debugging, and verification-before-completion
+  gate sections; approval-policy and token-budgeting references for
+  work-session.
+
+### Fixed
+- **Codex hook approval policy** — tightened `PermissionRequest` handling in
+  bridge.py to auto-decide only obvious allow/deny cases, with runtime payload
+  normalization tests and install edge-case fixes.
+
 ## [0.23.0] - 2026-04-26
 
 ### Added

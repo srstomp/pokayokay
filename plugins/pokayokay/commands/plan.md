@@ -1,6 +1,6 @@
 ---
 description: Analyze PRD and create implementation plan with task breakdown
-argument-hint: [--headless] [--review] <prd-path>
+argument-hint: "[--headless] [--review] <prd-path>"
 skill: planning
 ---
 

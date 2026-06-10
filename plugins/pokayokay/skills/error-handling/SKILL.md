@@ -46,3 +46,8 @@ Design resilient applications through intentional error handling strategies. Err
 | [anti-rationalization.md](references/anti-rationalization.md) | Iron Law, common rationalizations, red flag STOP list for error handling discipline |
 | [tdd-patterns.md](references/tdd-patterns.md) | Test-first patterns for error paths, retry logic, boundaries |
 | [review-checklist.md](references/review-checklist.md) | Error handling review checklist (classes, messages, recovery, tracking) |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

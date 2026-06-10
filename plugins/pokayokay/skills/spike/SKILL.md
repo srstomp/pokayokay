@@ -44,3 +44,8 @@ Structured technical investigation to reduce uncertainty. Answer specific questi
 | [spike-types.md](references/spike-types.md) | Feasibility, architecture, integration, performance spikes |
 | [question-patterns.md](references/question-patterns.md) | How to frame good spike questions |
 | [output-templates.md](references/output-templates.md) | Spike report templates and examples |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

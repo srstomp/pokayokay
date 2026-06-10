@@ -84,7 +84,7 @@ The `/work`, `/fix`, and `/hotfix` commands use a coordinator pattern that dispa
 13. **yokay-test-runner** - Test execution with concise output
 14. **yokay-auditor** - L0-L5 completeness scanning (read-only)
 
-Agents are dispatched via the Task tool with `subagent_type` matching the agent filename (without .md).
+Agents are dispatched via the Task tool with `subagent_type` set to the plugin-prefixed agent name, e.g. `pokayokay:yokay-implementer` (the agent filename without `.md`, prefixed with `pokayokay:`).
 
 ### CLI (`cli/`)
 

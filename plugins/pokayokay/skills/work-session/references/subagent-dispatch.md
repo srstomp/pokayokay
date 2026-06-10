@@ -2,6 +2,11 @@
 
 Guide for the coordinator to prepare and dispatch subagents.
 
+> **Runtime note:** Task-tool dispatch is Claude Code-only. On Codex, run each
+> stage inline in the current session — read the stage's `agents/yokay-<name>.md`
+> and follow its Behavioral Defaults, Critical Rules, and Output Contract. The
+> prompt templates and ohno integration in this reference apply on both runtimes.
+
 ## Overview
 
 The coordinator delegates work to subagents at various stages:

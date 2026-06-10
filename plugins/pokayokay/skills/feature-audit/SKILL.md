@@ -50,3 +50,8 @@ Ensures features are not just implemented but actually user-accessible. Bridges 
 | [remediation-templates.md](references/remediation-templates.md) | Task templates for common gaps |
 | [scanning-process.md](references/scanning-process.md) | Backend, frontend, API, navigation scans |
 | [anti-patterns.md](references/anti-patterns.md) | Audit and remediation anti-patterns |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

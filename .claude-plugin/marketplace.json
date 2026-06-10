@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "pokayokay",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI-assisted development orchestration with task tracking and skill-based routing",
   "owner": {
     "name": "Steve Stomp",
@@ -11,7 +11,7 @@
     {
       "name": "pokayokay",
       "description": "AI-powered development workflows with task tracking, skill-based routing, and guaranteed execution hooks",
-      "version": "0.24.0",
+      "version": "0.25.0",
       "author": {
         "name": "Steve Stomp"
       },

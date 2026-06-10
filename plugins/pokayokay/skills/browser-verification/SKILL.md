@@ -88,3 +88,8 @@ yokay-implementer → browser-verify → yokay-spec-reviewer → yokay-quality-r
 ```
 
 Browser verification runs AFTER implementation and BEFORE spec review.
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

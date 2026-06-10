@@ -63,3 +63,8 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 | [anti-patterns.md](references/anti-patterns.md) | Common mistakes and fixes |
 | [bug-fix-pipeline.md](references/bug-fix-pipeline.md) | Agent pipeline for `/fix --thorough` and `/hotfix` commands |
 | [pre-flight-checks.md](references/pre-flight-checks.md) | Checks run before unattended/headless sessions |
+
+## Runtime Notes
+
+- **Claude Code**: the coordinator dispatches `yokay-*` agents via the Task tool as described in [subagent-dispatch.md](references/subagent-dispatch.md).
+- **Codex**: there is no subagent dispatch. Run the pipeline inline in the current session — for each stage, read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract. Execute stages (implement → spec review → quality review) as separate, sequential passes; do not skip review stages because dispatch is unavailable. Parallel batch execution ([parallel-execution.md](references/parallel-execution.md)) is Claude Code-only — process tasks sequentially on Codex.

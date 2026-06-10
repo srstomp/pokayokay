@@ -51,3 +51,8 @@ Systematic security review for application code, dependencies, and configuration
 | [auth-patterns.md](references/auth-patterns.md) | Secure authentication and authorization patterns |
 | [api-security.md](references/api-security.md) | API-specific security concerns |
 | [secrets-management.md](references/secrets-management.md) | Handling sensitive configuration |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

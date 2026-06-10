@@ -47,3 +47,8 @@ IaC approach?
 | `references/storage-and-cdn.md` | S3 configuration, CloudFront distributions, caching strategies |
 | `references/database-selection.md` | DynamoDB patterns, RDS/Aurora configuration, managed DB comparison |
 | `references/cost-optimization.md` | Right-sizing, reserved capacity, cost estimation, billing alerts |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

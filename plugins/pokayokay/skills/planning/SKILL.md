@@ -58,3 +58,8 @@ Transform product requirements into actionable implementation plans with visual 
 | [anti-patterns.md](references/anti-patterns.md) | Analysis, breakdown, and output anti-patterns |
 | [design-integration.md](references/design-integration.md) | Design plugin detection, UI/UX workflows, design-first routing |
 | [kanban-template.html](references/kanban-template.html) | HTML template for interactive kanban board |
+
+## Runtime Notes
+
+- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

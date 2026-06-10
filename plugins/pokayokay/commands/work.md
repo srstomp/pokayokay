@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: [supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]
+argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]"
 skill: work-session
 ---
 
