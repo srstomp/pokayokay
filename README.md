@@ -414,7 +414,7 @@ agent frontmatter aliases (`haiku`, `sonnet`, `opus`).
 | `yokay-design-reviewer` | Sonnet | Pre-implementation design and codebase-pattern review (read-only) |
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
 | `yokay-fixer` | Sonnet | Auto-retry on test failures with targeted fixes |
-| `yokay-implementer` | Sonnet | TDD implementation with fresh context |
+| `yokay-implementer` | Opus | TDD implementation with fresh context |
 | `yokay-planner` | Opus | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |

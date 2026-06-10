@@ -9,9 +9,10 @@ npx pokayokay
 claude plugin marketplace add srstomp/pokayokay
 claude plugin install pokayokay@pokayokay
 
-# Codex: add the repository checkout as a marketplace
+# Codex: register the repository checkout as a marketplace, then install
 cd ~/Projects/stevestomp/pokayokay
 codex plugin marketplace add .
+codex plugin add pokayokay@pokayokay
 
 # Initialize task management
 npx @stevestomp/ohno-cli init
@@ -103,13 +104,14 @@ npx @stevestomp/ohno-cli init
 | yokay-auditor | Sonnet | L0-L5 scanning |
 | yokay-brainstormer | Sonnet | Task refinement |
 | yokay-browser-verifier | Sonnet | UI verification |
+| yokay-design-reviewer | Sonnet | Pre-implementation design review |
 | yokay-explorer | Haiku | Fast codebase search |
 | yokay-fixer | Sonnet | Auto-retry test failures |
-| yokay-implementer | Sonnet | TDD implementation |
-| yokay-planner | Sonnet | PRD analysis + plan generation |
+| yokay-implementer | Opus | TDD implementation |
+| yokay-planner | Opus | PRD analysis + plan generation |
 | yokay-reviewer | Sonnet | Code review |
 | yokay-security-scanner | Sonnet | OWASP scanning |
-| yokay-spec-reviewer | Sonnet | Adversarial spec compliance |
+| yokay-spec-reviewer | Opus | Adversarial spec compliance |
 | yokay-quality-reviewer | Sonnet | Code quality (after spec) |
 | yokay-spike-runner | Sonnet | Investigations |
 | yokay-test-runner | Haiku | Test execution |

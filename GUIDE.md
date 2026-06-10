@@ -219,13 +219,14 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-auditor` | Sonnet | Read-only | L0-L5 completeness scanning |
 | `yokay-brainstormer` | Sonnet | Read-only | Refine ambiguous tasks into clear requirements |
 | `yokay-browser-verifier` | Sonnet | Read-only | Browser verification for UI changes |
+| `yokay-design-reviewer` | Sonnet | Read-only | Pre-implementation design review against codebase patterns |
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
 | `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
-| `yokay-implementer` | Sonnet | Can write | TDD implementation with fresh context |
-| `yokay-planner` | Sonnet | Read-only | PRD analysis and structured plan generation |
+| `yokay-implementer` | Opus | Can write | TDD implementation with fresh context |
+| `yokay-planner` | Opus | Read-only | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
-| `yokay-spec-reviewer` | Sonnet | Read-only | Adversarial spec compliance review |
+| `yokay-spec-reviewer` | Opus | Read-only | Adversarial spec compliance review |
 | `yokay-quality-reviewer` | Sonnet | Read-only | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
@@ -249,6 +250,7 @@ Commands that benefit from isolated execution include delegation instructions:
 | `/pokayokay:security` | yokay-security-scanner | Always (verbose scanning) |
 | `/pokayokay:test` | yokay-test-runner | Running tests (not designing) |
 | `/pokayokay:work` | yokay-brainstormer | Ambiguous tasks (before impl) |
+| `/pokayokay:work` | yokay-design-reviewer | Before implementation (validates approach) |
 | `/pokayokay:work` | yokay-implementer | Task execution (dispatched) |
 | `/pokayokay:work` | yokay-browser-verifier | UI changes (after implementation) |
 | `/pokayokay:work` | yokay-fixer | When tests fail after implementation |
@@ -296,6 +298,21 @@ AMBIGUOUS TASK → yokay-brainstormer → CLEAR REQUIREMENTS → Implementation
 
 This prevents wasted implementation effort from misunderstood requirements.
 
+### Design Review Gate
+
+Before implementation, `yokay-design-reviewer` validates the planned approach against existing codebase patterns and relevant design skills (read-only):
+
+```
+CLEAR REQUIREMENTS → yokay-design-reviewer → VALIDATED APPROACH → Implementation
+```
+
+**Output:**
+- A pre-validated implementation approach the implementer follows
+- Relevant codebase patterns and files to mirror
+- Applicable skill references for the domain
+
+The implementer receives this approach as part of its prompt and deviates only by escalating (`NEEDS_REDESIGN`) — it never silently redesigns. The quality reviewer later checks design compliance against this approach.
+
 ### Task Review (Two-Stage)
 
 After implementation completes, two sequential reviewers check the work:
@@ -313,6 +330,7 @@ IMPLEMENTATION → yokay-spec-reviewer → yokay-quality-reviewer → COMPLETE
 
 **Stage 2** (`yokay-quality-reviewer`): Code quality (only runs if spec passes)
 - Structure, readability, test coverage, project conventions
+- Design compliance against the pre-validated approach from the design review
 - Binary PASS/FAIL verdict
 
 Both reviews must PASS before a task is marked complete.
@@ -947,9 +965,11 @@ claude plugin install pokayokay@pokayokay
 
 **Codex** (or to set up both runtimes at once):
 ```bash
-# Current Codex activates plugins by adding a marketplace from the repo checkout.
+# Codex installs in two steps: register the repo checkout as a marketplace,
+# then install the plugin from it.
 git clone https://github.com/srstomp/pokayokay && cd pokayokay
 codex plugin marketplace add .
+codex plugin add pokayokay@pokayokay
 
 # Optional: run the local setup wizard to wire ohno MCP and hooks.
 npm --prefix cli install
