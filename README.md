@@ -80,10 +80,11 @@ Or from inside Claude Code REPL:
 Codex:
 
 ```bash
-# Current Codex activates plugins by adding a marketplace.
-# Run this from the pokayokay repository checkout:
+# Codex installs plugins in two steps: register the marketplace, then add the
+# plugin from it. Run this from the pokayokay repository checkout:
 cd ~/Projects/stevestomp/pokayokay
 codex plugin marketplace add .
+codex plugin add pokayokay@pokayokay
 
 # Optional: run the local setup wizard to wire ohno MCP and hooks.
 npm --prefix cli install
@@ -91,12 +92,13 @@ node cli/bin/cli.js
 ```
 
 Codex stores the marketplace entry in `~/.codex/config.toml` under
-`[marketplaces.pokayokay]`. Current Codex does not have a
-`codex plugin install` command. The local setup wizard adds the same marketplace
-entry and adds a pokayokay-owned hook block to `~/.codex/config.toml`. The hook
-block enables `codex_hooks = true`, routes tool lifecycle events to
-`hooks/actions/bridge.py`, and adds conservative `PermissionRequest` approval
-handling.
+`[marketplaces.pokayokay]` and the install record under
+`[plugins."pokayokay@pokayokay"]`. Registering the marketplace alone does not
+install the plugin — `codex plugin add` is required (the command is `add`, not
+`install`). The local setup wizard runs both steps and adds a pokayokay-owned
+hook block to `~/.codex/config.toml`. The hook block enables
+`codex_hooks = true`, routes tool lifecycle events to `hooks/actions/bridge.py`,
+and adds conservative `PermissionRequest` approval handling.
 
 #### Required: ohno MCP Server
 
@@ -536,6 +538,7 @@ claude --plugin-dir ./plugins/pokayokay
 
 # Codex local marketplace development
 codex plugin marketplace add .
+codex plugin add pokayokay@pokayokay
 npm --prefix cli install
 node cli/bin/cli.js
 ```

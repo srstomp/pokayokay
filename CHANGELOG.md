@@ -30,10 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `argument-hint` values starting with `[`, which fail YAML parsing and
   silently dropped all frontmatter (including the `skill:` binding) at
   runtime. Values are now quoted.
-- **Codex install docs** — replace the removed `codex plugin install pokayokay`
-  step with `codex plugin marketplace add .` from the pokayokay repository
-  checkout, and clarify that the npm package is the setup CLI rather than the
-  Codex plugin payload.
+- **Codex install path** — installing on Codex takes two steps:
+  `codex plugin marketplace add .` from the repository checkout, then
+  `codex plugin add pokayokay@pokayokay`. Docs previously stopped at the
+  marketplace step, which registers the source without installing the plugin.
+  The setup wizard now runs both steps, and install detection requires the
+  `[plugins."pokayokay@..."]` record in `~/.codex/config.toml` rather than
+  treating a marketplace entry alone as installed. Also clarifies that the npm
+  package is the setup CLI rather than the Codex plugin payload.
 - **Claude marketplace alias** — update install examples and setup code to use
   `pokayokay@pokayokay`, matching the configured marketplace alias.
 - **Codex setup detection** — detect pokayokay through Codex's current

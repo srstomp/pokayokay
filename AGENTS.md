@@ -11,8 +11,10 @@ pokayokay is a development-orchestration plugin built primarily for Claude Code,
 ## Development Commands
 
 ```bash
-# Register this checkout as a Codex plugin marketplace (run from repo root)
+# Register this checkout as a Codex plugin marketplace, then install the
+# plugin from it (run from repo root)
 codex plugin marketplace add .
+codex plugin add pokayokay@pokayokay
 
 # Run the CLI setup wizard locally (wires ohno MCP + Codex hooks)
 npm --prefix cli install
@@ -29,7 +31,7 @@ bash plugins/pokayokay/tests/codex-compatibility.test.sh
 node --test plugins/pokayokay/tests/cli-dual-runtime.test.mjs
 ```
 
-Note: current Codex has no `codex plugin install` or `codex plugin validate` commands — activation goes through `codex plugin marketplace add`, which stores the entry in `~/.codex/config.toml` under `[marketplaces.pokayokay]`.
+Note: Codex installs in two steps — `codex plugin marketplace add` registers the source under `[marketplaces.pokayokay]` in `~/.codex/config.toml`, and `codex plugin add pokayokay@pokayokay` installs the plugin (recorded under `[plugins."pokayokay@pokayokay"]`). The marketplace step alone does not install anything. The command is `add`, not `install`, and there is no `codex plugin validate`.
 
 ## Architecture
 

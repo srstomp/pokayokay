@@ -178,8 +178,13 @@ console.log('Test 9: installPlugin reports Codex hook bridge scope');
   const pluginStepSource = readFileSync(new URL('../../../cli/src/steps/plugin.js', import.meta.url), 'utf8');
   assert.match(
     pluginStepSource,
-    /installedScopes\.push\('Codex marketplace', 'Codex hook bridge'\)/,
-    'Codex install summary should include both marketplace and hook bridge work'
+    /installedScopes\.push\('Codex marketplace', 'Codex plugin', 'Codex hook bridge'\)/,
+    'Codex install summary should include marketplace, plugin add, and hook bridge work'
+  );
+  assert.match(
+    pluginStepSource,
+    /\['plugin', 'add', 'pokayokay@pokayokay'\]/,
+    'Codex install must run `codex plugin add` after registering the marketplace'
   );
   assert.match(pluginStepSource, /Failed to complete Codex setup/);
   assert.doesNotMatch(pluginStepSource, /Failed to write Codex marketplace entry/);

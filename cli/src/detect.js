@@ -38,6 +38,7 @@ function detectClaudePluginInstalled() {
  */
 function detectCodexPluginInstalled() {
   const globalPaths = [
+    join(homedir(), '.codex', 'plugins', 'cache', 'pokayokay', 'pokayokay'),
     join(homedir(), '.codex', 'plugins', 'installed', 'pokayokay'),
     join(homedir(), 'plugins', 'pokayokay', '.codex-plugin', 'plugin.json')
   ];
@@ -48,11 +49,14 @@ function detectCodexPluginInstalled() {
     }
   }
 
-  // Current Codex stores configured marketplaces in ~/.codex/config.toml.
+  // Current Codex records installed plugins in ~/.codex/config.toml as
+  // [plugins."pokayokay@<marketplace>"]. A [marketplaces.pokayokay] entry alone
+  // means the marketplace was registered but `codex plugin add` has not run —
+  // report not installed so setup completes the missing step.
   const codexConfigPath = getCodexConfigPath();
   if (existsSync(codexConfigPath)) {
     const content = readFileSync(codexConfigPath, 'utf-8');
-    if (/^\[marketplaces\."?pokayokay"?\]\s*$/m.test(content)) {
+    if (/^\[plugins\."pokayokay@/m.test(content)) {
       return { installed: true, scope: 'global', path: codexConfigPath };
     }
   }

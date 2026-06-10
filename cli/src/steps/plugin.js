@@ -83,6 +83,19 @@ async function ensureCodexMarketplaceEntry() {
 }
 
 /**
+ * Registering a marketplace only makes the plugin available — it still has to
+ * be installed from the marketplace snapshot. Re-running on an existing
+ * install is a no-op for current Codex.
+ */
+async function ensureCodexPluginAdded() {
+  const addResult = await execute('codex', ['plugin', 'add', 'pokayokay@pokayokay']);
+  if (!addResult.success) {
+    const output = [addResult.stderr, addResult.stdout].filter(Boolean).join('\n').trim();
+    throw new Error(output || 'codex plugin add pokayokay@pokayokay failed');
+  }
+}
+
+/**
  * Step 1: Install pokayokay plugin
  * @param {object} env - Environment state
  * @returns {Promise<{success: boolean, scope: string|null}>}
@@ -179,6 +192,7 @@ export async function installPlugin(env) {
   if (codexWorkPending) {
     try {
       const marketplaceRoot = await ensureCodexMarketplaceEntry();
+      await ensureCodexPluginAdded();
       const pluginPath = locatePluginSource();
       if (!pluginPath) {
         throw new Error('Could not find the pokayokay plugin source for Codex hook wiring');
@@ -186,8 +200,9 @@ export async function installPlugin(env) {
       const configPath = getCodexConfigPath();
       writeCodexHookBridgeConfig(configPath, pluginPath);
       console.log(chalk.green(`  ✓ Codex marketplace added from ${marketplaceRoot}`));
+      console.log(chalk.green(`  ✓ Codex plugin installed (pokayokay@pokayokay)`));
       console.log(chalk.green(`  ✓ Codex hook bridge wired in ${configPath}`));
-      installedScopes.push('Codex marketplace', 'Codex hook bridge');
+      installedScopes.push('Codex marketplace', 'Codex plugin', 'Codex hook bridge');
     } catch (err) {
       console.log(chalk.red(`  ✗ Failed to complete Codex setup:\n    ${err.message.replace(/\n/g, '\n    ')}`));
       // If Claude was already installed in this run, keep that progress; only
