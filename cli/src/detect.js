@@ -13,7 +13,8 @@ function detectClaudePluginInstalled() {
   // Check global paths
   const globalPaths = [
     join(homedir(), '.claude', 'plugins', 'installed', 'pokayokay'),
-    join(homedir(), '.claude', 'plugins', 'marketplaces', 'srstomp-pokayokay', 'plugins', 'pokayokay')
+    join(homedir(), '.claude', 'plugins', 'marketplaces', 'srstomp-pokayokay', 'plugins', 'pokayokay'),
+    join(homedir(), '.claude', 'plugins', 'cache', 'pokayokay', 'pokayokay')
   ];
 
   for (const p of globalPaths) {
@@ -47,9 +48,17 @@ function detectCodexPluginInstalled() {
     }
   }
 
-  // Setup writes a marketplace entry to ~/.agents/plugins/marketplace.json.
-  // Treat presence of the pokayokay entry as "installed" so doctor/setup
-  // do not repeatedly report Codex as not installed after a successful run.
+  // Current Codex stores configured marketplaces in ~/.codex/config.toml.
+  const codexConfigPath = getCodexConfigPath();
+  if (existsSync(codexConfigPath)) {
+    const content = readFileSync(codexConfigPath, 'utf-8');
+    if (/^\[marketplaces\."?pokayokay"?\]\s*$/m.test(content)) {
+      return { installed: true, scope: 'global', path: codexConfigPath };
+    }
+  }
+
+  // Legacy setup wrote a marketplace entry to ~/.agents/plugins/marketplace.json.
+  // Keep recognizing it so doctor/setup do not regress existing users.
   const marketplacePath = join(homedir(), '.agents', 'plugins', 'marketplace.json');
   if (existsSync(marketplacePath)) {
     try {

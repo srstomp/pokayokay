@@ -942,16 +942,18 @@ Ensure the plugin is installed for your active runtime.
 claude plugin list
 # If not listed:
 claude plugin marketplace add srstomp/pokayokay
-claude plugin install pokayokay@srstomp-pokayokay
+claude plugin install pokayokay@pokayokay
 ```
 
 **Codex** (or to set up both runtimes at once):
 ```bash
-# Re-run the wizard from a checkout of the pokayokay repo
+# Current Codex activates plugins by adding a marketplace from the repo checkout.
 git clone https://github.com/srstomp/pokayokay && cd pokayokay
-npx pokayokay
-# Then activate in Codex:
-codex plugin install pokayokay
+codex plugin marketplace add .
+
+# Optional: run the local setup wizard to wire ohno MCP and hooks.
+npm --prefix cli install
+node cli/bin/cli.js
 ```
 
 ### Session context lost

@@ -30,14 +30,24 @@
 
 ## Installation
 
-The easiest way to install is with the setup wizard:
+The setup wizard is the easiest path for Claude Code from npm:
 
 ```bash
 npx pokayokay
 ```
 
-This interactive wizard will:
-1. Install the pokayokay plugin for Claude Code, Codex, or both
+For current Codex support, run the setup wizard from the repository checkout so
+Codex can use that checkout as the marketplace source:
+
+```bash
+cd ~/Projects/stevestomp/pokayokay
+npm --prefix cli install
+node cli/bin/cli.js
+```
+
+The public npm package is the setup CLI and does not contain the Codex plugin
+payload. The local setup wizard will:
+1. Install or register the pokayokay plugin for Claude Code, Codex, or both
 2. Configure the ohno MCP server
 3. Initialize ohno in your project
 4. Wire runtime hooks where supported
@@ -57,31 +67,36 @@ Claude Code:
 claude plugin marketplace add srstomp/pokayokay
 
 # 2. Install the plugin
-claude plugin install pokayokay@srstomp-pokayokay
+claude plugin install pokayokay@pokayokay
 ```
 
 Or from inside Claude Code REPL:
 
 ```
 /plugin marketplace add srstomp/pokayokay
-/plugin install pokayokay@srstomp-pokayokay
+/plugin install pokayokay@pokayokay
 ```
 
 Codex:
 
 ```bash
-# From this repository, create a local Codex marketplace entry and wire hooks.
-npx pokayokay
+# Current Codex activates plugins by adding a marketplace.
+# Run this from the pokayokay repository checkout:
+cd ~/Projects/stevestomp/pokayokay
+codex plugin marketplace add .
 
-# Then activate the plugin in Codex.
-codex plugin install pokayokay
+# Optional: run the local setup wizard to wire ohno MCP and hooks.
+npm --prefix cli install
+node cli/bin/cli.js
 ```
 
-The Codex setup writes a local marketplace entry to
-`~/.agents/plugins/marketplace.json` and adds a pokayokay-owned hook block to
-`~/.codex/config.toml`. The hook block enables `codex_hooks = true`, routes
-tool lifecycle events to `hooks/actions/bridge.py`, and adds conservative
-`PermissionRequest` approval handling.
+Codex stores the marketplace entry in `~/.codex/config.toml` under
+`[marketplaces.pokayokay]`. Current Codex does not have a
+`codex plugin install` command. The local setup wizard adds the same marketplace
+entry and adds a pokayokay-owned hook block to `~/.codex/config.toml`. The hook
+block enables `codex_hooks = true`, routes tool lifecycle events to
+`hooks/actions/bridge.py`, and adds conservative `PermissionRequest` approval
+handling.
 
 #### Required: ohno MCP Server
 
@@ -520,8 +535,9 @@ git clone https://github.com/srstomp/pokayokay.git
 claude --plugin-dir ./plugins/pokayokay
 
 # Codex local marketplace development
-npx pokayokay
-codex plugin install pokayokay
+codex plugin marketplace add .
+npm --prefix cli install
+node cli/bin/cli.js
 ```
 
 Useful checks while developing:

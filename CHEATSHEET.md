@@ -2,12 +2,16 @@
 
 ## Setup
 ```bash
-# Recommended: interactive wizard for Claude Code, Codex, or both
+# Recommended: interactive wizard for Claude Code
 npx pokayokay
 
 # Or manually for Claude Code:
 claude plugin marketplace add srstomp/pokayokay
-claude plugin install pokayokay@srstomp-pokayokay
+claude plugin install pokayokay@pokayokay
+
+# Codex: add the repository checkout as a marketplace
+cd ~/Projects/stevestomp/pokayokay
+codex plugin marketplace add .
 
 # Initialize task management
 npx @stevestomp/ohno-cli init
