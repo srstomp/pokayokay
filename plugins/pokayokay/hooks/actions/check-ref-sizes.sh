@@ -52,21 +52,26 @@ if [ -z "$FILES" ]; then
       # `git add <paths>`: gate reference files named in the command, either
       # by full path or via any parent directory (`git add skills/foo` stages
       # everything beneath it, so a contained ref file must be checked too).
-      # Over-matching only widens the size check, never skips it.
+      # Each probe must appear as a COMPLETE argument — bounded by start/
+      # whitespace/quote/`=` before and optional `/` plus whitespace/quote/end
+      # after — so `skills/demo-other` or a deeper sibling file under demo/
+      # never matches the demo/ probe (a false block would deadlock commits
+      # that don't stage the oversized ref at all).
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
       FILES=""
+      B_PRE='(^|[[:space:]"'"'"'=])'
+      B_POST='/?([[:space:]"'"'"']|$)'
       while IFS= read -r candidate; do
         [ -n "$candidate" ] || continue
         probe="$candidate"
         while [ -n "$probe" ]; do
-          case "$GIT_COMMAND" in
-            *"$probe"*)
-              FILES="${FILES}${FILES:+$NL}${candidate}"
-              break
-              ;;
-          esac
+          esc=$(printf '%s' "$probe" | sed 's/[][\.*^$()+?{|]/\\&/g')
+          if printf '%s' "$GIT_COMMAND" | grep -qE "${B_PRE}${esc}${B_POST}"; then
+            FILES="${FILES}${FILES:+$NL}${candidate}"
+            break
+          fi
           parent="${probe%/*}"
           [ "$parent" = "$probe" ] && break
           probe="$parent"

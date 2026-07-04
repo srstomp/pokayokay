@@ -131,6 +131,24 @@ DIR_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/
 assert_deny "$DIR_OUTPUT"
 echo "  PASS: directory add gates the contained oversized reference"
 
+echo "Test 5e: sibling directory with shared prefix does not false-block"
+SIBLING_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/pokayokay/skills/demo-other && git commit -m \"sib\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_not_blocked "$SIBLING_OUTPUT"
+echo "  PASS: demo-other add does not match the demo/ probe"
+
+echo "Test 5f: adding a different file under references/ does not false-block"
+OTHERFILE_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/pokayokay/skills/demo/references/other.md && git commit -m \"other\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_not_blocked "$OTHERFILE_OUTPUT"
+echo "  PASS: sibling file add does not gate the unrelated oversized ref"
+
+echo "Test 5g: trailing-slash directory add still gates the contained ref"
+SLASH_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/pokayokay/skills/demo/ && git commit -m \"dirslash\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$SLASH_OUTPUT"
+echo "  PASS: trailing-slash directory add gates the contained oversized reference"
+
 echo "Test 6: advisory failures (lint exit 1) do not block the commit"
 # Remove the violation entirely and stage a package.json whose lint fails.
 rm -f "$REF_DIR/big-ref.md"
