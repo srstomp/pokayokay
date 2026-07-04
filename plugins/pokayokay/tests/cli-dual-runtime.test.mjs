@@ -133,6 +133,14 @@ console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
     assert.ok(permissionRequestBlock, 'PermissionRequest block should exist');
     assert.match(permissionRequestBlock[0], /matcher = "Bash"/);
     assert.doesNotMatch(permissionRequestBlock[0], /matcher = "Bash\|apply_patch\|Edit\|Write"/);
+    const postToolUseBlock = result.match(/\[\[hooks\.PostToolUse\]\][\s\S]*?(?=\n\n|\n# END pokayokay hooks|$)/);
+    assert.ok(postToolUseBlock, 'PostToolUse block should exist');
+    assert.match(
+      postToolUseBlock[0],
+      /matcher = "Bash\|apply_patch\|Edit\|Write\|mcp__\(plugin_\[A-Za-z0-9_-\]\+_\)\?ohno__\.\*"/,
+      'PostToolUse matcher must cover plugin-scoped ohno tool names (matches plugins/pokayokay/hooks.json)'
+    );
+    assert.match(postToolUseBlock[0], /timeout = 450/, 'PostToolUse timeout must cover story-boundary action chains');
     console.log('  PASS: Codex hook wiring is appended once and preserves config');
   } finally {
     rmSync(hooksDir, { recursive: true, force: true });
