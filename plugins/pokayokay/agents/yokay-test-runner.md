@@ -3,6 +3,7 @@ name: yokay-test-runner
 description: Test execution specialist. Runs test suites and reports failures concisely. Use after implementation changes, before commits, or when verifying fixes.
 tools: Bash, Read, Grep
 model: haiku
+permissionMode: bypassPermissions
 color: green
 ---
 
@@ -123,16 +124,12 @@ All tests passing.
 [error message/stack trace - abbreviated]
 ```
 
-**Likely Cause**: [Brief analysis]
-
 ---
 
 ### 2. [Next failure...]
 
 ## Summary
 - X tests failed
-- Common pattern: [if multiple failures share a cause]
-- Suggested fix: [if obvious]
 ```
 
 ## Guidelines
@@ -140,18 +137,6 @@ All tests passing.
 1. **Run all tests first**: Get the full picture
 2. **Isolate failures**: Re-run specific failing tests for detail
 3. **Be concise**: Only report failures, not all passing tests
-4. **Analyze patterns**: Note if multiple failures share a root cause
-5. **Suggest fixes**: If the cause is obvious, mention it
-
-## Common Test Issues
-
-| Symptom | Likely Cause |
-|---------|--------------|
-| Timeout | Async not awaited, infinite loop |
-| Import error | Missing dependency, wrong path |
-| Type error | Interface changed, missing props |
-| Assertion failed | Logic bug, changed behavior |
-| Connection refused | Service not running, wrong port |
 
 ## Running Tests for Specific Changes
 

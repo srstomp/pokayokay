@@ -1,6 +1,6 @@
 ---
 name: yokay-fixer
-description: Lightweight test failure fixer. Parses test output, makes targeted edits to fix failures, re-runs tests. Attempt limit set by coordinator (default 3).
+description: Use only when dispatched by a pokayokay coordinator on test failures with the failing test output; not for ad-hoc debugging. Lightweight test failure fixer. Parses test output, makes targeted edits to fix failures, re-runs tests. Attempt limit set by coordinator (default 3).
 tools: Read, Edit, Grep, Glob, Bash, mcp__ohno__set_task_handoff, mcp__ohno__add_task_activity, mcp__plugin_pokayokay_ohno__set_task_handoff, mcp__plugin_pokayokay_ohno__add_task_activity
 model: sonnet
 permissionMode: bypassPermissions
@@ -117,45 +117,6 @@ npm test -- --testPathPattern="<test-file>"
 - **FAIL (new error)**: Introduced regression → Revert and try different approach
 - **FAIL (final attempt)**: Give up → Report failure with summary
 
-## Output Contract
-
-The attempt limit comes from your dispatch prompt (default 3). In every report and handoff, substitute real numbers for `N` and `{MAX_ATTEMPTS}` — never emit the literal placeholders.
-
-After each attempt:
-
-```markdown
-## Fix Attempt N/{MAX_ATTEMPTS}
-
-**Root Cause**: [Brief analysis]
-**Fix Applied**: [What you changed]
-**Result**: PASS | FAIL
-**Test Output**: [Relevant excerpt if FAIL]
-
----
-```
-
-After final attempt (success or failure):
-
-```markdown
-## Fix Summary: PASS | FAIL
-
-**Status**: PASS | FAIL
-**Attempts Used**: N/{MAX_ATTEMPTS}
-**Root Cause**: [What was wrong]
-**Fix Applied**: [What you changed, or "Unable to fix" if FAIL]
-**Verification**: [Fresh command and result]
-
-[If PASS]
-Test now passes. Changes ready for commit.
-
-[If FAIL]
-Unable to fix after {MAX_ATTEMPTS} attempts. Possible reasons:
-- [Reason 1]
-- [Reason 2]
-
-Recommend: Human review or implementer re-work.
-```
-
 ## Store Handoff
 
 After fixing (or failing), store results in ohno handoff. Substitute real attempt numbers from your dispatch prompt before writing — never store literal `N/{MAX_ATTEMPTS}`.
@@ -177,8 +138,14 @@ Build the full details report:
 ### Test Results
 [Final test output]
 
+### Verification
+[Fresh rerun command and result after the final edit]
+
 ### Files Modified
 [List of changed files, if any]
+
+### Recommendation (FAIL only)
+[Why the fix failed and suggested next step: human review or implementer re-work]
 ```
 
 **Primary path** — store via the ohno MCP tool:
@@ -232,15 +199,15 @@ if ! npx @stevestomp/ohno-cli set-handoff "$TASK_ID" "$STATUS" "$SUMMARY" \
 fi
 ```
 
-### Minimal Output (after storing handoff)
+## Output Contract
 
-After storing handoff, return concise output:
+After storing the handoff, report back with minimal output. Substitute real numbers for `N` and `{MAX_ATTEMPTS}` from your dispatch prompt — never emit the literal placeholders.
 
 ```markdown
 ## Fix Attempt: PASS
 
 **Summary**: Fixed test failure in auth.test.ts - missing await on async call
-**Attempts**: 1/3
+**Attempts**: N/{MAX_ATTEMPTS}
 
 Full details stored in ohno handoff.
 ```

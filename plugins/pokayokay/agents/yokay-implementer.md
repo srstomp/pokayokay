@@ -1,6 +1,6 @@
 ---
 name: yokay-implementer
-description: Implements a single task with fresh context. Receives full task details from coordinator, implements following TDD, self-reviews, commits, and reports back.
+description: Use only when dispatched by a pokayokay coordinator (/work, /fix, /hotfix) with a filled implementer-prompt template; not for ad-hoc edits. Implements a single task with AC-first TDD and fresh context. Receives full task details from coordinator, implements, self-reviews, commits, and reports back.
 tools: Read, Write, Edit, Grep, Glob, Bash, NotebookEdit, mcp__ohno__set_task_handoff, mcp__ohno__update_task_status, mcp__ohno__update_task_wip, mcp__ohno__set_blocker, mcp__ohno__add_task_activity, mcp__plugin_pokayokay_ohno__set_task_handoff, mcp__plugin_pokayokay_ohno__update_task_status, mcp__plugin_pokayokay_ohno__update_task_wip, mcp__plugin_pokayokay_ohno__set_blocker, mcp__plugin_pokayokay_ohno__add_task_activity
 model: inherit
 permissionMode: bypassPermissions

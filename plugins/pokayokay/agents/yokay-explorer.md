@@ -1,7 +1,7 @@
 ---
 name: yokay-explorer
 description: Fast codebase exploration for understanding structure, patterns, and architecture. Use proactively for research tasks, planning phases, or when you need to understand how something works before implementing.
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob, LS, Bash
 model: haiku
 permissionMode: plan
 color: blue
