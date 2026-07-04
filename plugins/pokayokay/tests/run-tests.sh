@@ -8,6 +8,17 @@
 
 set -u
 
+# Prerequisites: several bridge/WIP tests need jq, and cli-*.test.mjs need
+# cli/node_modules (npm ci --prefix cli). Fail loudly, not mysteriously.
+missing=""
+command -v jq >/dev/null 2>&1 || missing="$missing jq"
+command -v python3 >/dev/null 2>&1 || missing="$missing python3"
+command -v node >/dev/null 2>&1 || missing="$missing node"
+if [ -n "$missing" ]; then
+  echo "ERROR: missing required tools:$missing" >&2
+  exit 1
+fi
+
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 
