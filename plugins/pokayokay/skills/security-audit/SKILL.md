@@ -23,7 +23,7 @@ Systematic security review for application code, dependencies, and configuration
 ## When NOT to Use
 
 - **Designing new auth flows** — Use `api-design` for designing OAuth2/JWT endpoints from scratch
-- **Performance issues** — Use `performance-optimization` even if caused by auth overhead
+- **Performance issues** — Use `observability` to diagnose latency and resource problems, even if caused by auth overhead
 - **CI/CD pipeline security** — Use `ci-cd` for pipeline hardening (secret management, permissions)
 
 ## Key Principles

@@ -336,7 +336,7 @@ For stakeholder communication (< 100 words):
 ## Spike Summary: [Title]
 
 **Question**: [One line]
-**Answer**: [GO/NO-GO/PIVOT] — [One sentence]
+**Answer**: [GO/NO-GO/PIVOT/MORE-INFO] — [One sentence]
 **Key Finding**: [Most important discovery]
 **Next Step**: [Immediate action]
 **Full Report**: `.claude/spikes/[name].md`

@@ -99,117 +99,51 @@ git log --name-only --format="" --since="$SINCE" | \
     sort | uniq -c | sort -rn | head -20
 ```
 
-## Database Analysis
+## Task Analysis (ohno)
+
+Task state lives in ohno (`.ohno/`) — query it via the CLI's global `--json` flag or MCP tools; never read ohno's internal database directly.
 
 ### Task Completion Metrics
 
-```sql
--- task-metrics.sql
--- Run against .claude/tasks.db
+```bash
+#!/bin/bash
+# task-metrics.sh - Completion stats from ohno
 
--- Overall completion stats
-SELECT 
-    COUNT(*) as total_tasks,
-    SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed,
-    SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-    SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
-    ROUND(100.0 * SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) / COUNT(*), 1) as completion_pct
-FROM tasks;
+npx @stevestomp/ohno-cli tasks --json | node -e '
+const tasks = JSON.parse(require("fs").readFileSync(0, "utf8"));
 
--- Completion by task type
-SELECT 
-    task_type,
-    COUNT(*) as total,
-    SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed,
-    ROUND(100.0 * SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) / COUNT(*), 1) as pct
-FROM tasks
-GROUP BY task_type
-ORDER BY total DESC;
+// Overall completion stats
+const count = s => tasks.filter(t => t.status === s).length;
+console.log("=== Overall ===");
+console.log(`Total: ${tasks.length}`);
+console.log(`Done: ${count("done")}, In progress: ${count("in_progress")}, Blocked: ${count("blocked")}`);
+console.log(`Completion: ${(100 * count("done") / (tasks.length || 1)).toFixed(1)}%`);
 
--- Estimate accuracy by type
-SELECT 
-    task_type,
-    COUNT(*) as tasks,
-    ROUND(AVG(estimate_hours), 1) as avg_estimate,
-    ROUND(AVG(
-        CASE WHEN completed_at IS NOT NULL AND started_at IS NOT NULL
-        THEN (julianday(completed_at) - julianday(started_at)) * 24
-        ELSE NULL END
-    ), 1) as avg_actual,
-    ROUND(
-        AVG(
-            CASE WHEN completed_at IS NOT NULL AND started_at IS NOT NULL
-            THEN (julianday(completed_at) - julianday(started_at)) * 24
-            ELSE NULL END
-        ) / NULLIF(AVG(estimate_hours), 0),
-    2) as accuracy_ratio
-FROM tasks
-WHERE status = 'done'
-GROUP BY task_type;
-
--- Tasks that took longest relative to estimate
-SELECT 
-    id,
-    title,
-    task_type,
-    estimate_hours,
-    ROUND((julianday(completed_at) - julianday(started_at)) * 24, 1) as actual_hours,
-    ROUND(
-        (julianday(completed_at) - julianday(started_at)) * 24 / NULLIF(estimate_hours, 0),
-    1) as ratio
-FROM tasks
-WHERE status = 'done' 
-    AND completed_at IS NOT NULL 
-    AND started_at IS NOT NULL
-ORDER BY ratio DESC
-LIMIT 10;
+// Completion by task type
+console.log("\n=== By Task Type ===");
+const byType = {};
+for (const t of tasks) {
+  const g = (byType[t.task_type] ||= { total: 0, done: 0 });
+  g.total++;
+  if (t.status === "done") g.done++;
+}
+for (const [type, g] of Object.entries(byType)) {
+  console.log(`${type}: ${g.done}/${g.total} (${(100 * g.done / g.total).toFixed(1)}%)`);
+}'
 ```
 
-### Dependency Analysis
+### Blocked Task Analysis
 
-```sql
--- dependency-analysis.sql
-
--- Find tasks that blocked others
-SELECT 
-    t.id,
-    t.title,
-    t.status,
-    COUNT(d.blocked_task_id) as blocks_count
-FROM tasks t
-JOIN dependencies d ON t.id = d.blocker_task_id
-GROUP BY t.id
-ORDER BY blocks_count DESC;
-
--- Find bottleneck paths (tasks with most downstream dependencies)
-WITH RECURSIVE dependency_chain AS (
-    SELECT 
-        blocker_task_id as root,
-        blocked_task_id as task_id,
-        1 as depth
-    FROM dependencies
-    
-    UNION ALL
-    
-    SELECT 
-        dc.root,
-        d.blocked_task_id,
-        dc.depth + 1
-    FROM dependency_chain dc
-    JOIN dependencies d ON dc.task_id = d.blocker_task_id
-    WHERE dc.depth < 10
-)
-SELECT 
-    root,
-    t.title,
-    COUNT(DISTINCT task_id) as downstream_tasks,
-    MAX(depth) as max_chain_length
-FROM dependency_chain dc
-JOIN tasks t ON dc.root = t.id
-GROUP BY root
-ORDER BY downstream_tasks DESC
-LIMIT 10;
+```bash
+# Tasks currently blocked, with reasons
+npx @stevestomp/ohno-cli tasks --json | node -e '
+const tasks = JSON.parse(require("fs").readFileSync(0, "utf8"));
+for (const t of tasks.filter(t => t.status === "blocked")) {
+  console.log(`${t.id}: ${t.title} — ${t.blocked_reason || "no reason recorded"}`);
+}'
 ```
+
+In an MCP session, `mcp__ohno__get_project_status` and `mcp__ohno__get_blocked_tasks` return the same data without shell scripting, and `mcp__ohno__get_task_dependencies` shows which tasks blocked others.
 
 ## Session Log Analysis
 
@@ -464,12 +398,12 @@ echo "## Git Analysis" > "$REPORT_FILE"
 echo >> "$REPORT_FILE"
 ./git-stats.sh "1 week ago" >> "$REPORT_FILE"
 
-# Database analysis
-if [ -f "$CLAUDE_DIR/tasks.db" ]; then
+# Task analysis (ohno)
+if [ -d "$PROJECT_DIR/.ohno" ]; then
     echo >> "$REPORT_FILE"
     echo "## Task Analysis" >> "$REPORT_FILE"
     echo >> "$REPORT_FILE"
-    sqlite3 -header -column "$CLAUDE_DIR/tasks.db" < task-metrics.sql >> "$REPORT_FILE"
+    ./task-metrics.sh >> "$REPORT_FILE"
 fi
 
 # Session analysis

@@ -25,7 +25,7 @@
 
 | Anti-Pattern | Problem | Fix |
 |--------------|---------|-----|
-| Output to random location | Skills can't find | Always use `.claude/` |
+| Output to random location | Skills can't find | Artifacts in `.claude/`, plan state in ohno |
 | No PROJECT.md | No shared context | Always generate PROJECT.md |
 | No skill assignments | Manual routing needed | Assign skills during analysis |
-| Missing features.json | No machine-readable list | Always generate features.json |
+| Plan not persisted | Skills can't find work | Create epic/story/task hierarchy in ohno |

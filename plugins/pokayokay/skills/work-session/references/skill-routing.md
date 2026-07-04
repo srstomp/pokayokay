@@ -33,12 +33,10 @@ ohno task types describe the **nature of work**, not the layer. Route by keyword
 | "API test", "contract test", "integration test", "mock" | testing-strategy |
 | "refactor", "architecture", "structure", "module", "boundary" | architecture-review |
 | "SDK", "library", "package", "npm publish", "extract" | sdk-development |
-| "Figma", "plugin", "design tool" | figma-plugin |
 | "security", "audit", "vulnerability", "CVE", "OWASP", "injection" | security-audit |
-| "performance", "slow", "optimize", "bundle", "cache", "latency" | performance-optimization |
 | "database", "schema", "migration", "query", "index" | database-design |
 | "error", "exception", "error handling", "retry", "fallback" | error-handling |
-| "logging", "metrics", "tracing", "monitoring", "alerting" | observability |
+| "performance", "slow", "latency", "logging", "metrics", "tracing", "monitoring", "alerting" | observability |
 | "CI", "CD", "pipeline", "deploy", "GitHub Actions", "workflow" | ci-cd |
 | "README", "docs", "ADR", "documentation", "user guide" | documentation |
 | "PRD", "requirements", "feature spec", "implementation plan" | planning |

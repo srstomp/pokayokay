@@ -212,7 +212,7 @@ def analyze_progress_patterns(progress_md: str) -> dict:
 **Description**: Adding features not in original spec
 
 **Signals**:
-- Tasks appear that weren't in features.json
+- Tasks appear that weren't in the plan (ohno backlog)
 - Estimates balloon mid-project
 - "While I'm here..." in logs
 

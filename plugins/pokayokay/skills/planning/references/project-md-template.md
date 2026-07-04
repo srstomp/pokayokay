@@ -50,8 +50,7 @@ The most important output — shared context for all skills.
 
 ## Key Files
 - PRD: [path or "uploaded"]
-- Tasks DB: `.claude/tasks.db`
-- Kanban: `.claude/kanban.html`
+- Plan state: ohno (`.ohno/`, via MCP tools / `npx @stevestomp/ohno-cli`)
 
 ## Session Log
 | Date | Session | Completed | Notes |
