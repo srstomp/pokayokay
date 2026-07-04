@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pre-validated approach infeasible.
 - **Test runner + CI** — `tests/run-tests.sh` runs the full shell test suite
   in one command, and a CI workflow runs it on every push.
+- **Machine-parseable review verdicts** — reviewer agents now emit a
+  `VERDICT:` terminal line, and bridge.py parses it robustly (including a
+  `BLOCKED` verdict path) instead of relying on free-form prose.
+- **Dispatch-failure protocol** — four failure classes with a retry-once
+  policy and a `set_blocker` fallback when the retry also fails, plus a
+  one-shot brainstormer dispatch (no open-ended re-brainstorm loops).
+- **Structured parallel-conflict detection** — implementer handoffs report
+  `packages_touched`, which the coordinator unions with the existing
+  file-overlap heuristic when deciding what can run in parallel.
+- **work.md structure tests** — new tests pin the progressive-disclosure
+  extraction and the plugin-qualified dispatch-ID doc contract.
 
 ### Changed
 - **Agent model policy alignment** — agents now follow explicit model tiers:
@@ -23,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   domain reference files removed, `disable-model-invocation` on process
   skills, `allowed-tools` on read-only skills, CSO trigger-style descriptions
   and "When NOT to Use" sections.
+- **Coordinator-supplied review baseline** — reviewers receive an explicit
+  `BASE_COMMIT` from the coordinator and review the working tree against it
+  (working-tree-inclusive diff), with closed `BLOCKED` triggers and
+  mode-aware escalation instead of guessing a baseline.
+- **work.md progressive disclosure** — chain-state details and kaizen
+  review-failure handling extracted to `chain-state.md` and
+  `kaizen-review-failures.md` references, and the duplicated brainstorm-gate
+  text deduplicated, keeping work.md lean.
+- **Spike skill canonicalization** — spike time-box values, report paths, and
+  the decision enum are now canonical and consistent across the skill and its
+  references.
 
 ### Fixed
 - **Hook payload and routing repair** — bridge.py now parses MCP content-block
@@ -36,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suite passes again.
 - **CLI codex and Windows fixes** — corrected Codex install handling and
   Windows path issues in the setup wizard.
+- **Stale pre-ohno references removed** — remaining mentions of the old
+  `tasks.db` / `features.json` state files and dead skill routes are gone;
+  everything now points at ohno-backed task state.
+- **session-review allowed-tools completed** — the session-review skill's
+  `allowed-tools` list now includes every tool the workflow actually uses.
 
 ### Documentation
 - **Hook documentation truth pass** — hook docs (CLAUDE.md flow diagram and
