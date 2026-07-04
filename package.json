@@ -11,6 +11,9 @@
     "development"
   ],
   "author": "Steve Stomp <https://github.com/srstomp>",
+  "scripts": {
+    "test": "bash plugins/pokayokay/tests/run-tests.sh"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18"

@@ -27,8 +27,10 @@ The plugin lives in `plugins/pokayokay/` with four main areas:
 # Run a specific test
 bash plugins/pokayokay/tests/<test-name>.test.sh
 
-# Run all tests
-for test in plugins/pokayokay/tests/*.test.sh; do bash "$test"; done
+# Run all tests (shell + node, with per-test PASS/FAIL summary)
+npm test
+# or directly:
+bash plugins/pokayokay/tests/run-tests.sh
 ```
 
 ### Validating the Plugin

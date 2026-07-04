@@ -21,8 +21,10 @@ node cli/bin/cli.js
 # Run specific shell tests
 bash plugins/pokayokay/tests/<test-name>.test.sh
 
-# Run all shell tests
-for test in plugins/pokayokay/tests/*.test.sh; do bash "$test"; done
+# Run the full test suite (shell + node, per-test PASS/FAIL, non-zero exit on failure)
+npm test
+# or directly:
+bash plugins/pokayokay/tests/run-tests.sh
 ```
 
 ## Architecture
@@ -85,6 +87,20 @@ The `/work`, `/fix`, and `/hotfix` commands use a coordinator pattern that dispa
 14. **yokay-auditor** - L0-L5 completeness scanning (read-only)
 
 Agents are dispatched via the Task tool with `subagent_type` set to the plugin-prefixed agent name, e.g. `pokayokay:yokay-implementer` (the agent filename without `.md`, prefixed with `pokayokay:`).
+
+### Agent Model Policy
+
+Agent frontmatter follows a three-tier model policy:
+
+| Tier | Frontmatter | Agents |
+|------|-------------|--------|
+| Judgment (planning, TDD implementation, adversarial spec review) | `model: inherit` | yokay-planner, yokay-implementer, yokay-spec-reviewer |
+| Mechanical review/scan | `model: sonnet` | yokay-auditor, yokay-brainstormer, yokay-browser-verifier, yokay-design-reviewer, yokay-fixer, yokay-quality-reviewer, yokay-reviewer, yokay-security-scanner, yokay-spike-runner |
+| Bulk scan/exec | `model: haiku` | yokay-explorer, yokay-test-runner |
+
+Judgment agents inherit the session model so the most judgment-critical stages run on the strongest model available — orchestrated `/work` sessions assume a top-tier session model; running them from a weaker session downgrades these agents too. New agents must justify any pin against this table.
+
+Model resolution order: `CLAUDE_CODE_SUBAGENT_MODEL` env var > per-invocation `model` param > frontmatter > session model. The env var is the escape hatch to floor a weak inherited model.
 
 ### CLI (`cli/`)
 
