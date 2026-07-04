@@ -46,5 +46,5 @@ No human checkpoints at all. For overnight/headless runs.
 
 **Requirements:**
 - Must specify scope (`--epic`, `--story`, or `--all`)
-- For true unattended: `claude --headless --dangerously-skip-permissions`
+- For true unattended: `claude -p --dangerously-skip-permissions "/work unattended -n auto --all"`
 - Session chains automatically on context pressure

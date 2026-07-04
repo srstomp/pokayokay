@@ -122,7 +122,7 @@ When a session reaches context limits:
 4. SessionEnd hook spawns or prepares the next session using the active runtime:
    ```bash
    # Claude Code
-   claude --headless --prompt="/work --continue --epic epic-abc123"
+   claude -p "/work --continue --epic epic-abc123"
 
    # Codex
    codex --prompt="/work --continue --epic epic-abc123"
@@ -1937,7 +1937,7 @@ When session ends with remaining work in scope:
 1. SessionEnd hook calls `session-chain.sh`
 2. Script checks remaining ready tasks via ohno
 3. If tasks remain and chain limit not reached:
-   - Spawns/prepares the next session using the active runtime, for example `claude --headless --prompt="/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
+   - Spawns/prepares the next session using the active runtime, for example `claude -p "/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
 4. If chain complete or limit reached:
    - Generates report to `.ohno/reports/chain-{id}-report.md`
    - Notifies via configured method
@@ -2119,7 +2119,7 @@ If you discover a bug while working on a feature:
 
 # Overnight unattended run (NEVER pauses, for headless CLI use)
 # Run with your active runtime's non-interactive mode, for example:
-# claude --headless --dangerously-skip-permissions --prompt="..."
+# claude -p --dangerously-skip-permissions "/work unattended -n auto --all"
 # codex --prompt="..."
 /work unattended -n auto --all
 ```
