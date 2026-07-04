@@ -1482,20 +1482,21 @@ Only runs if spec review passes.
 
 #### Review Failure Hook Integration
 
-When either spec or quality review fails, the post-review-fail hook is invoked to analyze the failure and suggest corrective actions.
+When either spec or quality review fails, `bridge.py` detects the FAIL in the
+reviewer's Task output (PostToolUse) and invokes the post-review-fail hook
+**automatically**. Do NOT run `hooks/post-review-fail.sh` yourself — manual
+invocation risks double execution (duplicate kaizen fix-task suggestions),
+and in consuming projects the script may not exist at all.
 
-**Hook Execution:**
+The bridge resolves the hook from the *project's* `hooks/post-review-fail.sh`
+(so projects can supply their own kaizen wiring). When the script is absent,
+the failure is still tracked locally (recurring-failure detection +
+graduate-rules) and the outcome is `kaizen_action: LOGGED`.
 
-```bash
-# Set environment variables and call hook
-export TASK_ID="<current-task-id>"
-export FAILURE_DETAILS="<review-failure-details>"
-export FAILURE_SOURCE="<spec-review|quality-review>"
-
-./hooks/post-review-fail.sh
-```
-
-The hook analyzes the failure using kaizen and returns JSON with one of three actions:
+The hook result surfaces as hook output context after the reviewer's Task
+call, with a `kaizen_action` of AUTO, SUGGEST, or LOGGED (plus `fix_task`
+details when available). The coordinator's only job is to act on that
+outcome:
 
 **1. AUTO Action (High Confidence)**
 
@@ -1591,12 +1592,14 @@ Review FAIL
      │
      ▼
 ┌─────────────────┐
-│ Call post-      │
-│ review-fail.sh  │
+│ bridge.py runs  │
+│ post-review-fail│
+│ (automatic)     │
 └────────┬────────┘
          │
          ▼
-    Parse JSON
+ Read kaizen_action
+ from hook output
          │
     ┌────┴─────┬─────────────┐
     │          │             │
@@ -1824,31 +1827,22 @@ Get next task and continue until:
 
 Hooks execute automatically at lifecycle points:
 
-- **pre-session**: Verifies clean git state
-- **pre-task**: Checks for blockers
-- **post-task**: Syncs ohno, commits changes (mode-dependent)
-- **post-story**: Runs tests, mini-audit
-- **post-session**: Final sync, summary
+- **pre-session**: Verifies clean git state (plus pre-flight in unattended mode, crash recovery)
+- **pre-task**: Checks blockers, suggests skills, sets up worktree
+- **post-task**: Syncs ohno, commits, detects spikes, captures knowledge
+- **post-story**: Runs tests, story integration, audit gate
+- **post-session**: Final sync, session summary, memory curation, session chaining
 
-Hooks guarantee sync and commit execution (mode-dependent).
+Hooks run identically in **every** work mode — mode controls pause points,
+not hook behavior. Sync and commit are guaranteed on every task completion.
 
 ### Customizing Hooks
 
-Create `.yokay/hooks.yaml` in your project:
+There is no per-project hook configuration file — hook routing and action
+lists are code-controlled in the plugin's `hooks/actions/bridge.py`. Do not
+create `.yokay/hooks.yaml` or similar; nothing reads it.
 
-```yaml
-hooks:
-  post-task:
-    actions:
-      - sync
-      - commit
-      - my-custom-action
-
-  pre-commit:
-    enabled: false  # Disable linting
-```
-
-See `hooks/HOOKS.md` for full configuration.
+See `hooks/HOOKS.md` for full documentation.
 
 ## Task Completion with Worktree
 

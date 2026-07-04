@@ -478,6 +478,7 @@ pokayokay includes a **guaranteed hook system** that executes actions at key lif
 | post-epic | Epic completes | Audit gate |
 | on-blocker | Task blocked | Notification |
 | pre-commit | Before git commit | Lint, check ref sizes |
+| post-command | After audit commands | Verify tasks created |
 | permission-request | Codex approval prompt | Allow obvious read-only/test/ohno commands, deny destructive/deploy commands |
 | post-session | Session ends | Sync, session summary, curate memory, session chain |
 

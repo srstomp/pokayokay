@@ -50,8 +50,8 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | on-blocker | Task blocked | notification |
 | pre-commit | Before commit | lint (advisory), check-ref-sizes (blocking) |
 | post-session | Session end | sync, session-summary, curate-memory, session-chain |
-| post-command | After audit commands | verify-tasks |
-| post-review | Review FAIL | graduate-rules (failure tracking) |
+| post-command | Audit skill completes (model-invoked Skill tool only) | verify-tasks |
+| post-review | Reviewer Task reports FAIL | failure tracking, graduate-rules, post-review-fail (if present in project) |
 | file-change | Edit/Write | WIP tracking |
 | bash-complete | Bash execution | WIP tracking (tests, commits, errors) |
 
@@ -111,15 +111,22 @@ Continuing despite warnings.
 
 ## Configuration
 
-Hook behavior is controlled by `bridge.py` and the `defaults.yaml` reference. Custom hook actions can be added as shell scripts in `hooks/actions/`.
+Hook routing and action lists are hardcoded in `bridge.py` — there is no YAML
+or per-project hook configuration file (nothing reads `.yokay/hooks.yaml`).
+Shell scripts in `hooks/actions/` run only when `bridge.py` explicitly
+dispatches them; adding a new script to the directory does not wire it to any
+hook. The one configurable area is session chaining (`.pokayokay/config.json`,
+legacy `.claude/pokayokay.json`).
 
 ## Mode Behavior
 
-| Hook | supervised | semi-auto | auto |
-|------|------------|-----------|------------|
-| post-task | sync | sync, commit | sync, commit, test |
-| post-story | — | test, audit | test, audit |
-| post-epic | audit | audit | audit, docs |
+Hooks run identically in **all** work modes. Post-task actions (sync, commit,
+detect-spike, capture-knowledge) execute on every task completion regardless
+of mode — supervised mode does **not** suppress auto-commit. Mode controls
+only:
+
+- **Pause points**: supervised pauses after every task; semi-auto at story/epic boundaries; auto at epic boundaries; unattended never pauses.
+- **Pre-flight**: the pre-session pre-flight check runs only in unattended mode.
 
 ## Intelligent Hooks
 
@@ -163,22 +170,30 @@ Outputs warnings when thresholds not met, suggests `/pokayokay:audit` for full a
 
 ## Post-Command Hooks
 
-Post-command hooks verify that audit commands created expected tasks. They fire after specific commands complete.
+Post-command hooks verify that audit skills created expected tasks.
 
-### Configured Commands
+**Trigger caveat**: the hook fires on the PostToolUse `Skill` event, which is
+emitted only when Claude itself invokes the skill via the Skill tool
+(model-invoked). When the *user* types the slash command (e.g.
+`/pokayokay:security auth`), Claude Code expands it into the prompt without a
+Skill tool call, so no PostToolUse event fires and this verification does not
+run. (A UserPromptSubmit-marker design could cover user-typed commands in the
+future; it is not implemented.)
 
-| Command | Prefix | Trigger |
-|---------|--------|---------|
-| `/pokayokay:security` | `Security:` | Always |
-| `/pokayokay:test --audit` | `Test:` | With `--audit` flag |
-| `/pokayokay:observe --audit` | `Observability:` | With `--audit` flag |
-| `/pokayokay:arch --audit` | `Arch:` | With `--audit` flag |
+### Configured Skills
+
+| Skill | Prefix | Trigger |
+|-------|--------|---------|
+| `pokayokay:security` | `Security:` | Always (when model-invoked) |
+| `pokayokay:test` | `Test:` | With `--audit` flag |
+| `pokayokay:observe` | `Observability:` | With `--audit` flag |
+| `pokayokay:arch` | `Arch:` | With `--audit` flag |
 
 ### How It Works
 
-1. Command runs (e.g., `/pokayokay:security auth`)
-2. Command creates tasks for findings via ohno MCP `create_task`
-3. After command completes, `post-command` hook fires
+1. Claude invokes an audit skill via the Skill tool (e.g., `pokayokay:security` with args `auth`)
+2. The skill creates tasks for findings via ohno MCP `create_task`
+3. When the Skill tool call completes, the `post-command` hook fires
 4. `verify-tasks.sh` checks if tasks with expected prefix exist
 5. Warns if no tasks found (may indicate missed task creation)
 
