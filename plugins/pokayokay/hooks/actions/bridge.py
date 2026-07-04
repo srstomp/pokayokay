@@ -1345,12 +1345,15 @@ def handle_pre_commit(tool_input: dict) -> dict:
     # environment assignments (`FOO=bar git commit`), flag-style global
     # options (`git --no-pager commit`), and the argument-taking `-C <path>` /
     # `-c <name=value>` global options (`git -C dir commit`). Other
-    # option-with-argument forms remain unmatched — a conscious tightening
-    # vs the old substring check.
+    # option-with-argument forms (and attached-argument `-Cdir`) remain
+    # unmatched — a conscious tightening vs the old substring check.
+    # The option alternatives are disjoint on the character after `-` so the
+    # repetition cannot backtrack exponentially (py/redos): `-C`/`-c` only
+    # match with a separate argument, everything else only via the second arm.
     git_write_pattern = (
         r'(?:^|&&|\|\||;|\||\n|\()\s*'
         r'(?:\w+=\S*\s+)*'
-        r'git(?:\s+(?:-[Cc]\s+\S+|-\S+))*'
+        r'git(?:\s+-(?:[Cc]\s+\S+|[^Cc\s]\S*))*'
         r'\s+(?:commit|add)\b'
     )
     if not re.search(git_write_pattern, command):
