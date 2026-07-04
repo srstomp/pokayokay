@@ -15,14 +15,8 @@ import shlex
 import subprocess
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional
-
-
-class DangerousValueError(ValueError):
-    """Raised when an environment value contains dangerous shell characters."""
-    pass
 
 
 # Shell metacharacters that could enable command injection
@@ -55,17 +49,17 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "story-integration": 120,
 }
 
-# Rate limiting configuration
-RATE_LIMIT_MAX_EXECUTIONS = 10  # Max executions per hook per minute
-RATE_LIMIT_WINDOW_SECONDS = 60
-
-# Track hook executions for rate limiting (in-memory, resets on process restart)
-_hook_executions: Dict[str, List[float]] = defaultdict(list)
-
-# WIP tracking (in-memory, resets on process restart)
-_tracked_files: set = set()
-_last_wip_update: float = 0
+# WIP tracking debounce interval. The bridge runs as a fresh process per hook
+# event, so debounce state is persisted to .pokayokay/wip-state.json (see
+# load_wip_state / save_wip_state) rather than kept in module globals.
 WIP_UPDATE_INTERVAL = 5  # seconds - don't update more than every 5 seconds
+
+# Action script exit-code contract (documented in HOOKS.md):
+#   0                        -> "success"
+#   2                        -> "error"   (blocking: handle_pre_commit denies the tool call)
+#   any other nonzero (incl. 1) -> "warning" (advisory, surfaced but never blocks)
+# Script *execution* failures (unspawnable script, etc.) map to "warning" so a
+# chmod-broken hook script cannot accidentally block every commit.
 
 # Review failure tracking
 REVIEW_FAILURE_THRESHOLD = 3  # Write to memory after this many occurrences
@@ -74,37 +68,32 @@ REVIEW_FAILURE_MAX_ENTRIES = 50  # Max entries in recurring-failures.md
 
 def sanitize_env_value(value: str, field_name: str = "unknown") -> str:
     """
-    Sanitize environment variable values to prevent command injection.
+    Sanitize environment variable values passed to hook action scripts.
 
-    Removes non-printable characters and rejects values containing shell
-    metacharacters that could enable command injection in shell scripts.
+    Removes non-printable characters and neutralizes shell metacharacters by
+    replacing them with spaces (matching the FAILURE_DETAILS handling in
+    handle_review_complete). Values are passed via subprocess ``env=`` and
+    never interpolated into a shell command line by the bridge, so this is
+    defense-in-depth for scripts that mishandle quoting. Neutralizing instead
+    of rejecting matters: free-text fields like TASK_NOTES routinely contain
+    parentheses/backticks/``$``, and rejecting them would silently disable
+    every post-task hook, including auto-commit.
 
     Args:
         value: The environment variable value to sanitize
-        field_name: Name of the field for error messages
+        field_name: Name of the field (kept for call-site readability)
 
     Returns:
-        Sanitized string with only safe printable characters
-
-    Raises:
-        DangerousValueError: If value contains shell metacharacters
+        Sanitized string with metacharacters replaced by spaces
     """
     if not isinstance(value, str):
-        return str(value)
+        value = str(value)
 
     # Remove non-printable characters (except common whitespace)
     sanitized = ''.join(c for c in value if c.isprintable() or c in (' ', '\t'))
 
-    # Check for shell metacharacters
-    dangerous_found = [c for c in sanitized if c in SHELL_METACHARACTERS]
-    if dangerous_found:
-        # Log which characters were found (without exposing full value)
-        chars = ', '.join(repr(c) for c in set(dangerous_found))
-        raise DangerousValueError(
-            f"Field '{field_name}' contains dangerous shell characters: {chars}"
-        )
-
-    return sanitized
+    # Neutralize shell metacharacters with spaces instead of rejecting
+    return ''.join(' ' if c in SHELL_METACHARACTERS else c for c in sanitized)
 
 
 def get_script_dir() -> Path:
@@ -147,7 +136,19 @@ def normalize_tool_name(tool_name: str) -> str:
     if tool_name in ("Bash", "Edit", "Write", "Skill", "Task"):
         return tool_name
 
-    return aliases.get(str(tool_name).strip().lower(), tool_name)
+    lowered = str(tool_name).strip().lower()
+
+    # Plugin-scoped MCP servers get prefixed tool names (e.g.
+    # mcp__plugin_pokayokay_ohno__update_task_status when ohno is bundled via
+    # the plugin's .mcp.json). Canonicalize any server-name variant by suffix.
+    # The double-underscore separator keeps the Codex dot alias
+    # (ohno.update_task_status) on the alias-dict path below.
+    if lowered.endswith("ohno__update_task_status"):
+        return "mcp__ohno__update_task_status"
+    if lowered.endswith("ohno__set_blocker"):
+        return "mcp__ohno__set_blocker"
+
+    return aliases.get(lowered, tool_name)
 
 
 def normalize_hook_input(input_data: dict) -> dict:
@@ -351,28 +352,17 @@ def handle_permission_request(tool_name: str, tool_input: dict) -> dict:
     return {"skip": True, "reason": "approval left to runtime"}
 
 
-def check_rate_limit(hook_name: str) -> Optional[str]:
+def status_from_returncode(returncode: int) -> str:
+    """Map an action script's exit code to a result status per the contract.
+
+    0 = success, 2 = error (blocking), everything else = warning (advisory).
+    Only exactly 2 blocks so unexpected codes (126/127, signals) stay advisory.
     """
-    Check if a hook has exceeded its rate limit.
-
-    Args:
-        hook_name: Name of the hook to check
-
-    Returns:
-        None if within limits, error message if rate limited
-    """
-    now = time.time()
-    executions = _hook_executions[hook_name]
-
-    # Remove executions outside the time window
-    executions[:] = [t for t in executions if now - t < RATE_LIMIT_WINDOW_SECONDS]
-
-    if len(executions) >= RATE_LIMIT_MAX_EXECUTIONS:
-        return f"Rate limited: {hook_name} exceeded {RATE_LIMIT_MAX_EXECUTIONS} executions per minute"
-
-    # Record this execution
-    executions.append(now)
-    return None
+    if returncode == 0:
+        return "success"
+    if returncode == 2:
+        return "error"
+    return "warning"
 
 
 def get_timeout(hook_name: str) -> int:
@@ -387,11 +377,6 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
     if not script_path.exists():
         return {"action": name, "status": "skipped", "reason": "script not found"}
 
-    # Check rate limit before executing
-    rate_limit_error = check_rate_limit(name)
-    if rate_limit_error:
-        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
-
     # Get configurable timeout for this hook
     timeout = get_timeout(name)
 
@@ -399,11 +384,8 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
         # Merge environment
         run_env = os.environ.copy()
         if env:
-            # Sanitize environment variables to prevent command injection
-            try:
-                sanitized_env = {k: sanitize_env_value(v, field_name=k) for k, v in env.items()}
-            except DangerousValueError as e:
-                return {"action": name, "status": "blocked", "reason": str(e)}
+            # Sanitize environment variables (neutralizes shell metacharacters)
+            sanitized_env = {k: sanitize_env_value(v, field_name=k) for k, v in env.items()}
             run_env.update(sanitized_env)
 
         # Run the script with configurable timeout
@@ -419,14 +401,16 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
 
         return {
             "action": name,
-            "status": "success" if result.returncode == 0 else "warning",
+            "status": status_from_returncode(result.returncode),
             "output": result.stdout.strip(),
             "error": result.stderr.strip() if result.stderr else None
         }
     except subprocess.TimeoutExpired:
         return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
-    except Exception as e:
-        return {"action": name, "status": "error", "reason": "Script execution failed"}
+    except Exception:
+        # Execution failure is advisory, not "error": a broken script must
+        # not block every commit under the exit-code contract.
+        return {"action": name, "status": "warning", "reason": "Script execution failed"}
 
 
 def _detect_stale_session() -> Optional[dict]:
@@ -443,17 +427,23 @@ def _detect_stale_session() -> Optional[dict]:
     if not chain_state.get("chain_id"):
         return None
 
-    # Check for in_progress tasks via ohno-cli
+    # Check for in_progress tasks via ohno-cli (global --json flag; output is
+    # an object {"tasks": [...], "total_count": N}, not a bare list)
     try:
         result = subprocess.run(
-            ["npx", "@stevestomp/ohno-cli", "list", "--status", "in_progress", "--format", "json"],
+            ["npx", "@stevestomp/ohno-cli", "--json", "tasks", "--status", "in_progress"],
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0 and result.stdout.strip():
             import json as json_mod
-            tasks = json_mod.loads(result.stdout)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                task_ids = [t.get("id", "") for t in tasks if t.get("id")]
+            data = json_mod.loads(result.stdout)
+            tasks = data.get("tasks", []) if isinstance(data, dict) else []
+            if tasks:
+                task_ids = [
+                    t.get("id", "")
+                    for t in tasks
+                    if isinstance(t, dict) and t.get("id")
+                ]
                 if task_ids:
                     return {
                         "stale_tasks": task_ids,
@@ -664,29 +654,37 @@ def reset_token_usage() -> None:
         pass
 
 
-def record_agent_tokens(agent_type: str, description: str, tool_response: dict) -> None:
+def record_agent_tokens(agent_type: str, description: str, tool_response) -> None:
     """Record token usage from a completed Task (subagent) tool call."""
-    # Extract usage from tool_response
-    # Claude Code includes usage data in task-notification messages
-    result_text = str(tool_response.get("result", ""))
-
-    # Parse total_tokens from the response if available
     total_tokens = 0
     tool_uses = 0
     duration_ms = 0
 
-    # The tool_response for Task contains usage info
-    if "total_tokens" in result_text:
-        import re
-        token_match = re.search(r'total_tokens["\s:]+(\d+)', result_text)
-        if token_match:
-            total_tokens = int(token_match.group(1))
-        tool_match = re.search(r'tool_uses["\s:]+(\d+)', result_text)
-        if tool_match:
-            tool_uses = int(tool_match.group(1))
-        duration_match = re.search(r'duration_ms["\s:]+(\d+)', result_text)
-        if duration_match:
-            duration_ms = int(duration_match.group(1))
+    # Claude Code exposes structured usage fields on the Task tool_response.
+    if isinstance(tool_response, dict):
+        try:
+            total_tokens = int(tool_response.get("totalTokens") or 0)
+            tool_uses = int(tool_response.get("totalToolUseCount") or 0)
+            duration_ms = int(tool_response.get("totalDurationMs") or 0)
+        except (TypeError, ValueError):
+            total_tokens = tool_uses = duration_ms = 0
+
+    # Codex fallback: scrape snake_case usage keys from the response text.
+    # (The Task output itself arrives in content blocks on Claude Code, not
+    # a top-level "result" key — extract_output_text handles both shapes.)
+    if not total_tokens:
+        result_text = extract_output_text(tool_response)
+        if "total_tokens" in result_text:
+            import re
+            token_match = re.search(r'total_tokens["\s:]+(\d+)', result_text)
+            if token_match:
+                total_tokens = int(token_match.group(1))
+            tool_match = re.search(r'tool_uses["\s:]+(\d+)', result_text)
+            if tool_match:
+                tool_uses = int(tool_match.group(1))
+            duration_match = re.search(r'duration_ms["\s:]+(\d+)', result_text)
+            if duration_match:
+                duration_ms = int(duration_match.group(1))
 
     usage = load_token_usage()
     usage["agents"].append({
@@ -895,15 +893,73 @@ def handle_session_end(input_data: dict) -> dict:
     return response
 
 
+def parse_mcp_payload(tool_response) -> dict:
+    """Parse an MCP tool result into a plain dict.
+
+    ohno's MCP server wraps every tool result as
+    ``{"content": [{"type": "text", "text": "<json string>"}]}`` — and some
+    runtimes deliver the content-block list directly. Extract the text via
+    extract_output_text and json.loads it. Falls back to top-level dict reads
+    (the Codex shape, where the result object arrives unwrapped) when there is
+    no parseable JSON payload. Never raises; returns {} for unusable input.
+    """
+    text = extract_output_text(tool_response)
+    if text:
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return tool_response if isinstance(tool_response, dict) else {}
+
+
+def _lookup_task(task_id: str) -> dict:
+    """Fetch task metadata (title, task_type, story_id) via the ohno CLI.
+
+    ohno's update_task_status result carries no ``task`` object and its input
+    schema rejects title/type fields, so the CLI is the only source for the
+    TASK_TITLE/TASK_TYPE/STORY_ID env vars passed to hook scripts.
+    Best-effort: short timeout, returns {} on any failure.
+    """
+    if not task_id or task_id == "unknown":
+        return {}
+    try:
+        result = subprocess.run(
+            ["npx", "@stevestomp/ohno-cli", "--json", "task", "get", task_id],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            data = json.loads(result.stdout)
+            if isinstance(data, dict):
+                return data
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError, Exception):
+        pass
+    return {}
+
+
 def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     """Handle task status change to in_progress - run pre-task hooks."""
     task_id = tool_input.get("task_id", "unknown")
 
-    # Extract task metadata from response if available
-    task_data = tool_response.get("task", {})
-    task_title = task_data.get("title", tool_input.get("title", ""))
-    task_type = task_data.get("task_type", task_data.get("type", tool_input.get("type", "feature")))
-    story_id = task_data.get("story_id", "")
+    # ohno MCP results arrive as JSON inside content blocks — parse them.
+    response_data = parse_mcp_payload(tool_response)
+
+    # Extract task metadata from response if available, otherwise look the
+    # task up via the ohno CLI (update_task_status results carry no task
+    # object and its input schema rejects title/type, so tool_input
+    # fallbacks alone can never populate these).
+    task_data = response_data.get("task")
+    if not isinstance(task_data, dict) or not task_data:
+        task_data = _lookup_task(task_id)
+    task_title = task_data.get("title") or tool_input.get("title", "")
+    task_type = (
+        task_data.get("task_type")
+        or task_data.get("type")
+        or tool_input.get("type")
+        or "feature"
+    )
+    story_id = task_data.get("story_id") or ""
 
     # Get worktree flags from environment (set by /work command)
     force_worktree = os.environ.get("YOKAY_FORCE_WORKTREE", "false")
@@ -951,14 +1007,28 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
 
     task_id = tool_input.get("task_id", "unknown")
 
-    # Extract task metadata from response if available
-    task_data = tool_response.get("task", {})
-    task_title = task_data.get("title", tool_input.get("title", ""))
-    task_type = task_data.get("type", tool_input.get("type", ""))
+    # ohno MCP results arrive as JSON inside content blocks — parse them.
+    response_data = parse_mcp_payload(tool_response)
+
+    # Extract task metadata from response if available, otherwise look the
+    # task up via the ohno CLI (update_task_status results are
+    # {success, boundaries?} with no task object).
+    task_data = response_data.get("task")
+    if not isinstance(task_data, dict) or not task_data:
+        task_data = _lookup_task(task_id)
+    task_title = task_data.get("title") or tool_input.get("title", "")
+    task_type = (
+        task_data.get("task_type")
+        or task_data.get("type")
+        or tool_input.get("type")
+        or ""
+    )
     task_notes = tool_input.get("notes", "")
 
-    # Extract boundary metadata
-    boundaries = tool_response.get("boundaries", {})
+    # Extract boundary metadata from the parsed MCP payload
+    boundaries = response_data.get("boundaries", {})
+    if not isinstance(boundaries, dict):
+        boundaries = {}
     story_completed = boundaries.get("story_completed", False)
     epic_completed = boundaries.get("epic_completed", False)
     story_id = boundaries.get("story_id")
@@ -986,6 +1056,14 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     # Write spike results to memory
     if task_type == "spike":
         _write_spike_result(task_id, task_title, task_notes)
+
+    # Update chain state: increment tasks_completed BEFORE the long-running
+    # story/epic boundary actions so the count survives if the runtime kills
+    # the bridge process partway through a boundary chain.
+    chain_state = load_chain_state()
+    if chain_state.get("chain_id"):
+        chain_state["tasks_completed"] = chain_state.get("tasks_completed", 0) + 1
+        save_chain_state(chain_state)
 
     # Run post-story hooks if story completed
     if story_completed:
@@ -1027,12 +1105,6 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
             except Exception:
                 pass  # Best-effort
 
-    # Update chain state: increment tasks_completed
-    chain_state = load_chain_state()
-    if chain_state.get("chain_id"):
-        chain_state["tasks_completed"] = chain_state.get("tasks_completed", 0) + 1
-        save_chain_state(chain_state)
-
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
     warning_count = sum(1 for r in results if r["status"] == "warning")
@@ -1073,10 +1145,18 @@ def handle_set_blocker(tool_input: dict, tool_response: dict) -> dict:
 
 def handle_pre_commit(tool_input: dict) -> dict:
     """Handle Bash pre-commit check (PreToolUse)."""
+    import re
+
     command = tool_input.get("command", "")
 
-    # Check if this is a git commit command
-    if "git commit" not in command and "git add" not in command:
+    # Match `git commit` / `git add` only when it is an actual command (at the
+    # start of the string or after a shell separator/newline/subshell open),
+    # not quoted text inside another command. Tolerates flag-style global
+    # options (`git --no-pager commit`) but intentionally does not match
+    # option-with-argument forms like `git -C dir commit` — a conscious
+    # tightening vs the old substring check.
+    git_write_pattern = r'(?:^|&&|\|\||;|\||\n|\()\s*git(?:\s+-\S+)*\s+(?:commit|add)\b'
+    if not re.search(git_write_pattern, command):
         return {"skip": True, "reason": "not a commit command"}
 
     results = []
@@ -1351,8 +1431,10 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     if not (is_spec_review or is_quality_review):
         return {"skip": True, "reason": "not a review task"}
 
-    # Get the agent output (tool_response contains the agent's result)
-    agent_output = str(tool_response.get("result", ""))
+    # Get the agent output. On Claude Code the Task tool_response carries the
+    # subagent output in content blocks; "result" is the Codex alias already
+    # normalized by normalize_hook_input. extract_output_text handles both.
+    agent_output = extract_output_text(tool_response)
 
     # Detect PASS/FAIL
     if ": PASS" in agent_output:
@@ -1432,11 +1514,6 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
     if not script_path.exists():
         return {"action": name, "status": "skipped", "reason": "script not found"}
 
-    # Check rate limit before executing
-    rate_limit_error = check_rate_limit(name)
-    if rate_limit_error:
-        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
-
     # Get configurable timeout for this hook
     timeout = get_timeout(name)
 
@@ -1459,36 +1536,93 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
 
         return {
             "action": name,
-            "status": "success" if result.returncode == 0 else "warning",
+            "status": status_from_returncode(result.returncode),
             "output": result.stdout.strip(),
             "error": result.stderr.strip() if result.stderr else None
         }
     except subprocess.TimeoutExpired:
         return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
-    except Exception as e:
-        return {"action": name, "status": "error", "reason": "Script execution failed"}
+    except Exception:
+        # Execution failure is advisory, not "error": a broken script must
+        # not block every commit under the exit-code contract.
+        return {"action": name, "status": "warning", "reason": "Script execution failed"}
 
 
 # ==========================================================================
 # WIP Auto-capture Functions
 # ==========================================================================
+#
+# The bridge is spawned as a fresh process per hook event, so WIP debounce
+# state (last update time + files touched for the active task) is persisted
+# to ``.pokayokay/wip-state.json`` instead of module globals.
 
-def should_update_wip(force: bool = False) -> bool:
-    """Check if enough time has passed to update WIP (rate limiting)."""
-    global _last_wip_update
-    if force:
-        return True
-    now = time.time()
-    if now - _last_wip_update < WIP_UPDATE_INTERVAL:
-        return False
-    _last_wip_update = now
-    return True
+WIP_STATE_FILENAME = "wip-state.json"
+
+
+def _wip_state_path() -> Path:
+    """Get path to the WIP state file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(WIP_STATE_FILENAME)
+
+
+def _default_wip_state(task_id: str) -> dict:
+    return {"task_id": task_id, "last_update": 0.0, "files": []}
+
+
+def load_wip_state(task_id: str) -> dict:
+    """Load WIP debounce state, resetting it when the active task changes.
+
+    Falls back to a fresh state (per-event behavior) on any JSON/IO error.
+    """
+    state_path = _wip_state_path()
+    if not state_path.exists():
+        return _default_wip_state(task_id)
+
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        if not isinstance(state, dict) or state.get("task_id") != task_id:
+            return _default_wip_state(task_id)
+        files = state.get("files")
+        state["files"] = (
+            [entry for entry in files if isinstance(entry, str)]
+            if isinstance(files, list)
+            else []
+        )
+        state["last_update"] = float(state.get("last_update") or 0.0)
+        return state
+    except (json.JSONDecodeError, OSError, TypeError, ValueError):
+        return _default_wip_state(task_id)
+
+
+def save_wip_state(state: dict) -> None:
+    """Save WIP debounce state.
+
+    Uses atomic write (temp file + rename) to prevent corruption. Best-effort:
+    hooks never crash on write failure.
+    """
+    state_path = _wip_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp_path = state_path.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        tmp_path.rename(state_path)
+    except OSError:
+        if tmp_path.exists():
+            tmp_path.unlink()
 
 
 def extract_output_text(tool_response) -> str:
     """Extract text output from tool response (handles Claude and Codex formats)."""
     if isinstance(tool_response, str):
         return tool_response
+    if isinstance(tool_response, list):
+        # Bare list of MCP content blocks: [{"type": "text", "text": "..."}]
+        return "\n".join(
+            c.get("text", "") for c in tool_response if isinstance(c, dict)
+        )
     if isinstance(tool_response, dict):
         # Claude Code shape: {"content": [{"text": "..."}]} or {"content": "..."}
         content = tool_response.get("content")
@@ -1594,19 +1728,25 @@ def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) ->
     if not file_path:
         return {"skip": True, "reason": "no file path"}
 
-    # Track this file
-    _tracked_files.add(file_path)
+    # Track this file in the persisted state
+    state = load_wip_state(task_id)
+    if file_path not in state["files"]:
+        state["files"].append(file_path)
 
-    # Rate limit WIP updates
-    if not should_update_wip():
-        return {"skip": True, "reason": "rate limited"}
+    # Debounce WIP updates across bridge invocations
+    now = time.time()
+    if now - state["last_update"] < WIP_UPDATE_INTERVAL:
+        save_wip_state(state)
+        return {"skip": True, "reason": "debounced"}
 
     wip_data = {
-        "files_modified": sorted(list(_tracked_files)),
+        "files_modified": sorted(state["files"]),
         "uncommitted_changes": True
     }
 
     update_wip(task_id, wip_data)
+    state["last_update"] = now
+    save_wip_state(state)
     return {"skip": True, "reason": "wip updated silently"}
 
 
@@ -1633,8 +1773,6 @@ def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
         if commit_hash:
             wip_data["last_commit"] = commit_hash
             wip_data["uncommitted_changes"] = False
-            # Clear tracked files after commit
-            _tracked_files.clear()
             force_update = True  # Always update immediately for commits
 
     # Detect errors (non-zero exit)
@@ -1643,10 +1781,24 @@ def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
         if error_info:
             wip_data["errors"] = [error_info]
 
-    if wip_data and should_update_wip(force=force_update):
-        update_wip(task_id, wip_data)
+    if not wip_data:
+        return {"skip": True, "reason": "wip updated silently"}
 
-    return {"skip": True, "reason": "wip updated silently"}
+    state = load_wip_state(task_id)
+    now = time.time()
+    debounced = not force_update and now - state["last_update"] < WIP_UPDATE_INTERVAL
+
+    if not debounced:
+        update_wip(task_id, wip_data)
+        state["last_update"] = now
+
+    if force_update:
+        # Commit landed - clear tracked files so the next WIP snapshot
+        # doesn't resend already-committed files.
+        state["files"] = []
+
+    save_wip_state(state)
+    return {"skip": True, "reason": "debounced" if debounced else "wip updated silently"}
 
 
 def main():
@@ -1749,8 +1901,16 @@ def main():
 
             # Block if requested (for pre-commit failures)
             if result.get("block"):
+                block_reason = result.get("reason", "Hook check failed")
+                if hook_event == "PreToolUse":
+                    # Current hook API shape: deny via hookSpecificOutput,
+                    # merged alongside additionalContext.
+                    output["hookSpecificOutput"]["permissionDecision"] = "deny"
+                    output["hookSpecificOutput"]["permissionDecisionReason"] = block_reason
+                # Top-level decision/reason is the deprecated legacy shape,
+                # kept for older runtimes.
                 output["decision"] = "block"
-                output["reason"] = result.get("reason", "Hook check failed")
+                output["reason"] = block_reason
 
             print(json.dumps(output))
     else:
@@ -1786,8 +1946,6 @@ def format_context(result: dict) -> str:
                 "warning": "⚠️",
                 "error": "❌",
                 "skipped": "⏭️",
-                "blocked": "🚫",
-                "rate_limited": "⏳",
                 "timeout": "⏰",
             }.get(r["status"], "?")
             output = r.get("output", r.get("reason", ""))[:50]
