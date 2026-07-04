@@ -1,7 +1,7 @@
 ---
 name: security-audit
-agents: [yokay-security-scanner]
 description: Use when reviewing code security, auditing dependencies for CVEs, checking configuration or secret security, assessing authentication and authorization patterns, identifying OWASP vulnerabilities (injection, XSS, CSRF), or addressing security concerns about implementations.
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Security Audit
@@ -54,5 +54,5 @@ Systematic security review for application code, dependencies, and configuration
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-security-scanner via the Task tool with `subagent_type: "pokayokay:yokay-security-scanner"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

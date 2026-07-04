@@ -1,7 +1,8 @@
 ---
 name: browser-verification
-agents: [yokay-browser-verifier]
-description: Automatically verify UI changes in a real browser after implementation. Integrated into the /work workflow — checks visual elements, interactions, and console errors using Playwright. Not a standalone skill.
+description: Use when a completed task changed UI-affecting files and browser verification is needed during /work. Checks visual elements, interactions, and console errors in a real browser via Playwright. Not a standalone skill.
+user-invocable: false
+disable-model-invocation: true
 ---
 
 # Browser Verification Skill
@@ -32,7 +33,7 @@ Must have either:
 
 ### 2. Server Running
 
-Must have an HTTP server on a dev port (3000-8999) or ability to start one via package.json scripts.
+Must have an HTTP server on a dev port (3000-9999) or ability to start one via package.json scripts.
 
 ### 3. Renderable Files Changed
 
@@ -75,6 +76,11 @@ Projects can customize in `.pokayokay.json`:
 }
 ```
 
+## When NOT to Use
+
+- **Unit/integration testing** — Use `testing-strategy` for test architecture; this skill verifies visual output in a browser
+- **API-only changes** — Browser verification is for UI changes; backend-only tasks skip this automatically
+
 ## Reference Documents
 
 - `references/testability-detection.md` - How to determine if verification should run
@@ -91,5 +97,5 @@ Browser verification runs AFTER implementation and BEFORE spec review.
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-browser-verifier via the Task tool with `subagent_type: "pokayokay:yokay-browser-verifier"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

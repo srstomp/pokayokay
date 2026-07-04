@@ -62,60 +62,39 @@ All file paths should be relative to this directory unless specified otherwise.
 7. **Add SHOULD criteria** - Write test + implement for each, or document deferral
 8. **Self-review against AC checklist** - Every MUST has a passing test
 9. **Commit your work** - Use conventional commit messages
-10. **Report back** - Include AC verification table in report
+10. **Report back** - Minimal status report; the AC verification table goes in the ohno handoff details
 
 ### Before You Start
 
-If you have ANY of these concerns, ask the coordinator NOW:
+**If you encounter ANY of these, report BLOCKED immediately — do NOT guess:**
 
 - Ambiguous or conflicting requirements
-- Missing acceptance criteria details
-- Unclear file locations or naming conventions
-- Questions about scope boundaries
-- Dependency or integration concerns
-- Uncertainty about which skill/approach to use
+- Acceptance criteria too vague to write a test from
+- Unclear file locations with no existing convention to follow
+- Scope boundaries unclear (multiple valid interpretations)
+- Missing dependency or integration details
 
-**It is always better to clarify upfront than to implement incorrectly.**
+You are a subagent and cannot ask questions interactively. A BLOCKED report with specific questions costs one dispatch cycle. A wrong implementation costs two.
 
 ---
 
 ## Expected Report Format
 
-When you complete implementation, report back using this format:
+When you complete implementation, report back using this minimal format — it mirrors your Output Contract:
 
 ```markdown
 ## Implementation Complete
 
 **Task ID**: {TASK_ID}
 **Task**: {TASK_TITLE}
-**Status**: Complete / Partial / Blocked / NEEDS_REDESIGN
+**Status**: PASS | FAIL | BLOCKED | NEEDS_REDESIGN
+**Summary**: [2-3 sentence summary of what was done]
+**Commit**: [hash, if applicable]
 
-### What Was Implemented
-- [Bullet points of what you built]
-
-### Tests Added
-- [List of test cases with file locations]
-
-### Files Changed
-- `path/to/file` - [brief description]
-
-### Self-Review Findings
-- [Any concerns, technical debt, or follow-up suggestions]
-
-### Acceptance Criteria Verification
-| # | Priority | Criterion | Test | Status |
-|---|----------|-----------|------|--------|
-| 1 | MUST | [criterion text] | [test file:line] | PASS |
-| 2 | MUST | [criterion text] | [test file:line] | PASS |
-| 3 | SHOULD | [criterion text] | — | DEFERRED: [reason] |
-
-### Issues Encountered
-- [Problems hit and how they were resolved]
-
-### Commit
-- Hash: [commit hash]
-- Message: [commit message summary]
+Full details stored in ohno handoff.
 ```
+
+Full details — including the acceptance criteria verification table (criterion, test file:line, status) — belong in the ohno handoff `details` field, not in the report.
 
 ---
 
@@ -123,6 +102,7 @@ When you complete implementation, report back using this format:
 
 - **ONE TASK**: Implement only what is described above
 - **NO SCOPE CREEP**: Do not add unrequested features
+- **NO BULK REWRITES**: Enumerate matches with grep -n before any multi-occurrence replacement
 - **TDD DISCIPLINE**: Test first, then implement, then refactor
 - **ASK QUESTIONS**: Clarify before implementing
 - **SELF-REVIEW**: Check your work before reporting complete
@@ -142,6 +122,8 @@ For ohno task management, prefer these MCP tools over `npx @stevestomp/ohno-cli`
 | `npx @stevestomp/ohno-cli activity <id> ...` | `mcp__ohno__add_task_activity(task_id, ...)` |
 
 **Why**: MCP tools don't require Bash permission approval, making unattended sessions smoother.
+
+When ohno runs as the plugin-bundled server, these tools are namespaced `mcp__plugin_pokayokay_ohno__*` (e.g. `mcp__plugin_pokayokay_ohno__set_task_handoff`). Only if no ohno MCP tools are available, fall back to the CLI and check its exit code.
 
 Begin when ready. If you have questions, ask them now.
 

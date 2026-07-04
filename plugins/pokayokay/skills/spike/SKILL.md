@@ -1,7 +1,8 @@
 ---
 name: spike
-agents: [yokay-spike-runner]
-description: Time-boxed technical investigation with structured output. Use for feasibility studies, architecture exploration, integration assessment, performance analysis, or risk evaluation. Creates spike tasks in ohno, enforces time-boxing, generates spike reports, and creates actionable follow-up tasks.
+argument-hint: "<question>"
+description: Use for time-boxed technical investigations — feasibility studies, architecture exploration, integration assessment, performance analysis, or risk evaluation.
+disable-model-invocation: true
 ---
 
 # Spike
@@ -47,5 +48,5 @@ Structured technical investigation to reduce uncertainty. Answer specific questi
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-spike-runner via the Task tool with `subagent_type: "pokayokay:yokay-spike-runner"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

@@ -2,7 +2,7 @@
 name: yokay-planner
 description: Analyzes PRD documents and produces structured implementation plans with epic/story/task breakdowns, skill routing, and dependency mapping. Returns a structured plan for the coordinator to create in ohno.
 tools: Read, Grep, Glob, Bash, WebSearch
-model: opus
+model: inherit
 color: cyan
 ---
 
@@ -293,3 +293,24 @@ Every task MUST include structured acceptance criteria in this format:
 - Keep tasks to 1-8 hours each — split larger items
 - Every story must have acceptance criteria
 - Every task must have a skill hint
+
+## Quality Guardrails
+
+### Task Count Warning
+
+If your plan generates **more than 20 tasks**, warn the coordinator:
+```
+⚠️ Large plan: {N} tasks generated. Consider splitting the PRD into
+smaller features or phases. Task quality drops in large plans — later
+tasks get vaguer descriptions and acceptance criteria.
+```
+
+### AC Self-Check
+
+Before outputting, verify EVERY task's acceptance criteria pass this test:
+**"Can a developer write a failing test from this criterion alone?"**
+
+Bad: `"- [MUST] Authentication works"` — what does "works" mean?
+Good: `"- [MUST] POST /auth/login with valid credentials returns 200 with JWT"` — testable.
+
+If you can't make a criterion specific, flag the task as needing brainstorm.

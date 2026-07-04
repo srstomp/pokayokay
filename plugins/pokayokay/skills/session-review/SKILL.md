@@ -1,6 +1,8 @@
 ---
 name: session-review
 description: Use after completing work sessions to analyze agent behavior patterns, prepare session handoffs for continuity, document completed work, identify blockers, or preserve context for the next session.
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Session Review & Handoff
@@ -22,6 +24,11 @@ This skill serves two complementary workflows:
 - Capture decisions, blockers, and next steps
 - Track skill usage and ad-hoc work
 - Prepare context for the next session or agent
+
+## When NOT to Use
+
+- **Auditing feature completeness** — Use `feature-audit` for PRD gap analysis; this skill analyzes agent behavior
+- **Planning new work** — Use `planning` for PRD breakdown; this skill reviews completed sessions
 
 ## Key Principles
 
