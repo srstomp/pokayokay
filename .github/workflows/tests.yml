@@ -15,5 +15,8 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install CLI dependencies
+        run: npm ci --prefix cli
+
       - name: Run test suite
         run: bash plugins/pokayokay/tests/run-tests.sh

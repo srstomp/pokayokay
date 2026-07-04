@@ -86,7 +86,7 @@ FOUND_KEYWORDS=0
 
 for keyword in "${UI_KEYWORDS[@]}"; do
   if grep -qi "$keyword" "$PLAN_FILE"; then
-    ((FOUND_KEYWORDS++))
+    FOUND_KEYWORDS=$((FOUND_KEYWORDS + 1))
   fi
 done
 
