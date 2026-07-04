@@ -82,15 +82,34 @@ SKIP_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"echo \"git comm
 assert_skip "$SKIP_OUTPUT"
 echo "  PASS: quoted mention skipped"
 
-echo "Test 5: unstaged violation still blocks via the working-tree fallback"
+echo "Test 5: unstaged violation still blocks via the add-all fallback"
 # `git add -A && git commit` fires the hook before staging — the check must
-# scan working-tree changes (including untracked files) when nothing relevant
-# is staged yet.
+# scan working-tree changes (including untracked files) when the command is
+# about to stage everything.
 git rm -q --cached "$REF_DIR/big-ref.md"
 FALLBACK_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add -A && git commit -m \"all\""},"hook_event_name":"PreToolUse"}' |
   python3 "$BRIDGE")
 assert_deny "$FALLBACK_OUTPUT"
 echo "  PASS: untracked oversized reference blocked pre-staging"
+
+echo "Test 5b: plain git commit is NOT blocked by an untracked oversized ref"
+# The oversized file is still untracked in the working tree, but the commit
+# being intercepted stages only an unrelated file — the check must not
+# deadlock the commit on a WIP draft it doesn't include.
+echo "unrelated content" > src.txt
+git add src.txt
+PLAIN_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"unrelated\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_not_blocked "$PLAIN_OUTPUT"
+echo "  PASS: unrelated commit not blocked by working-tree draft"
+
+echo "Test 5c: git add of the oversized ref by explicit path is blocked"
+NAMED_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/pokayokay/skills/demo/references/big-ref.md && git commit -m \"ref\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$NAMED_OUTPUT"
+echo "  PASS: explicitly-added oversized reference blocked pre-staging"
+git rm -q --cached src.txt
+rm -f src.txt
 
 echo "Test 6: advisory failures (lint exit 1) do not block the commit"
 # Remove the violation entirely and stage a package.json whose lint fails.

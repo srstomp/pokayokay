@@ -70,5 +70,60 @@ else
   exit 1
 fi
 
+echo "Test 4: clean chained handoff (handoff_pending) does not trigger recovery"
+# A chained SessionEnd sets handoff_pending before relaunching — the
+# continuation session's in_progress tasks are the handoff, not a crash.
+cat > "$TEST_DIR/.pokayokay/pokayokay-chain-state.json" << 'EOF'
+{"chain_id": "chain-1", "chain_index": 3, "scope_type": "epic", "scope_id": "e1", "tasks_completed": 3, "handoff_pending": true}
+EOF
+OUTPUT=$(echo '{"hook_event_name":"SessionStart","source":"startup"}' | python3 "$BRIDGE" 2>/dev/null)
+
+if [[ "$OUTPUT" != *"recover"* ]]; then
+  echo "  PASS: handoff_pending suppressed recovery"
+else
+  echo "  FAIL: recovery must not fire on a clean chained handoff"
+  echo "  Output: $OUTPUT"
+  exit 1
+fi
+
+echo "Test 5: handoff marker is consumed (one-shot) and chain state survives"
+MARKER=$(python3 -c "
+import json
+with open('$TEST_DIR/.pokayokay/pokayokay-chain-state.json') as f:
+    state = json.load(f)
+print('consumed' if not state.get('handoff_pending') and state.get('chain_id') == 'chain-1' else 'stale')
+")
+if [ "$MARKER" = "consumed" ]; then
+  echo "  PASS: marker cleared, chain state intact"
+else
+  echo "  FAIL: expected handoff_pending cleared and chain_id preserved"
+  cat "$TEST_DIR/.pokayokay/pokayokay-chain-state.json"
+  exit 1
+fi
+
+echo "Test 6: marker consumed — a real crash on the NEXT start is detected"
+OUTPUT=$(echo '{"hook_event_name":"SessionStart","source":"startup"}' | python3 "$BRIDGE" 2>/dev/null)
+if [[ "$OUTPUT" == *"recover"* ]]; then
+  echo "  PASS: crash detection re-armed after handoff consumed"
+else
+  echo "  FAIL: expected recovery once handoff marker was consumed"
+  echo "  Output: $OUTPUT"
+  exit 1
+fi
+
+echo "Test 7: source=resume never triggers recovery"
+cat > "$TEST_DIR/.pokayokay/pokayokay-chain-state.json" << 'EOF'
+{"chain_id": "chain-1", "chain_index": 3, "scope_type": "epic", "scope_id": "e1", "tasks_completed": 3}
+EOF
+OUTPUT=$(echo '{"hook_event_name":"SessionStart","source":"resume"}' | python3 "$BRIDGE" 2>/dev/null)
+
+if [[ "$OUTPUT" != *"recover"* ]]; then
+  echo "  PASS: resume skipped stale-session detection"
+else
+  echo "  FAIL: recovery must not fire on claude --resume"
+  echo "  Output: $OUTPUT"
+  exit 1
+fi
+
 echo ""
 echo "All bridge crash-detection tests passed!"

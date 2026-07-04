@@ -107,11 +107,11 @@ npx @stevestomp/ohno-cli init
 | yokay-design-reviewer | Sonnet | Pre-implementation design review |
 | yokay-explorer | Haiku | Fast codebase search |
 | yokay-fixer | Sonnet | Auto-retry test failures |
-| yokay-implementer | Opus | TDD implementation |
-| yokay-planner | Opus | PRD analysis + plan generation |
+| yokay-implementer | Inherit | TDD implementation |
+| yokay-planner | Inherit | PRD analysis + plan generation |
 | yokay-reviewer | Sonnet | Code review |
 | yokay-security-scanner | Sonnet | OWASP scanning |
-| yokay-spec-reviewer | Opus | Adversarial spec compliance |
+| yokay-spec-reviewer | Inherit | Adversarial spec compliance |
 | yokay-quality-reviewer | Sonnet | Code quality (after spec) |
 | yokay-spike-runner | Sonnet | Investigations |
 | yokay-test-runner | Haiku | Test execution |

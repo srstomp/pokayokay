@@ -87,7 +87,7 @@ Even when AC exists, check quality before dispatching. **Route through brainstor
 ### Processing Result
 
 - **Refined**: Update ohno with refined description/AC, proceed to the design review gate
-- **Needs Input**: PAUSE for human to answer brainstormer's questions
+- **Needs Input**: supervised / semi-auto — PAUSE for human to answer brainstormer's questions; auto / unattended — log the open questions as assumptions (`add_task_activity`) and proceed with the brainstormer's best judgment. Never pause in auto/unattended.
 
 ## Step 3: Design Review Gate (Conditional)
 

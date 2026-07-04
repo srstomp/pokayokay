@@ -994,11 +994,11 @@ If brainstorm triggers:
      })
      ```
    - If open questions:
-     - **auto mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
+     - **auto or unattended mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
        ```
-       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto mode): {questions}")
+       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto/unattended mode): {questions}")
        ```
-     - **other modes**: PAUSE for human input
+     - **supervised / semi-auto**: PAUSE for human input
    - If refined: Proceed to Step 3.5 (validation), then the Design Review Gate (Step 3.7)
 
 3. Log activity:
@@ -1028,8 +1028,10 @@ If brainstorm triggers:
        ▼
 ┌──────────────┐     QUESTIONS   ┌──────────────┐
 │ Result?      │────────────────►│ PAUSE for    │
-└──────┬───────┘                 │ human input  │
+└──────┬───────┘                 │ human input* │
        │ REFINED                 └──────────────┘
+       │        * supervised/semi-auto only; auto/unattended
+       │          auto-resolve questions as assumptions
        ▼
 ┌──────────────┐
 │ Update ohno  │

@@ -224,14 +224,17 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-design-reviewer` | Sonnet | Read-only | Pre-implementation design review against codebase patterns |
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
 | `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
-| `yokay-implementer` | Opus | Can write | TDD implementation with fresh context |
-| `yokay-planner` | Opus | Read-only | PRD analysis and structured plan generation |
+| `yokay-implementer` | Inherit | Can write | TDD implementation with fresh context |
+| `yokay-planner` | Inherit | Read-only | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
-| `yokay-spec-reviewer` | Opus | Read-only | Adversarial spec compliance review |
+| `yokay-spec-reviewer` | Inherit | Read-only | Adversarial spec compliance review |
 | `yokay-quality-reviewer` | Sonnet | Read-only | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
+
+Judgment-tier agents (`Inherit`) run on the session model — see the Agent
+Model Policy in `CLAUDE.md`.
 
 ### Agent vs Skill
 

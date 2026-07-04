@@ -429,13 +429,26 @@ def _detect_stale_session() -> Optional[dict]:
 
     A session is considered crashed if:
     1. Chain state file exists (session was chaining)
-    2. There are in_progress tasks in ohno (not cleaned up)
-    3. No active Claude process is running this chain
+    2. The state does NOT carry a handoff_pending marker (a clean chained
+       SessionEnd sets it; its presence means this start is the expected
+       continuation, not a crash)
+    3. There are in_progress tasks in ohno (not cleaned up)
 
     Returns dict with stale_tasks and chain_id if crash detected, None otherwise.
     """
     chain_state = load_chain_state()
     if not chain_state.get("chain_id"):
+        return None
+
+    # A clean SessionEnd that chained to a continuation session sets
+    # handoff_pending — in_progress tasks are then the deliberate handoff the
+    # resume flow relies on, not crash debris. Consume the marker (one-shot)
+    # so a genuine crash in THIS session is still detected on the next start.
+    # Without this, recovery would stash the handed-off changes and retire
+    # the chain state, silently killing the chain after one hop.
+    if chain_state.get("handoff_pending"):
+        chain_state.pop("handoff_pending", None)
+        save_chain_state(chain_state)
         return None
 
     # Check for in_progress tasks via ohno-cli (global --json flag; output is
@@ -487,9 +500,11 @@ def handle_session_start(input_data: dict) -> dict:
         preflight_result = run_action("pre-flight", env={"WORK_MODE": work_mode})
         results.append(preflight_result)
 
-    # Detect and recover from crashed sessions (not on compaction — the
-    # session is still alive, its in_progress tasks are not stale)
-    stale = None if source == "compact" else _detect_stale_session()
+    # Detect and recover from crashed sessions. Skip on compaction (the
+    # session is still alive, its in_progress tasks are not stale) and on
+    # resume (`claude --resume` picks the old session back up — its
+    # in_progress tasks are about to be worked on, not crash debris).
+    stale = None if source in ("compact", "resume") else _detect_stale_session()
     if stale:
         recovery_env = {
             "STALE_TASKS": ",".join(stale["stale_tasks"]),
@@ -968,10 +983,15 @@ def handle_session_end(input_data: dict) -> dict:
                     # Update state file for next session
                     # Preserve all coordinator state fields (adaptive_n, failed_tasks, etc.)
                     chain_state["chain_index"] = chain_state.get("chain_index", 0) + 1
+                    # Mark the handoff as clean so the continuation session's
+                    # SessionStart doesn't mistake handed-off in_progress
+                    # tasks for a crash (see _detect_stale_session).
+                    chain_state["handoff_pending"] = True
                     save_chain_state(chain_state)
                 elif chain_action == "audit_pending":
                     # Don't end the chain - signal coordinator to run audit
                     chain_state["audit_pending"] = True
+                    chain_state["handoff_pending"] = True
                     save_chain_state(chain_state)
                 elif chain_action in ("complete", "limit_reached"):
                     # Chain is done - clean up state file
@@ -1331,9 +1351,11 @@ def handle_pre_commit(tool_input: dict) -> dict:
 
     results = []
 
-    # Run pre-commit hooks
+    # Run pre-commit hooks. check-ref-sizes needs the intercepted command to
+    # decide whether unstaged files are about to be staged (add-all forms) or
+    # irrelevant to the commit (env values are metachar-sanitized in transit).
     results.append(run_action("lint"))
-    results.append(run_action("check-ref-sizes"))
+    results.append(run_action("check-ref-sizes", env={"POKAYOKAY_GIT_COMMAND": command}))
 
     # Check for failures that should block
     has_blocking_error = any(r["status"] == "error" for r in results)
