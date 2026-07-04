@@ -48,7 +48,7 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | post-story | Story complete | test, story-integration, audit-gate |
 | post-epic | Epic complete | audit-gate |
 | on-blocker | Task blocked | notification |
-| pre-commit | Before commit | lint, check-ref-sizes |
+| pre-commit | Before commit | lint (advisory), check-ref-sizes (blocking) |
 | post-session | Session end | sync, session-summary, curate-memory, session-chain |
 | post-command | After audit commands | verify-tasks |
 | post-review | Review FAIL | graduate-rules (failure tracking) |
@@ -134,14 +134,18 @@ Automatically creates git worktrees for task isolation based on task type:
 | `chore`, `docs` | Works in-place (no worktree) |
 | Unknown | Creates worktree (safer default) |
 
-**Override flags** (set via environment):
-- `YOKAY_FORCE_WORKTREE=true` - Always create worktree
-- `YOKAY_FORCE_INPLACE=true` - Never create worktree
+**Override flags** (`/work --worktree` / `--in-place`): the coordinator writes
+`force_worktree` / `force_inplace` into the task state file
+(`.pokayokay/pokayokay-task-state.json`) *before* marking the task
+`in_progress`. Hook subprocesses never inherit environment variables exported
+by the coordinator, so the state file is the only reliable channel (see "Task
+State File" below). The legacy `YOKAY_FORCE_WORKTREE` / `YOKAY_FORCE_INPLACE`
+env vars still work for direct shell invocations of the bridge.
 
 **Story worktree reuse**: If a task belongs to a story and a worktree already exists for that story, it will be reused instead of creating a new one.
 
 ### Skill Suggestions (pre-task)
-Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to performance, security, accessibility, observability, and testing.
+Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to security, observability, and testing, and cross-checks every suggestion against the plugin's `skills/` directory so only skills that actually exist are suggested.
 
 ### Spike Detection (post-task)
 Monitors task completion notes for uncertainty signals ("not sure", "need to investigate", etc.). When detected, suggests converting to a spike for structured investigation.
@@ -236,7 +240,7 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 | PostToolUse | `Skill` (audit commands) | post-command (verify-tasks) |
 | PostToolUse | `Edit` / `Write` | WIP tracking (files modified) |
 | PostToolUse | `Bash` | WIP tracking (test results, commits, errors) |
-| PreToolUse | `Bash` (git commit/add) | pre-commit (lint, check-ref-sizes) |
+| PreToolUse | `Bash` (git commit/add as an actual command, not quoted text) | pre-commit (lint advisory, check-ref-sizes blocking) |
 | PermissionRequest | `Bash` (Codex) | conservative allow/deny decisions for read-only, test, ohno, and dangerous commands |
 
 ### Boundary Metadata
@@ -260,6 +264,57 @@ The bridge script uses this to determine which hooks to run:
 - **post-story**: Runs when `story_completed: true`
 - **post-epic**: Runs when `epic_completed: true`
 
+Post-story actions (test, story-integration, audit-gate) run inside the
+story's worktree (`.worktrees/story-<story_id>-*`) when it exists — the
+story's changes live there, not in the main checkout. The bridge resolves the
+worktree via `git worktree list --porcelain` and passes it as `WORKTREE_DIR`.
+
+Note: when ohno is bundled via the plugin's `.mcp.json`, Claude Code prefixes
+the tool names (e.g. `mcp__plugin_pokayokay_ohno__update_task_status`). The
+hook matcher and `bridge.py` normalize any server-name variant to the
+canonical `mcp__ohno__*` routing keys.
+
+### Action Exit-Code Contract
+
+Action scripts in `actions/` signal severity through their exit code:
+
+| Exit code | Status | Effect |
+|-----------|--------|--------|
+| 0 | success | Normal completion |
+| 2 | error | Blocking — pre-commit denies the tool call (`permissionDecision: deny`) |
+| any other nonzero | warning | Advisory — surfaced to the agent, never blocks |
+
+Only an exact exit code 2 blocks, so unexpected codes (126/127, signal
+deaths) stay advisory. Script execution failures (e.g. an unspawnable
+script) also map to warning so a broken hook script cannot block every
+commit. By design, `lint.sh` exits 1 on lint failures (advisory) while
+`check-ref-sizes.sh` exits 2 on oversized reference files (blocking).
+
+### Task State File
+
+Environment variables exported by the coordinator cannot reach hook
+subprocesses (hooks are spawned by the runtime, not by the coordinator's
+shell — the same propagation bug chain state hit). The active task therefore
+travels through `.pokayokay/pokayokay-task-state.json`:
+
+- The coordinator may pre-write `{"force_worktree": ..., "force_inplace": ...}`
+  before marking a task `in_progress` (for `/work --worktree` / `--in-place`).
+- The pre-task hook (`handle_task_start`) merges those flags with the task id
+  and persists `{task_id, force_worktree, force_inplace}`, passing the flags
+  to `setup-worktree.sh` as `FORCE_WORKTREE`/`FORCE_INPLACE`.
+- WIP tracking (Edit/Write/Bash events) and review-failure attribution read
+  `task_id` from this file (`CURRENT_OHNO_TASK_ID` remains a fallback for
+  direct shell invocations only).
+- The post-task hook (`handle_task_complete`) clears the file.
+
+### WIP Debounce State
+
+The bridge runs as a fresh process per hook event, so WIP tracking persists
+its debounce state (active task id, last update time, files touched) to
+`.pokayokay/wip-state.json`. WIP updates are debounced to at most one every
+5 seconds; git commits force an immediate update and clear the tracked file
+list.
+
 ### Files
 
 | File | Purpose |
@@ -279,7 +334,7 @@ The bridge script uses this to determine which hooks to run:
 | `actions/story-integration.sh` | Story-level integration checks (post-story) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
-| `actions/lint.sh` | Runs linter (pre-commit) |
+| `actions/lint.sh` | Runs linter, advisory only (pre-commit) |
 | `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |
 | `actions/session-summary.sh` | Prints session summary with token costs (post-session) |
 | `actions/curate-memory.sh` | Enforces MEMORY.md section budgets (post-session) |

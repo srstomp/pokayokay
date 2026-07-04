@@ -36,27 +36,28 @@ else
 fi
 
 # Check for existing story worktree
+# (parse porcelain "worktree <path>" lines whole so paths with spaces work)
 if [[ -n "$STORY_ID" ]]; then
-    EXISTING=$(git worktree list --porcelain 2>/dev/null | grep -A1 "^worktree " | grep "story-${STORY_ID}-" | head -1 || true)
-    if [[ -n "$EXISTING" ]]; then
-        # Extract path from the worktree line
-        EXISTING_PATH=$(git worktree list 2>/dev/null | grep "story-${STORY_ID}-" | awk '{print $1}' | head -1)
-        if [[ -n "$EXISTING_PATH" ]]; then
-            echo "MODE=worktree"
-            echo "WORKTREE_PATH=$EXISTING_PATH"
-            echo "WORKTREE_REUSED=true"
-            exit 0
-        fi
+    EXISTING_PATH=$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | grep "story-${STORY_ID}-" | head -1 || true)
+    if [[ -n "$EXISTING_PATH" ]]; then
+        echo "MODE=worktree"
+        echo "WORKTREE_PATH=$EXISTING_PATH"
+        echo "WORKTREE_REUSED=true"
+        exit 0
     fi
 fi
 
-# Get base branch
-BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo "main")
+# Get base branch. The old `... || echo main` fallback never fired (a pipeline's
+# exit status is sed's, which succeeds even on empty input) and hardcoded a
+# default-branch name — use explicit emptiness checks instead.
+BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+[[ -z "$BASE" ]] && BASE=$(git branch --show-current 2>/dev/null)
+[[ -z "$BASE" ]] && BASE=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
 # Check if branch already exists
 if git rev-parse --verify "$NAME" >/dev/null 2>&1; then
-    # Branch exists, check if worktree exists for it
-    EXISTING_PATH=$(git worktree list 2>/dev/null | grep "\[$NAME\]" | awk '{print $1}' || true)
+    # Branch exists, check if worktree exists for it (porcelain block parse)
+    EXISTING_PATH=$(git worktree list --porcelain 2>/dev/null | awk -v b="branch refs/heads/$NAME" '/^worktree /{p=substr($0,10)} $0==b{print p; exit}' || true)
     if [[ -n "$EXISTING_PATH" ]]; then
         echo "MODE=worktree"
         echo "WORKTREE_PATH=$EXISTING_PATH"
@@ -104,11 +105,14 @@ fi
     fi
 ) &
 
-# Symlink memory directory so worktree agents can access project memory
+# Symlink memory directory so worktree agents can access project memory.
+# Claude Code encodes project keys by replacing EVERY non-alphanumeric char
+# with "-" and KEEPS the leading dash (e.g. /Users/x/proj/.worktrees/wt ->
+# -Users-x-proj--worktrees-wt).
 PROJECT_DIR=$(pwd)
-MAIN_MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT_DIR" | tr '/' '-' | sed 's/^-//')/memory"
+MAIN_MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT_DIR" | sed 's/[^a-zA-Z0-9]/-/g')/memory"
 WORKTREE_ABS_PATH="$(cd "$WORKTREE_PATH" && pwd)"
-WORKTREE_MEMORY_DIR="$HOME/.claude/projects/$(echo "$WORKTREE_ABS_PATH" | tr '/' '-' | sed 's/^-//')/memory"
+WORKTREE_MEMORY_DIR="$HOME/.claude/projects/$(echo "$WORKTREE_ABS_PATH" | sed 's/[^a-zA-Z0-9]/-/g')/memory"
 
 if [ -d "$MAIN_MEMORY_DIR" ] && [ ! -e "$WORKTREE_MEMORY_DIR" ]; then
     mkdir -p "$(dirname "$WORKTREE_MEMORY_DIR")"

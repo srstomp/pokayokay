@@ -17,19 +17,14 @@ fi
 TITLE_LOWER=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]')
 SUGGESTIONS=()
 
-# Performance-related keywords
-if echo "$TITLE_LOWER" | grep -qE "(optimi|slow|latency|cache|memory|bundle|performance|speed)"; then
-  SUGGESTIONS+=("performance-optimization")
-fi
+# NOTE: keyword branches must map to skills that exist in the plugin's
+# skills/ directory — phantom names produce failed skill loads. (The old
+# performance-optimization and accessibility-auditor branches were removed:
+# no such skills exist.) A final existence filter below guards regressions.
 
 # Security-related keywords
 if echo "$TITLE_LOWER" | grep -qE "(auth|security|permiss|access|encrypt|vulnerab|token|jwt|oauth)"; then
   SUGGESTIONS+=("security-audit")
-fi
-
-# Accessibility-related keywords
-if echo "$TITLE_LOWER" | grep -qE "(a11y|accessibility|screen.?reader|aria|wcag|keyboard)"; then
-  SUGGESTIONS+=("accessibility-auditor")
 fi
 
 # Observability-related keywords
@@ -47,9 +42,11 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-.}"
 MEM_DIR="${MEMORY_DIR:-}"
 MEMORY_NOTES=()
 
-# Auto-detect memory dir if not set
+# Auto-detect memory dir if not set. Claude Code's project keys replace
+# every non-alphanumeric char with "-" and keep the leading dash
+# (e.g. /Users/x/proj -> -Users-x-proj).
 if [ -z "$MEM_DIR" ]; then
-  PROJECT_KEY=$(echo "$PROJECT_DIR" | tr '/' '-' | sed 's/^-//')
+  PROJECT_KEY=$(echo "$PROJECT_DIR" | sed 's/[^a-zA-Z0-9]/-/g')
   CLAUDE_MEMORY="$HOME/.claude/projects/$PROJECT_KEY/memory"
   if [ -d "$CLAUDE_MEMORY" ]; then
     MEM_DIR="$CLAUDE_MEMORY"
@@ -94,6 +91,22 @@ if [ -d "$RULES_DIR" ]; then
   RULE_FILES=$(ls -1 "$RULES_DIR"/*.md 2>/dev/null | xargs -I{} basename {} .md | tr '\n' ', ' | sed 's/,$//')
   if [ -n "$RULE_FILES" ]; then
     MEMORY_NOTES+=("Graduated patterns in .claude/rules/pokayokay/: $RULE_FILES")
+  fi
+fi
+
+# Filter suggestions to skills that actually exist in the plugin, so a
+# renamed/removed skill can't reintroduce phantom suggestions.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+if [ ${#SUGGESTIONS[@]} -gt 0 ] && [ -d "$PLUGIN_ROOT/skills" ]; then
+  FILTERED=()
+  for skill in "${SUGGESTIONS[@]}"; do
+    if [ -d "$PLUGIN_ROOT/skills/$skill" ]; then
+      FILTERED+=("$skill")
+    fi
+  done
+  SUGGESTIONS=()
+  if [ ${#FILTERED[@]} -gt 0 ]; then
+    SUGGESTIONS=("${FILTERED[@]}")
   fi
 fi
 

@@ -440,6 +440,24 @@ function shouldUseWorktree(task, flags) {
 }
 ```
 
+#### Propagating Force Flags to the Worktree Hook
+
+The `setup-worktree` hook runs in a separate hook process that cannot see
+environment variables exported by the coordinator. When `--worktree` or
+`--in-place` was passed, write the flags into the task state file BEFORE
+marking the task `in_progress`:
+
+```bash
+mkdir -p .pokayokay
+printf '{"force_worktree": %s, "force_inplace": %s}\n' "true" "false" \
+  > .pokayokay/pokayokay-task-state.json
+```
+
+The bridge merges these flags with the task id on the `in_progress`
+transition and passes them to `setup-worktree.sh` as
+`FORCE_WORKTREE`/`FORCE_INPLACE`. Without flags, skip this step — the hook
+applies the smart defaults above.
+
 #### Worktree Setup Flow
 
 If worktree is needed:
@@ -1394,15 +1412,16 @@ See `skills/browser-verification/SKILL.md` for full details.
 
 After implementer completes, run spec compliance and code quality reviews sequentially:
 
-#### Environment Setup for Review Hooks
+#### Task Context for Review Hooks
 
-Before dispatching reviewers, set the current task context for hook integration:
+No setup needed. When the task moved to `in_progress`, the bridge recorded its
+id in the task state file (`.pokayokay/pokayokay-task-state.json`), and the
+post-review-fail hook reads the active task from there to capture failures and
+integrate with kaizen automatically.
 
-```bash
-export CURRENT_OHNO_TASK_ID="<current-task-id>"
-```
-
-This enables the post-review-fail hook to capture failures and integrate with kaizen automatically.
+Do NOT try to `export CURRENT_OHNO_TASK_ID` from a Bash call — every Bash tool
+call is a fresh shell and hooks are spawned by the runtime, so an exported
+variable can never reach the hook process.
 
 #### Stage 1: Spec Compliance Review (Adversarial)
 

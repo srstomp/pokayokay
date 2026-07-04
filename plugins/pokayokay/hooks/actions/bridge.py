@@ -11,6 +11,7 @@ Output: JSON with additionalContext for Claude
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -370,8 +371,18 @@ def get_timeout(hook_name: str) -> int:
     return HOOK_TIMEOUTS.get(hook_name, HOOK_TIMEOUTS["default"])
 
 
-def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[str, str]] = None) -> Dict:
-    """Run a yokay hook action script."""
+def run_action(
+    name: str,
+    args: Optional[List[str]] = None,
+    env: Optional[Dict[str, str]] = None,
+    cwd: Optional[str] = None,
+) -> Dict:
+    """Run a yokay hook action script.
+
+    ``cwd`` overrides the working directory (defaults to the project dir);
+    story-boundary actions pass the story worktree so tests run against the
+    tree that actually contains the story's changes.
+    """
     script_path = get_script_dir() / f"{name}.sh"
 
     if not script_path.exists():
@@ -396,7 +407,7 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
             text=True,
             timeout=timeout,
             env=run_env,
-            cwd=get_project_dir()
+            cwd=cwd or get_project_dir()
         )
 
         return {
@@ -459,8 +470,13 @@ def handle_session_start(input_data: dict) -> dict:
     """Handle SessionStart event - run pre-session hooks and crash recovery."""
     results = []
 
-    # Reset token usage tracking for this session
-    reset_token_usage()
+    # SessionStart also fires on mid-session compaction and resume. Only a
+    # genuinely new session ("startup", "clear", or runtimes that send no
+    # source) resets the token-usage ledger — an auto-compact must not wipe
+    # the agent token data accumulated so far.
+    source = str(input_data.get("source") or "").strip().lower()
+    if source not in ("compact", "resume"):
+        reset_token_usage()
 
     # Run pre-session verification
     results.append(run_action("verify-clean"))
@@ -471,8 +487,9 @@ def handle_session_start(input_data: dict) -> dict:
         preflight_result = run_action("pre-flight", env={"WORK_MODE": work_mode})
         results.append(preflight_result)
 
-    # Detect and recover from crashed sessions
-    stale = _detect_stale_session()
+    # Detect and recover from crashed sessions (not on compaction — the
+    # session is still alive, its in_progress tasks are not stale)
+    stale = None if source == "compact" else _detect_stale_session()
     if stale:
         recovery_env = {
             "STALE_TASKS": ",".join(stale["stale_tasks"]),
@@ -610,6 +627,92 @@ def delete_chain_state() -> None:
 
 
 # ==========================================================================
+# Task State File Functions
+# ==========================================================================
+#
+# Environment variables exported by the coordinator never reach hook
+# subprocesses (the exact propagation bug already fixed once for chain
+# state), so the active task id and the /work --worktree / --in-place
+# override flags travel through a state file instead:
+#
+# - The coordinator MAY pre-write {"force_worktree": ..., "force_inplace": ...}
+#   before marking a task in_progress.
+# - handle_task_start merges those flags with the task id and persists
+#   {task_id, force_worktree, force_inplace}.
+# - WIP tracking (Edit/Write/Bash events) and review-failure attribution
+#   read task_id from the file (env var kept as a legacy fallback).
+# - handle_task_complete clears the file.
+
+TASK_STATE_FILENAME = "pokayokay-task-state.json"
+
+
+def _task_state_path() -> Path:
+    """Get path to the task state file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(TASK_STATE_FILENAME)
+
+
+def load_task_state() -> dict:
+    """Load the active-task state. Returns {} when absent or unreadable."""
+    state_path = _task_state_path()
+    if not state_path.exists():
+        return {}
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        return state if isinstance(state, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_task_state(state: dict) -> None:
+    """Save the active-task state (atomic write, best-effort)."""
+    state_path = _task_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp_path = state_path.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        tmp_path.rename(state_path)
+    except OSError:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def clear_task_state() -> None:
+    """Remove the task state file from both possible locations."""
+    project_dir = Path(get_project_dir())
+    for candidate in (
+        project_dir / PRIMARY_STATE_DIR / TASK_STATE_FILENAME,
+        project_dir / LEGACY_STATE_DIR / TASK_STATE_FILENAME,
+    ):
+        try:
+            if candidate.exists():
+                candidate.unlink()
+        except OSError:
+            pass  # Best-effort cleanup
+
+
+def get_active_task_id() -> str:
+    """Return the active task id: task state file first, env fallback.
+
+    The env fallback (CURRENT_OHNO_TASK_ID) only works when the bridge is
+    invoked from a shell that exported it (tests, direct runs) — coordinator
+    exports never reach hook subprocesses, hence the state file.
+    """
+    task_id = str(load_task_state().get("task_id") or "").strip()
+    if task_id:
+        return task_id
+    return os.environ.get("CURRENT_OHNO_TASK_ID", "")
+
+
+def _coerce_flag(value) -> str:
+    """Normalize a JSON/env truthy flag to the literal string 'true'/'false'."""
+    return "true" if str(value).strip().lower() == "true" else "false"
+
+
+# ==========================================================================
 # Token Usage Tracking
 # ==========================================================================
 
@@ -706,7 +809,10 @@ def _get_memory_dir() -> Optional[Path]:
     Returns None if neither can be determined.
     """
     project_dir = get_project_dir()
-    project_key = project_dir.replace("/", "-").lstrip("-")
+    # Claude Code encodes project keys by replacing EVERY non-alphanumeric
+    # character with "-" and keeps the leading dash (verified on disk:
+    # ~/.claude/projects/-Users-steve-...; "." and "_" also become "-").
+    project_key = re.sub(r"[^A-Za-z0-9]", "-", project_dir)
     claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
     if claude_memory.exists():
         return claude_memory
@@ -961,9 +1067,30 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     )
     story_id = task_data.get("story_id") or ""
 
-    # Get worktree flags from environment (set by /work command)
-    force_worktree = os.environ.get("YOKAY_FORCE_WORKTREE", "false")
-    force_inplace = os.environ.get("YOKAY_FORCE_INPLACE", "false")
+    # Worktree override flags come from the task state file: the coordinator
+    # writes them there before marking the task in_progress, because exported
+    # env vars never reach this hook subprocess. The YOKAY_* env vars remain
+    # as a legacy fallback for direct invocations.
+    task_state = load_task_state()
+    force_worktree = _coerce_flag(
+        task_state.get("force_worktree", os.environ.get("YOKAY_FORCE_WORKTREE", "false"))
+    )
+    force_inplace = _coerce_flag(
+        task_state.get("force_inplace", os.environ.get("YOKAY_FORCE_INPLACE", "false"))
+    )
+
+    # Persist the active task so later per-event bridge processes (WIP
+    # tracking, review-failure attribution) can attribute work to it.
+    save_task_state({
+        "task_id": task_id,
+        "force_worktree": force_worktree,
+        "force_inplace": force_inplace,
+    })
+
+    # Memory-informed skill routing needs the project memory dir; hook
+    # subprocesses can't compute it from Claude-internal state, so pass it
+    # explicitly (matching the curate-memory dispatch at session end).
+    memory_dir = _get_memory_dir()
 
     env = {
         "TASK_ID": task_id,
@@ -972,6 +1099,7 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
         "STORY_ID": story_id,
         "FORCE_WORKTREE": force_worktree,
         "FORCE_INPLACE": force_inplace,
+        "MEMORY_DIR": str(memory_dir) if memory_dir else "",
     }
 
     results = []
@@ -998,6 +1126,34 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
         "results": results,
         "summary": f"{success_count} passed, {warning_count} warnings"
     }
+
+
+def _find_story_worktree(story_id: str) -> Optional[str]:
+    """Resolve the story worktree path via ``git worktree list --porcelain``.
+
+    setup-worktree.sh names story worktrees ``.worktrees/story-<story_id>-<slug>``.
+    Returns the worktree path when one exists on disk, else None (porcelain
+    ``worktree <path>`` lines are parsed whole, so paths with spaces work).
+    """
+    if not story_id:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, timeout=10,
+            cwd=get_project_dir(),
+        )
+        if result.returncode != 0:
+            return None
+        marker = f"story-{story_id}-"
+        for line in result.stdout.splitlines():
+            if line.startswith("worktree "):
+                path = line[len("worktree "):].strip()
+                if os.path.basename(path).startswith(marker) and os.path.isdir(path):
+                    return path
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+    return None
 
 
 def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
@@ -1068,11 +1224,18 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     # Run post-story hooks if story completed
     if story_completed:
         hooks_run.append("post-story")
-        results.append(run_action("test", env=env))
-        results.append(run_action("story-integration", env=env))
+        # The story's changes live in its worktree (setup-worktree.sh names
+        # them .worktrees/story-<story_id>-<slug>), not the main checkout —
+        # run the boundary checks there when the worktree exists.
+        story_worktree = _find_story_worktree(story_id or "")
+        boundary_env = dict(env)
+        if story_worktree:
+            boundary_env["WORKTREE_DIR"] = story_worktree
+        results.append(run_action("test", env=boundary_env, cwd=story_worktree))
+        results.append(run_action("story-integration", env=boundary_env, cwd=story_worktree))
         # Run audit-gate for story boundary
-        story_env = {**env, "BOUNDARY_TYPE": "story"}
-        results.append(run_action("audit-gate", env=story_env))
+        story_env = {**boundary_env, "BOUNDARY_TYPE": "story"}
+        results.append(run_action("audit-gate", env=story_env, cwd=story_worktree))
 
         # Compact story handoffs (memory decay)
         if story_id:
@@ -1104,6 +1267,13 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
                 )
             except Exception:
                 pass  # Best-effort
+
+    # The task is no longer active — clear the task state file so later
+    # Edit/Bash events don't attribute work to a finished task. Skip when a
+    # different task has already been started (overlapping task starts).
+    current_state = load_task_state()
+    if not current_state or current_state.get("task_id") in ("", None, task_id):
+        clear_task_state()
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
@@ -1446,8 +1616,9 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     # Extract failure source
     failure_source = "spec-review" if is_spec_review else "quality-review"
 
-    # Get task ID from environment (set by coordinator before dispatching reviewers)
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID", "unknown")
+    # Get task ID from the task state file (written by handle_task_start;
+    # env var is a legacy fallback for direct invocations)
+    task_id = get_active_task_id() or "unknown"
 
     # Truncate failure details to prevent shell issues (2000 chars max)
     # Also remove any shell metacharacters for safety
@@ -1720,7 +1891,7 @@ def update_wip(task_id: str, wip_data: dict):
 
 def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) -> dict:
     """Capture file modifications to WIP."""
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    task_id = get_active_task_id()
     if not task_id or task_id == "unknown":
         return {"skip": True, "reason": "no active task"}
 
@@ -1752,7 +1923,7 @@ def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) ->
 
 def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
     """Capture test results, git commits, and errors from Bash."""
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    task_id = get_active_task_id()
     if not task_id or task_id == "unknown":
         return {"skip": True, "reason": "no active task"}
 

@@ -14,6 +14,13 @@ if [ -z "$STORY_ID" ]; then
   exit 0
 fi
 
+# WORKTREE_DIR may point at a worktree that was already removed — skip
+# instead of dying on cd under set -euo pipefail.
+if [ ! -d "$WORKTREE_DIR" ]; then
+  echo "{\"status\": \"skip\", \"reason\": \"Worktree directory not found: $WORKTREE_DIR\"}"
+  exit 0
+fi
+
 cd "$WORKTREE_DIR"
 
 # Detect test runner
@@ -21,8 +28,16 @@ if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ]; then
   TEST_CMD="npx vitest run"
 elif [ -f "jest.config.ts" ] || [ -f "jest.config.js" ]; then
   TEST_CMD="npx jest"
-elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
-  TEST_CMD="python -m pytest"
+elif [ -f "pytest.ini" ] || { [ -f "pyproject.toml" ] && grep -q '^\[tool\.pytest' pyproject.toml; }; then
+  # pyproject.toml alone doesn't imply pytest (may only carry black/ruff/
+  # poetry config), and macOS ships python3 with no `python` binary — gate
+  # on pytest actually being importable before committing to the runner.
+  if command -v python3 >/dev/null 2>&1 && python3 -c 'import pytest' 2>/dev/null; then
+    TEST_CMD="python3 -m pytest"
+  else
+    echo '{"status": "skip", "reason": "pytest not installed"}'
+    exit 0
+  fi
 else
   echo '{"status": "skip", "reason": "No test runner detected"}'
   exit 0
