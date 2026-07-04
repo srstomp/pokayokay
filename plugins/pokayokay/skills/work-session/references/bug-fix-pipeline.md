@@ -152,7 +152,7 @@ Fill templates with (cover EVERY placeholder — a literal `{...}` in a dispatch
 - `{IMPLEMENTATION_SUMMARY}`: from the implementer's ohno handoff (`get_task_handoff(task_id)`) — the inline report is minimal
 - `{FILES_CHANGED}`: from implementer's handoff
 - `{COMMIT_INFO}`: from implementer's commit (hash + message)
-- `{COMMIT_HASH}`: bare commit hash — used in the templates' `git diff` verification commands
+- `{BASE_COMMIT}`: commit recorded by the coordinator before implementer dispatch — primary baseline for the templates' `git diff` verification commands (working-tree-inclusive)
 - `{APPROACH}` (quality template only): `None — design review was skipped`
 - `{WORKING_DIRECTORY}`: task's worktree path or project root
 

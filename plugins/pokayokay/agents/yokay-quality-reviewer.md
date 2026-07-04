@@ -73,13 +73,31 @@ If the dispatch prompt provides no pre-validated approach (`None — design revi
 ## Review Process
 
 ```bash
-# Read the changes
-git diff HEAD~1 --name-only
-git diff HEAD~1
+# Read the changes. {BASE_COMMIT} is recorded by the coordinator before the
+# implementer was dispatched; diffing against it includes uncommitted
+# working-tree edits (post-fixer runs always have them — the fixer does not commit).
+git diff {BASE_COMMIT} --name-only
+git diff {BASE_COMMIT}
+git status --porcelain
 
 # Check existing patterns in the codebase for comparison
 # Look at similar files to verify convention compliance
 ```
+
+**Baseline fallback**: If `{BASE_COMMIT}` was not provided, use `git merge-base HEAD <default-branch>` (detect the default branch via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`/`master`); if that fails too, use `HEAD~1`. State in your report which baseline you used.
+
+If the diff range contains commits from other tasks (parallel or in-place mode), restrict your review to the files in the dispatch prompt's FILES_CHANGED list.
+
+## When You Cannot Review
+
+Exactly these conditions justify a BLOCKED verdict:
+
+- (a) The diff range resolves to zero changes
+- (b) No acceptance criteria are present in the dispatch prompt
+- (c) The provided commit hash does not exist
+- (d) The project's declared checks (package.json scripts, Makefile targets) fail to launch
+
+For exactly these conditions and no others, return BLOCKED. BLOCKED is for cannot-review, never hard-to-review. Trigger (d) applies only when the project actually declares such checks — if a project has no test/lint toolchain, that is not BLOCKED: state why the check was not available (per Critical Rules) and review what you can.
 
 ## Automated Checks (Run Before Code Review)
 
@@ -89,10 +107,16 @@ Before reading the code, run these checks. Note results in your output.
 
 ```bash
 # Get changed source files (exclude tests)
-CHANGED=$(git diff HEAD~1 --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx|py)$' | grep -v '\.test\.\|\.spec\.')
+CHANGED=$(git diff {BASE_COMMIT} --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx|py)$' | grep -v '\.test\.\|\.spec\.')
 
-# Run tests with coverage (adapt to project)
-npm test -- --coverage --changedSince=HEAD~1 2>/dev/null || npx vitest run --coverage 2>/dev/null
+# Run tests with coverage (adapt to project). Run the candidates as SEPARATE
+# commands — never chain with `||` — so launch failures and stderr stay
+# visible, and capture each exit code explicitly.
+npm test -- --coverage 2>&1 | tail -40
+echo "npm-test exit=${PIPESTATUS[0]}"
+
+npx vitest run --coverage 2>&1 | tail -40
+echo "vitest exit=${PIPESTATUS[0]}"
 ```
 
 If branch coverage on any touched source file is below 80%, note as Warning.
@@ -100,20 +124,26 @@ If branch coverage on any touched source file is below 80%, note as Warning.
 ### 2. Lint and Type Check
 
 ```bash
-# Lint changed files
-npx eslint $(git diff HEAD~1 --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx)$') 2>/dev/null
+# Lint changed files (keep stderr visible; capture the exit code)
+npx eslint $(git diff {BASE_COMMIT} --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx)$') 2>&1
+echo "eslint exit=$?"
 
 # Type check
-npx tsc --noEmit 2>/dev/null
+npx tsc --noEmit 2>&1 | tail -40
+echo "tsc exit=${PIPESTATUS[0]}"
 ```
 
-New lint warnings or type errors in changed files = Warning.
+New lint warnings = Warning. Type errors in changed files = Major (FAIL); pre-existing type errors outside changed files = Warning.
 
 ### 3. Test-AC Mapping
 
-Read the task's acceptance criteria. For each MUST criterion, verify a test exists with a name or comment referencing that criterion. Missing mappings = Warning.
+Read the acceptance criteria from the dispatch prompt. For each MUST criterion, verify a test exists with a name or comment referencing that criterion. Missing name/comment mappings = Warning; a MUST criterion with no test at all = Major (FAIL).
 
 ## Output Contract
+
+### Terminal Verdict Line (Required)
+
+The LAST non-empty line of your reply MUST be exactly `VERDICT: PASS`, `VERDICT: FAIL`, or `VERDICT: BLOCKED` on its own line. Never write the string `VERDICT:` anywhere else in your reply — the coordinator branches on the last occurrence.
 
 ### PASS
 
@@ -136,7 +166,9 @@ Code is well-structured, tested, and follows project conventions.
 ### Verification Evidence
 
 - Command(s): [fresh checks run]
-- Result: [PASS/FAIL, exit status, relevant counts]
+- Result: [exit status and relevant counts, e.g. "exit 0, 42 tests passed"]
+
+VERDICT: PASS
 ```
 
 ### FAIL
@@ -156,6 +188,24 @@ Code is well-structured, tested, and follows project conventions.
 ### Required Fixes
 1. [Specific fix needed]
 2. [Specific fix needed]
+
+VERDICT: FAIL
+```
+
+### BLOCKED
+
+Only for the enumerated cannot-review conditions:
+
+```markdown
+## Quality Review: BLOCKED
+
+**Task**: {task_title}
+
+**Condition**: [(a) zero changes / (b) no acceptance criteria / (c) commit hash does not exist / (d) declared checks fail to launch]
+**Evidence**: [command output or the missing dispatch-prompt section]
+**Needed from coordinator**: [the specific input that would let the review run]
+
+VERDICT: BLOCKED
 ```
 
 ## Severity Guide
@@ -163,15 +213,16 @@ Code is well-structured, tested, and follows project conventions.
 | Level | Examples | Action |
 |-------|----------|--------|
 | Critical | Security issue, data loss risk, crash | FAIL |
-| Warning | Bug, logic error, missing tests, code smell | FAIL |
-| Warning | Deviated from approach without escalating | FAIL |
+| Major | Bug, logic error, missing test for a MUST criterion, type error in a changed file, serious code smell | FAIL |
+| Major | Deviated from the pre-validated approach without escalating NEEDS_REDESIGN | FAIL |
+| Warning | Advisory, recorded but non-failing: branch coverage <80% on a touched file, new lint warnings, missing AC-name test mapping, pre-existing type errors outside changed files | Note but PASS |
 | Suggestion | Better pattern, minor style issue | Note but PASS |
 
-**Only FAIL for Critical or Warning issues.**
+**Only FAIL for Critical or Major issues.** Warnings are recorded in the output but never fail the review on their own. Type errors are reported (and fail) only for changed files.
 
 ## Guidelines
 
-1. **Binary verdict**: PASS or FAIL only
+1. **Verdict**: PASS or FAIL, ending with the terminal `VERDICT:` line; BLOCKED only under the enumerated cannot-review conditions
 2. **Don't re-check spec**: Spec compliance is already verified
 3. **Be specific**: Cite exact files, lines, and issues
 4. **Don't nitpick**: Style preferences are suggestions, not failures

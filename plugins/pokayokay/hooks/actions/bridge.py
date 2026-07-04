@@ -1638,15 +1638,64 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     # normalized by normalize_hook_input. extract_output_text handles both.
     agent_output = extract_output_text(tool_response)
 
-    # Detect PASS/FAIL
-    if ": PASS" in agent_output:
+    # Detect the review verdict. Primary signal: the reviewer contract's
+    # terminal line — branch on the LAST `VERDICT: PASS|FAIL|BLOCKED` match
+    # so a report that quotes the contract earlier cannot be misread.
+    verdicts = re.findall(r'^VERDICT:\s*(PASS|FAIL|BLOCKED)\s*$', agent_output, re.MULTILINE)
+    if verdicts:
+        verdict = verdicts[-1]
+    else:
+        # Fallback: anchored report headings. FAIL takes precedence
+        # regardless of order — a FAIL heading anywhere means the review
+        # failed, even if evidence lines elsewhere mention "PASS".
+        headings = re.findall(
+            r'^##\s+(?:Spec|Quality)\s+Review:\s*(PASS|FAIL|BLOCKED)\b',
+            agent_output,
+            re.MULTILINE,
+        )
+        if "FAIL" in headings:
+            verdict = "FAIL"
+        elif "BLOCKED" in headings:
+            verdict = "BLOCKED"
+        elif "PASS" in headings:
+            verdict = "PASS"
+        else:
+            verdict = None
+
+    if verdict == "PASS":
         return {"skip": True, "reason": "review passed"}
 
-    if ": FAIL" not in agent_output:
-        return {"skip": True, "reason": "could not determine review result"}
+    if verdict == "BLOCKED":
+        # BLOCKED is a non-verdict for kaizen purposes: the reviewer could
+        # not review (missing input), the implementation did not fail. The
+        # coordinator handles BLOCKED itself (fix the reviewer's input and
+        # re-dispatch the reviewer once) — never route it into
+        # post-review-fail or failure tracking.
+        return {"skip": True, "reason": "review blocked (cannot-review), not a failure"}
 
     # Extract failure source
     failure_source = "spec-review" if is_spec_review else "quality-review"
+
+    if verdict is None:
+        # Unparseable reviewer output. Fail closed only when the dispatch is
+        # unambiguously a reviewer (subagent_type match); keep the silent
+        # skip for description-only matches so non-reviewer Tasks that
+        # merely mention "spec review" don't raise false alarms.
+        if "spec-review" not in subagent_type and "quality-review" not in subagent_type:
+            return {"skip": True, "reason": "could not determine review result"}
+        return {
+            "review_type": failure_source,
+            "task_id": get_active_task_id() or "unknown",
+            "verdict": "UNPARSEABLE",
+            "summary": (
+                "Review verdict could not be parsed: the reviewer output has no "
+                "terminal 'VERDICT: PASS|FAIL|BLOCKED' line and no "
+                "'## Spec/Quality Review:' heading. Treat this review as FAIL "
+                "and re-dispatch the reviewer."
+            ),
+        }
+
+    # verdict == "FAIL": proceed with the failure path below.
 
     # Get task ID from the task state file (written by handle_task_start;
     # env var is a legacy fallback for direct invocations)
