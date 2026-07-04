@@ -1,6 +1,5 @@
 ---
 name: cloud-infrastructure
-agents: [yokay-implementer]
 description: Use when provisioning cloud resources, choosing between AWS services (Lambda vs ECS vs EKS), writing CDK/IaC, designing serverless or container architectures, configuring IAM/security groups, or optimizing cloud costs.
 ---
 
@@ -50,5 +49,5 @@ IaC approach?
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-implementer via the Task tool with `subagent_type: "pokayokay:yokay-implementer"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

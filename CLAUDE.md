@@ -129,7 +129,7 @@ Story tasks reuse the same worktree for related changes.
 ## File Conventions
 
 - **Commands** (`commands/*.md`): Frontmatter with `description`, `argument-hint`, optional `skill` reference
-- **Skills** (`skills/<name>/SKILL.md`): Main skill file with `references/` subdirectory for detailed guides. Optional `agents:` frontmatter lists dispatched agents.
+- **Skills** (`skills/<name>/SKILL.md`): Main skill file with `references/` subdirectory for detailed guides. Dispatched agents are named explicitly in each skill's Runtime Notes section (no `agents:` frontmatter — it is not part of the skill spec and nothing reads it).
   - **Reference size guideline**: Target ≤500 lines per reference file. Split larger files into focused sub-topics. References are lazy-loaded but consume context when active.
 - **Agents** (`agents/*.md`): Agent definitions loaded by Task tool's `subagent_type`
 - **Hook Actions** (`hooks/actions/*.sh`): Shell scripts executed by bridge.py

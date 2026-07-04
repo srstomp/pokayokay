@@ -67,5 +67,5 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 
 ## Runtime Notes
 
-- **Claude Code**: the coordinator dispatches `yokay-*` agents via the Task tool as described in [dispatch-preparation.md](references/dispatch-preparation.md).
+- **Claude Code**: the coordinator dispatches yokay-brainstormer, yokay-design-reviewer, yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer, yokay-browser-verifier, and yokay-test-runner via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`, as described in [dispatch-preparation.md](references/dispatch-preparation.md).
 - **Codex**: there is no subagent dispatch. Run the pipeline inline in the current session — for each stage, read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract. Execute stages (design review (conditional) → implement → spec review → quality review) as separate, sequential passes; do not skip review stages because dispatch is unavailable. Parallel batch execution ([parallel-execution.md](references/parallel-execution.md)) is Claude Code-only — process tasks sequentially on Codex.

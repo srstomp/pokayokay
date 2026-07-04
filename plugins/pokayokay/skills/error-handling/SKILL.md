@@ -1,6 +1,5 @@
 ---
 name: error-handling
-agents: [yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer]
 description: Use when designing error hierarchies, implementing React error boundaries, adding retry logic or fallbacks, creating API error responses, integrating error tracking (Sentry), or improving user-facing error communication.
 ---
 
@@ -49,5 +48,5 @@ Design resilient applications through intentional error handling strategies. Err
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch the relevant agent (yokay-implementer, yokay-fixer, yokay-spec-reviewer, or yokay-quality-reviewer) via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.
