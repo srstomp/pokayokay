@@ -22,14 +22,15 @@ failed_tests=()
 run_one() {
   local runner="$1"
   local test_file="$2"
-  local name
+  local name output
   name="$(basename "$test_file")"
 
-  if "$runner" "$test_file" > /dev/null 2>&1; then
+  if output="$("$runner" "$test_file" 2>&1)"; then
     echo "PASS  $name"
     pass_count=$((pass_count + 1))
   else
     echo "FAIL  $name"
+    printf '%s\n' "$output" | tail -40 | sed 's/^/      | /'
     fail_count=$((fail_count + 1))
     failed_tests+=("$runner plugins/pokayokay/tests/$name")
   fi
