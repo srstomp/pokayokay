@@ -49,33 +49,43 @@ if [ -z "$FILES" ]; then
       SCOPE="about-to-be-staged"
       FILES=$(git diff --name-only --diff-filter=ACM 2>/dev/null | grep "$REF_PATTERN" || true)
     elif echo "$GIT_COMMAND" | grep -qE "$ADD_CMD"; then
-      # `git add <paths>`: gate reference files named in the command, either
-      # by full path or via any parent directory (`git add skills/foo` stages
-      # everything beneath it, so a contained ref file must be checked too).
-      # Each probe must appear as a COMPLETE argument — bounded by start/
-      # whitespace/quote/`=` before and optional `/` plus whitespace/quote/end
-      # after — so `skills/demo-other` or a deeper sibling file under demo/
-      # never matches the demo/ probe (a false block would deadlock commits
-      # that don't stage the oversized ref at all).
+      # `git add <pathspec>...`: gate reference files the add will stage.
+      # Extract the pathspec region of each `git add` (everything up to the
+      # next shell separator), tokenize it, and match candidates with bash
+      # glob semantics: a token gates a candidate when it names it exactly,
+      # names a parent directory, or glob-matches it (references/*.md).
+      # Scoping tokens to the add region keeps commit-message words from
+      # false-blocking, and `demo-other` never matches a demo/ candidate.
+      # Quoted pathspecs containing spaces are split — a known limitation.
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
       FILES=""
-      B_PRE='(^|[[:space:]"'"'"'=])'
-      B_POST='/?([[:space:]"'"'"']|$)'
+      ADD_REGIONS=$(printf '%s' "$GIT_COMMAND" |
+        grep -oE 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*add[[:space:]][^;&|)]*' |
+        sed -E 's/^git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*add[[:space:]]//')
+      TOKENS=$(printf '%s\n' "$ADD_REGIONS" | tr ' \t' '\n\n')
       while IFS= read -r candidate; do
         [ -n "$candidate" ] || continue
-        probe="$candidate"
-        while [ -n "$probe" ]; do
-          esc=$(printf '%s' "$probe" | sed 's/[][\.*^$()+?{|]/\\&/g')
-          if printf '%s' "$GIT_COMMAND" | grep -qE "${B_PRE}${esc}${B_POST}"; then
-            FILES="${FILES}${FILES:+$NL}${candidate}"
+        matched=""
+        while IFS= read -r token; do
+          [ -n "$token" ] || continue
+          token="${token#\"}"; token="${token%\"}"
+          token="${token#\'}"; token="${token%\'}"
+          case "$token" in ''|-*) continue ;; esac
+          token="${token#./}"
+          token="${token%/}"
+          if [ "$token" = "." ] || [ -z "$token" ]; then
+            matched=1
             break
           fi
-          parent="${probe%/*}"
-          [ "$parent" = "$probe" ] && break
-          probe="$parent"
-        done
+          # Unquoted case patterns give glob matching without pathname
+          # expansion; $token/* additionally covers directory containment.
+          case "$candidate" in
+            $token|$token/*) matched=1; break ;;
+          esac
+        done <<< "$TOKENS"
+        [ -n "$matched" ] && FILES="${FILES}${FILES:+$NL}${candidate}"
       done <<< "$CANDIDATES"
     fi
     # Plain `git commit` of already-staged files: nothing relevant staged,
