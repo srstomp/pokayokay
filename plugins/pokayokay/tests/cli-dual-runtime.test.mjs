@@ -141,6 +141,9 @@ console.log('Test 6: writeCodexHookBridgeConfig enables hooks idempotently');
       'PostToolUse matcher must cover plugin-scoped ohno tool names (matches plugins/pokayokay/hooks.json)'
     );
     assert.match(postToolUseBlock[0], /timeout = 450/, 'PostToolUse timeout must cover story-boundary action chains');
+    const sessionEndBlock = result.match(/\[\[hooks\.SessionEnd\]\][\s\S]*?(?=\n\n|\n# END pokayokay hooks|$)/);
+    assert.ok(sessionEndBlock, 'SessionEnd block should exist');
+    assert.match(sessionEndBlock[0], /timeout = 120/, 'SessionEnd timeout must cover sync/summary/curate/chain action budget');
     console.log('  PASS: Codex hook wiring is appended once and preserves config');
   } finally {
     rmSync(hooksDir, { recursive: true, force: true });
