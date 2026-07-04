@@ -456,6 +456,11 @@ For ambiguous or under-specified tasks, `yokay-brainstormer` runs **before** imp
 
 This prevents wasted work from misunderstood requirements.
 
+For non-trivial tasks, `/work` then runs a conditional design-review gate:
+`yokay-design-reviewer` validates the implementation approach against codebase
+patterns before the implementer is dispatched (skipped for chores, docs, and
+trivial changes, or with `--skip-design`).
+
 ### Two-Stage Review
 
 After implementation, two sequential reviewers check the work:
@@ -548,7 +553,13 @@ npm --prefix cli install
 node cli/bin/cli.js
 ```
 
-Useful checks while developing:
+Run the full test suite:
+
+```bash
+npm test    # or: bash plugins/pokayokay/tests/run-tests.sh
+```
+
+Useful individual checks while developing:
 
 ```bash
 bash plugins/pokayokay/tests/codex-compatibility.test.sh

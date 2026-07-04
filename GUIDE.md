@@ -15,9 +15,9 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:api` | Design REST/GraphQL APIs | api-design |
 | `/pokayokay:arch` | Review architecture | architecture-review |
 | `/pokayokay:quick` | Quick task + immediate work | - |
-| `/pokayokay:fix` | Bug diagnosis and fix | - |
+| `/pokayokay:fix` | Bug diagnosis and fix | systematic-debugging |
 | `/pokayokay:spike` | Time-boxed investigation | spike |
-| `/pokayokay:hotfix` | Production incident response | - |
+| `/pokayokay:hotfix` | Production incident response | error-handling |
 | `/pokayokay:cicd` | CI/CD pipelines | ci-cd |
 | `/pokayokay:db` | Database design | database-design |
 | `/pokayokay:test` | Testing strategy | testing-strategy |

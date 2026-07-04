@@ -1341,11 +1341,18 @@ def handle_pre_commit(tool_input: dict) -> dict:
 
     # Match `git commit` / `git add` only when it is an actual command (at the
     # start of the string or after a shell separator/newline/subshell open),
-    # not quoted text inside another command. Tolerates flag-style global
-    # options (`git --no-pager commit`) but intentionally does not match
-    # option-with-argument forms like `git -C dir commit` — a conscious
-    # tightening vs the old substring check.
-    git_write_pattern = r'(?:^|&&|\|\||;|\||\n|\()\s*git(?:\s+-\S+)*\s+(?:commit|add)\b'
+    # not quoted text inside another command. Tolerates leading VAR=value
+    # environment assignments (`FOO=bar git commit`), flag-style global
+    # options (`git --no-pager commit`), and the argument-taking `-C <path>` /
+    # `-c <name=value>` global options (`git -C dir commit`). Other
+    # option-with-argument forms remain unmatched — a conscious tightening
+    # vs the old substring check.
+    git_write_pattern = (
+        r'(?:^|&&|\|\||;|\||\n|\()\s*'
+        r'(?:\w+=\S*\s+)*'
+        r'git(?:\s+(?:-[Cc]\s+\S+|-\S+))*'
+        r'\s+(?:commit|add)\b'
+    )
     if not re.search(git_write_pattern, command):
         return {"skip": True, "reason": "not a commit command"}
 
@@ -1796,12 +1803,15 @@ def save_wip_state(state: dict) -> None:
     state_path = _wip_state_path()
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
-    tmp_path = state_path.with_suffix(".tmp")
+    # PID-suffixed temp name: concurrent bridge processes (one per hook
+    # event) must not clobber each other's temp file mid-write. The final
+    # os.replace is atomic; last writer wins, which is acceptable here.
+    tmp_path = state_path.with_name(f"{state_path.name}.{os.getpid()}.tmp")
     try:
         with open(tmp_path, "w") as f:
             json.dump(state, f, indent=2)
             f.write("\n")
-        tmp_path.rename(state_path)
+        os.replace(tmp_path, state_path)
     except OSError:
         if tmp_path.exists():
             tmp_path.unlink()

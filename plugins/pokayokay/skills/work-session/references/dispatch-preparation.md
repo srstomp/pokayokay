@@ -219,6 +219,7 @@ Include the SKILL.md pointer in `{RELEVANT_SKILL}` — skill name plus an instru
 | `{CONTEXT}` | Assembled from story/handoff/deps |
 | `{RELEVANT_SKILL}` | Skill name and guidance |
 | `{APPROACH}` | Design review output (Step 3), or `Design review skipped — follow codebase patterns` |
+| `{RESUME_CONTEXT}` | Resume flow only (`--continue`): saved WIP + previous handoff (phase, files modified, last commit, decisions, next step). Empty on fresh dispatch |
 | `{WORKING_DIRECTORY}` | Project root path |
 
 ### Acceptance Criteria

@@ -985,6 +985,8 @@ If brainstorm triggers:
      prompt: [Fill template from agents/templates/brainstorm-prompt.md]
    ```
 
+   Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_TYPE}` (the ohno task's `task_type`), `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{TRIGGER_REASON}` (which trigger condition fired the gate, e.g. "Short description" or "No acceptance criteria"), `{WORKING_DIRECTORY}`.
+
 2. Process brainstorm result:
    - Update ohno task with refined requirements:
      ```
@@ -1170,10 +1172,9 @@ If the gate is not skipped:
    ```
 
 4. Process subagent result:
-   - If questions: Answer and re-dispatch
    - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
    - If NEEDS_REDESIGN: The pre-validated approach proved infeasible — see "Handling NEEDS_REDESIGN" below
-   - If blocked: Set blocker via ohno MCP
+   - If BLOCKED: Set blocker via ohno MCP (the report includes the implementer's specific open questions)
 
 #### Handling NEEDS_REDESIGN
 

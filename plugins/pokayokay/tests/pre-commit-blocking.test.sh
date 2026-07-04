@@ -76,6 +76,18 @@ COMPOUND_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"cd plugins\
 assert_deny "$COMPOUND_OUTPUT"
 echo "  PASS: compound command denied"
 
+echo "Test 3b: git -C <path> commit is gated"
+C_OPT_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git -C . commit -m wip"},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$C_OPT_OUTPUT"
+echo "  PASS: -C option-with-argument form denied"
+
+echo "Test 3c: env-prefixed git commit is gated"
+ENV_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"GIT_AUTHOR_NAME=bot git commit -m wip"},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$ENV_OUTPUT"
+echo "  PASS: env-prefixed commit denied"
+
 echo "Test 4: quoted 'git commit' text does not trigger the gate"
 SKIP_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"echo \"git commit example\""},"hook_event_name":"PreToolUse"}' |
   python3 "$BRIDGE")

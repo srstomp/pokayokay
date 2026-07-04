@@ -302,8 +302,9 @@ Action scripts in `actions/` signal severity through their exit code:
 Only an exact exit code 2 blocks, so unexpected codes (126/127, signal
 deaths) stay advisory. Script execution failures (e.g. an unspawnable
 script) also map to warning so a broken hook script cannot block every
-commit. By design, `lint.sh` exits 1 on lint failures (advisory) while
-`check-ref-sizes.sh` exits 2 on oversized reference files (blocking).
+commit. By design, `lint.sh` always exits 0 — lint failures are reported
+in its output but never block — while `check-ref-sizes.sh` exits 2 on
+oversized reference files (blocking).
 
 ### Task State File
 
@@ -348,6 +349,7 @@ list.
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/story-integration.sh` | Story-level integration checks (post-story) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
+| `actions/audit-summary.sh` | Prints a story-completion mini-audit banner; not wired to any hook — manually-invocable helper only |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
 | `actions/lint.sh` | Runs linter, advisory only (pre-commit) |
 | `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |

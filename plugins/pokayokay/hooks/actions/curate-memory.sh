@@ -82,7 +82,9 @@ archives = {
     "Completed Work": "completed-work-archive.md",
     "Key Decisions": "decisions-archive.md",
     "Architecture Notes": "architecture-archive.md",
+    "Active Patterns": "active-patterns-archive.md",
     "Recent Bug Fixes": "bugfixes-archive.md",
+    "Topic Index": "topic-index-archive.md",
 }
 
 pokayokay_marker = "<!-- pokayokay:"
@@ -177,8 +179,10 @@ for header, is_pokayokay, section_lines in sections:
     overflow = [line for entry in overflow_entries for line in entry]
     remaining = [line for entry in keep for line in entry]
 
-    if overflow and header in archives:
-        archive_path = os.path.join(memory_dir, archives[header])
+    # Every evicted entry is preserved: sections without a dedicated archive
+    # fall back to the generic memory-archive.md instead of being discarded.
+    if overflow:
+        archive_path = os.path.join(memory_dir, archives.get(header, "memory-archive.md"))
         archive_header = "# {} Archive\n\nOverflow entries from MEMORY.md, managed by pokayokay.\n\n".format(header)
         existing = ""
         if os.path.exists(archive_path):
