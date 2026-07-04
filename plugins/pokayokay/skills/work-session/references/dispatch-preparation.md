@@ -55,7 +55,7 @@ Assemble context from: (1) story context if task belongs to story, (2) task's ow
 
 ## Step 2: Brainstorm Gate (Conditional)
 
-**Agent**: `yokay-brainstormer` | **Template**: `agents/templates/brainstorm-prompt.md`
+**Agent**: `pokayokay:yokay-brainstormer` | **Template**: `agents/templates/brainstorm-prompt.md`
 
 ### Trigger Conditions
 
@@ -84,16 +84,36 @@ Even when AC exists, check quality before dispatching. **Route through brainstor
 
 **Quick heuristic**: If you could write a test from the criterion text alone, it passes. If you'd need to guess what to test, it fails.
 
+### Dispatching the Brainstormer
+
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-brainstormer"
+  description: "Brainstorm: {task.title}"
+  prompt: [Fill template from agents/templates/brainstorm-prompt.md]
+```
+
+Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_TYPE}` (the ohno task's `task_type`), `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{TRIGGER_REASON}` (which trigger condition fired the gate, e.g. "Short description" or "No acceptance criteria"), `{WORKING_DIRECTORY}`.
+
 ### Processing Result
 
-- **Refined**: Update ohno with refined description/AC, proceed to the design review gate
-- **Needs Input**: supervised / semi-auto — PAUSE for human to answer brainstormer's questions; auto / unattended — log the open questions as assumptions (`add_task_activity`) and proceed with the brainstormer's best judgment. Never pause in auto/unattended.
+- **Refined**: Update ohno with the refined requirements, log it, and proceed to the design review gate:
+
+  ```
+  update_task(task_id, {
+    description: refined_description,
+    acceptance_criteria: proposed_criteria
+  })
+  add_task_activity(task_id, "note", "Brainstorm: Refined requirements")
+  ```
+
+- **Needs Input**: supervised / semi-auto — PAUSE for human to answer brainstormer's questions; auto / unattended — log the open questions as assumptions (`add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto/unattended mode): {questions}")`) and proceed with the brainstormer's best judgment. Never pause in auto/unattended.
 
 ## Step 3: Design Review Gate (Conditional)
 
 Before dispatching the implementer, evaluate if the task needs design review.
 
-**Agent**: `yokay-design-reviewer` | **Template**: `agents/templates/design-review-prompt.md`
+**Agent**: `pokayokay:yokay-design-reviewer` | **Template**: `agents/templates/design-review-prompt.md`
 
 ### Skip Conditions
 

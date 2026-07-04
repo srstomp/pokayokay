@@ -155,6 +155,12 @@ mcp__ohno__create_task:
   description: "<rich description per Section 4.5>"
 ```
 
+When the planner JSON provides `packages_touched` for a task (`stories[].tasks[]`
+only — `spikes[]` and design tasks lack the field), append a final description
+line in the exact form `Packages: <comma-separated packages_touched>` (e.g.
+`Packages: @sakeba/api, apps/web`). This line is machine-parsed by `/work`
+for parallel-dispatch conflict detection — see Section 4.5.
+
 #### 4.4 Add Dependencies
 Link tasks that depend on each other:
 ```
@@ -229,6 +235,8 @@ mcp__ohno__create_task:
 
     Patterns to Follow:
     - Follow existing endpoint patterns in src/routes/
+
+    Packages: @app/api
 ```
 
 Every task description MUST include:
@@ -237,6 +245,7 @@ Every task description MUST include:
 3. **Acceptance criteria**: 3-5 checkboxes the implementer can self-verify against
 4. **Connects To**: Which tasks this depends on and blocks, with brief context
 5. **Patterns to Follow**: Where to look for conventions in existing code
+6. **Packages** (when the planner JSON provides `packages_touched` — `stories[].tasks[]` only): a final line in the exact form `Packages: <comma-separated packages_touched>` (e.g. `Packages: @sakeba/api, apps/web`). This line is machine-parsed by `/work` — its parallel-dispatch conflict check never batches two tasks sharing a package. Omit it for spike and design tasks, which lack the field.
 
 #### Anti-Pattern: Vague Descriptions
 
