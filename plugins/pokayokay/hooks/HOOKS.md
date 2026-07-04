@@ -349,7 +349,6 @@ list.
 | `actions/test.sh` | Runs tests (safe, non-blocking) |
 | `actions/story-integration.sh` | Story-level integration checks (post-story) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
-| `actions/audit-summary.sh` | Prints a story-completion mini-audit banner; not wired to any hook — manually-invocable helper only |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
 | `actions/lint.sh` | Runs linter, advisory only (pre-commit) |
 | `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |
