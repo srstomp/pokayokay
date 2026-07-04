@@ -34,11 +34,25 @@ if [ -z "${CHAIN_ID:-}" ]; then
 fi
 
 # Check remaining work
-# ohno-cli JSON list output is an object {"tasks": [...], "total_count": N},
-# so read total_count (also immune to the default --limit cap).
+# ohno-cli JSON list output is an object {"tasks": [...], "total_count": N}.
+# Unscoped chains read total_count (immune to the --limit cap). Scoped chains
+# (--epic/--story) count only in-scope rows — an unrelated todo task must not
+# keep the chain alive after the scoped work is done; the CLI has no scope
+# filter, so filter client-side over a high --limit.
 READY_COUNT=0
 if command -v npx &>/dev/null; then
-    READY_COUNT=$(npx @stevestomp/ohno-cli tasks --status todo --json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('total_count', 0))" 2>/dev/null || echo "0")
+    READY_COUNT=$(npx @stevestomp/ohno-cli tasks --status todo --json --limit 1000 2>/dev/null | \
+        SCOPE_TYPE="$SCOPE_TYPE" SCOPE_ID="${SCOPE_ID:-}" python3 -c "
+import json, os, sys
+data = json.load(sys.stdin)
+scope_type = os.environ.get('SCOPE_TYPE', '')
+scope_id = os.environ.get('SCOPE_ID', '')
+if scope_type in ('story', 'epic') and scope_id:
+    key = 'story_id' if scope_type == 'story' else 'epic_id'
+    print(sum(1 for t in data.get('tasks', []) if t.get(key) == scope_id))
+else:
+    print(data.get('total_count', 0))
+" 2>/dev/null || echo "0")
 fi
 # Guard against non-numeric output before -eq tests and JSON interpolation
 case "$READY_COUNT" in ''|*[!0-9]*) READY_COUNT=0 ;; esac

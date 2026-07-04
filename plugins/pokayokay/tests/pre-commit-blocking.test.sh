@@ -123,6 +123,14 @@ echo "  PASS: explicitly-added oversized reference blocked pre-staging"
 git rm -q --cached src.txt
 rm -f src.txt
 
+echo "Test 5d: git add of a parent directory catches the contained ref"
+# `git add skills/demo && git commit` stages everything beneath the dir; the
+# pre-staging check must match the contained ref via its parent directory.
+DIR_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add plugins/pokayokay/skills/demo && git commit -m \"dir\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$DIR_OUTPUT"
+echo "  PASS: directory add gates the contained oversized reference"
+
 echo "Test 6: advisory failures (lint exit 1) do not block the commit"
 # Remove the violation entirely and stage a package.json whose lint fails.
 rm -f "$REF_DIR/big-ref.md"

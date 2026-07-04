@@ -49,18 +49,28 @@ if [ -z "$FILES" ]; then
       SCOPE="about-to-be-staged"
       FILES=$(git diff --name-only --diff-filter=ACM 2>/dev/null | grep "$REF_PATTERN" || true)
     elif echo "$GIT_COMMAND" | grep -qE "$ADD_CMD"; then
-      # `git add <paths>`: gate only reference files named in the command.
-      # (Directory adds that merely contain a ref file slip through here;
-      # the staged check catches them on the follow-up commit.)
+      # `git add <paths>`: gate reference files named in the command, either
+      # by full path or via any parent directory (`git add skills/foo` stages
+      # everything beneath it, so a contained ref file must be checked too).
+      # Over-matching only widens the size check, never skips it.
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
       FILES=""
       while IFS= read -r candidate; do
         [ -n "$candidate" ] || continue
-        case "$GIT_COMMAND" in
-          *"$candidate"*) FILES="${FILES}${FILES:+$NL}${candidate}" ;;
-        esac
+        probe="$candidate"
+        while [ -n "$probe" ]; do
+          case "$GIT_COMMAND" in
+            *"$probe"*)
+              FILES="${FILES}${FILES:+$NL}${candidate}"
+              break
+              ;;
+          esac
+          parent="${probe%/*}"
+          [ "$parent" = "$probe" ] && break
+          probe="$parent"
+        done
       done <<< "$CANDIDATES"
     fi
     # Plain `git commit` of already-staged files: nothing relevant staged,

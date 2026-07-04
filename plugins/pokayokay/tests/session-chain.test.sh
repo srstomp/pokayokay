@@ -53,17 +53,17 @@ else
   exit 1
 fi
 
-echo "Test 2: work remaining -> continue, counted via total_count"
-echo '{"tasks":[{"id":"t1"},{"id":"t2"}],"total_count":5}' > "$TEST_DIR/mock-todo.out"
+echo "Test 2: scoped chain counts only in-scope tasks"
+echo '{"tasks":[{"id":"t1","epic_id":"epic-99"},{"id":"t2","epic_id":"epic-99"},{"id":"t3","epic_id":"epic-other"}],"total_count":5}' > "$TEST_DIR/mock-todo.out"
 OUTPUT=$(CHAIN_ID="chain-1" CHAIN_INDEX=0 MAX_CHAINS=10 SCOPE_TYPE="epic" SCOPE_ID="epic-99" \
   bash "$SCRIPT" 2>/dev/null)
 ACTION=$(echo "$OUTPUT" | json_field action)
 REMAINING=$(echo "$OUTPUT" | json_field tasks_remaining)
 CONTINUE_CMD=$(echo "$OUTPUT" | json_field continue_command)
-if [ "$ACTION" = "continue" ] && [ "$REMAINING" = "5" ]; then
-  echo "  PASS: action=continue with tasks_remaining=5 (total_count, not row/key count)"
+if [ "$ACTION" = "continue" ] && [ "$REMAINING" = "2" ]; then
+  echo "  PASS: action=continue with tasks_remaining=2 (epic-scoped row count, not total_count)"
 else
-  echo "  FAIL: expected action=continue with tasks_remaining=5, got action=$ACTION remaining=$REMAINING"
+  echo "  FAIL: expected action=continue with tasks_remaining=2, got action=$ACTION remaining=$REMAINING"
   echo "$OUTPUT"
   exit 1
 fi
@@ -78,6 +78,32 @@ if grep -q "^@stevestomp/ohno-cli tasks --status todo --json" "$TEST_DIR/npx_cal
 else
   echo "  FAIL: expected 'tasks --status todo --json' invocation"
   cat "$TEST_DIR/npx_calls.log" 2>/dev/null || echo "  (no npx calls logged)"
+  exit 1
+fi
+
+echo "Test 2b: unscoped chain still reads total_count"
+OUTPUT=$(CHAIN_ID="chain-1b" CHAIN_INDEX=0 MAX_CHAINS=10 SCOPE_TYPE="all" \
+  bash "$SCRIPT" 2>/dev/null)
+ACTION=$(echo "$OUTPUT" | json_field action)
+REMAINING=$(echo "$OUTPUT" | json_field tasks_remaining)
+if [ "$ACTION" = "continue" ] && [ "$REMAINING" = "5" ]; then
+  echo "  PASS: unscoped count uses total_count (immune to --limit cap)"
+else
+  echo "  FAIL: expected action=continue with tasks_remaining=5, got action=$ACTION remaining=$REMAINING"
+  echo "$OUTPUT"
+  exit 1
+fi
+
+echo "Test 2c: scoped chain with only out-of-scope todos ends the chain"
+OUTPUT=$(CHAIN_ID="chain-1c" CHAIN_INDEX=0 MAX_CHAINS=10 SCOPE_TYPE="story" SCOPE_ID="story-42" \
+  bash "$SCRIPT" 2>/dev/null)
+ACTION=$(echo "$OUTPUT" | json_field action)
+REMAINING=$(echo "$OUTPUT" | json_field tasks_remaining)
+if [ "$ACTION" = "audit_pending" ] && [ "$REMAINING" = "0" ]; then
+  echo "  PASS: unrelated todo tasks do not keep a scoped chain alive"
+else
+  echo "  FAIL: expected action=audit_pending with tasks_remaining=0, got action=$ACTION remaining=$REMAINING"
+  echo "$OUTPUT"
   exit 1
 fi
 
