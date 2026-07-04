@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]"
+argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue] [--skip-design]"
 skill: work-session
 ---
 
@@ -18,6 +18,7 @@ Parse `$ARGUMENTS` to extract:
 2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
+5. **Skip design**: `--skip-design` flag (bypass the Design Review Gate for all tasks this session)
 
 Example arguments:
 - `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
@@ -29,6 +30,7 @@ Example arguments:
 - `auto --story story-def456 -n 3` → scope=story:story-def456, parallel=3
 - `--continue` → resume from WIP, inherit previous scope
 - `--all` → work on all available tasks (no scope filter)
+- `auto --skip-design` → mode=auto, design review gate bypassed
 
 Note: `-p` is commonly reserved by AI runtime CLIs for prompt input. Use `-n` for parallel count.
 
@@ -532,12 +534,13 @@ For each task:
 3. **Route to skill** (if needed): Based on task type
 4. **Brainstorm gate** (conditional): See Brainstorm Gate section
 5. **Pre-implementation validation**: Verify description quality, dependencies, skill hint
-6. **Dispatch implementer**: Single Task tool call
-7. **Auto-fix test failures** (conditional): See Auto-Fix section
-8. **Browser verification** (conditional): See Browser Verification section
-9. **Task review**: Spec compliance + code quality
-10. **Complete task**: Mark done, trigger hooks
-11. **Checkpoint**: Based on mode
+6. **Design review gate** (conditional): See Design Review Gate section — produces the pre-validated approach
+7. **Dispatch implementer**: Single Task tool call, `{APPROACH}` filled from the design review
+8. **Auto-fix test failures** (conditional): See Auto-Fix section
+9. **Browser verification** (conditional): See Browser Verification section
+10. **Task review**: Spec compliance + code quality (incl. design compliance)
+11. **Complete task**: Mark done, trigger hooks
+12. **Checkpoint**: Based on mode
 
 ### Parallel Mode (parallel > 1)
 
@@ -599,7 +602,13 @@ Coordinator maintains N concurrent implementers:
        queued_tasks = [t for t in queued_tasks if t.id not in deferred]
    ```
 
-3. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
+3. **Design review gate (per task)**: Before batching implementer dispatches, run the Design Review Gate (Step 3.7) for EACH queued task:
+   - Apply the skip conditions per task (chore/docs type, `--skip-design`, trivial change)
+   - For non-skipped tasks, dispatch `yokay-design-reviewer` (these read-only dispatches may run in parallel)
+   - Store each task's APPROVED approach; it fills that task's `{APPROACH}` in the implementer template and later its quality-review dispatch
+   - NEEDS_DISCUSSION follows the same mode handling as sequential (auto/unattended: log and proceed without approach)
+
+4. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
    ```
    Task tool (yokay-implementer):
      description: "Implement: {task1.title}"
@@ -614,7 +623,7 @@ Coordinator maintains N concurrent implementers:
    ... up to N tasks
    ```
 
-3. **Track state**: Add all dispatched tasks to `active_agents`
+5. **Track state**: Add all dispatched tasks to `active_agents`
 
 #### Processing Results
 
@@ -624,9 +633,10 @@ As each agent returns:
 2. **Run task review** (spec + quality in one pass)
 3. **Handle result**:
    - PASS: Add to `completed_this_batch`, attempt commit
+   - NEEDS_REDESIGN: Handle per "Handling NEEDS_REDESIGN" (Step 4) — one redesign cycle, then block
    - FAIL: Re-dispatch or add to `failed_blocked`
 4. **Refill**: If `len(active_agents) < N` and queue not empty:
-   - Dispatch next task from queue
+   - Run the Design Review Gate (Step 3.7) for the next task, then dispatch it
    - Replenish queue from ohno if needed
 
 #### Commit Handling
@@ -965,7 +975,7 @@ If brainstorm triggers:
        add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto mode): {questions}")
        ```
      - **other modes**: PAUSE for human input
-   - If refined: Proceed to Step 4
+   - If refined: Proceed to Step 3.5 (validation), then the Design Review Gate (Step 3.7)
 
 3. Log activity:
    ```
@@ -982,7 +992,7 @@ If brainstorm triggers:
        ▼
 ┌──────────────┐     NO      ┌──────────────┐
 │ Needs        │────────────►│ Skip to      │
-│ Brainstorm?  │             │ Implementer  │
+│ Brainstorm?  │             │ Design Review│
 └──────┬───────┘             └──────────────┘
        │ YES
        ▼
@@ -1000,6 +1010,12 @@ If brainstorm triggers:
 ┌──────────────┐
 │ Update ohno  │
 │ with criteria│
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Design Review│
+│  Gate (3.7)  │
 └──────┬───────┘
        │
        ▼
@@ -1040,11 +1056,69 @@ def validate_task(task):
 
 If task was just brainstormed (Step 3) and still has BLOCK issues, something went wrong. Log and skip rather than re-brainstorming.
 
+### 3.7 Design Review Gate (Conditional)
+
+Before dispatching the implementer, validate the implementation approach against the codebase. The design reviewer's APPROVED output becomes the implementer's blueprint via the `{APPROACH}` template variable, and is re-used later for the quality reviewer's design-compliance check.
+
+#### Skip Conditions
+
+Design review is skipped when ANY of these are true (keep consistent with the skip conditions in `agents/templates/design-review-prompt.md`):
+
+| Condition | Check | Rationale |
+|-----------|-------|-----------|
+| Manual skip | `--skip-design` flag passed | Human override |
+| Low-risk type | `task_type == "chore"` or `task_type == "docs"` | Low design risk |
+| Trivial change | Fewer than 3 acceptance criteria AND touches <= 1 file | Not worth a dispatch |
+
+```python
+# Pseudocode
+def skip_design_review(task, skip_flag=False):
+    if skip_flag:
+        return True  # --skip-design flag
+    if task.task_type in ["chore", "docs"]:
+        return True  # Low design risk
+    ac_count = count_acceptance_criteria(task)
+    if ac_count < 3 and estimated_files_touched(task) <= 1:
+        return True  # Trivial change
+    return False
+```
+
+**If skipped**: fill `{APPROACH}` in Step 4's implementer template with `Design review skipped — follow codebase patterns`. NEVER leave the literal `{APPROACH}` placeholder in a dispatched prompt.
+
+#### Dispatching Design Reviewer
+
+If the gate is not skipped:
+
+1. Dispatch design reviewer (read-only agent):
+   ```
+   Task tool (yokay-design-reviewer):
+     description: "Design review: {task.title}"
+     prompt: [Fill template from agents/templates/design-review-prompt.md]
+   ```
+
+   Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{CONTEXT}` (story + handoff notes + dependencies), `{WORKING_DIRECTORY}`.
+
+2. Process design review result:
+   - **APPROVED**: Store the approach (the `## Design Review: APPROVED` block). It fills:
+     - `{APPROACH}` in Step 4's implementer template
+     - `{APPROACH}` in Step 5 Stage 2's quality-review template (design-compliance post-check)
+   - **NEEDS_DISCUSSION**: Handle per mode:
+     - **supervised / semi-auto**: PAUSE — present the decision needed and options to the human, then re-run the gate with the decision appended to `{CONTEXT}`
+     - **auto / unattended**: Do NOT pause. Log the open decision and proceed WITHOUT a validated approach — fill `{APPROACH}` with the skip text:
+       ```
+       add_task_activity(task_id, "decision", "Design review NEEDS_DISCUSSION — proceeding without validated approach (auto/unattended): {decision_needed}")
+       ```
+
+3. Log activity:
+   ```
+   add_task_activity(task_id, "note", "Design review: APPROVED — approach stored for implementer")
+   ```
+
 ### 4. Dispatch Implementer Subagent
 
 **CRITICAL: Do not implement inline. Always dispatch subagent.**
 
-*Note: If brainstorm ran in Step 3, task now has refined requirements. Validation in Step 3.5 confirmed readiness.*
+*Note: If brainstorm ran in Step 3, task now has refined requirements. Validation in Step 3.5 confirmed readiness. If design review ran in Step 3.7, its approach fills `{APPROACH}`.*
 
 1. Extract full task details from ohno:
    ```
@@ -1056,6 +1130,7 @@ If task was just brainstormed (Step 3) and still has BLOCK issues, something wen
    - Acceptance criteria (from task or brainstorm output)
    - Architectural context (where this fits in the project)
    - Relevant skill (determined in Step 2 or assigned by planner)
+   - Pre-validated approach (from Step 3.7 — fills `{APPROACH}`; use `Design review skipped — follow codebase patterns` if the gate was skipped)
    - Known pitfalls (from `memory/recurring-failures.md` if file exists — include entries matching the task domain as a "## Known Pitfalls" section in the implementer prompt)
 
 3. Dispatch subagent using Task tool:
@@ -1069,7 +1144,25 @@ If task was just brainstormed (Step 3) and still has BLOCK issues, something wen
 4. Process subagent result:
    - If questions: Answer and re-dispatch
    - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
+   - If NEEDS_REDESIGN: The pre-validated approach proved infeasible — see "Handling NEEDS_REDESIGN" below
    - If blocked: Set blocker via ohno MCP
+
+#### Handling NEEDS_REDESIGN
+
+The implementer reports NEEDS_REDESIGN (with evidence) when the pre-validated approach from Step 3.7 proves infeasible. Do NOT re-dispatch the implementer against the same approach, and do NOT treat it as a plain FAIL.
+
+**Cap: ONE redesign cycle per task.**
+
+1. Log the implementer's infeasibility evidence:
+   ```
+   add_task_activity(task_id, "note", "NEEDS_REDESIGN: {implementer's evidence}")
+   ```
+2. Re-dispatch `yokay-design-reviewer` (Step 3.7 template) with the implementer's evidence appended to `{CONTEXT}` under a `### Prior Approach Infeasible` heading
+3. On APPROVED: re-dispatch the implementer with the revised `{APPROACH}`
+4. If the implementer returns NEEDS_REDESIGN **again** (or the redesign comes back NEEDS_DISCUSSION), stop the cycle:
+   - Set blocker: `set_blocker(task_id, "Approach infeasible after one redesign cycle: {evidence}")`
+   - **supervised / semi-auto / auto**: PAUSE for human decision
+   - **unattended**: leave the task blocked and move to the next task
 
 **Why subagent?**
 - Fresh context per task (no accumulated confusion)
@@ -1235,7 +1328,7 @@ All three conditions must pass:
 2. **Server running**: HTTP server on ports 3000-9999, or can be started via package.json
 3. **Renderable files changed**: Task modified `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/`
 
-If any check fails, silently skip to Step 6 (Review).
+If any check fails, silently skip to Step 5 (Review).
 
 #### Verification Flow
 
@@ -1249,7 +1342,7 @@ If all checks pass:
    ```
 
 2. Process verification result:
-   - **PASS**: Continue to Step 6 (Review)
+   - **PASS**: Continue to Step 5 (Review)
    - **ISSUE**: Re-dispatch implementer with visual/functional issues
    - **SKIP**: User provided reason, continue with warning flag
 
@@ -1297,7 +1390,7 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 6. Task Review (Two-Stage)
+### 5. Task Review (Two-Stage)
 
 After implementer completes, run spec compliance and code quality reviews sequentially:
 
@@ -1320,6 +1413,8 @@ This enables the post-review-fail hook to capture failures and integrate with ka
      prompt: [Fill template from agents/templates/spec-review-prompt.md]
    ```
 
+   Fill `{IMPLEMENTATION_SUMMARY}` from the implementer's ohno handoff (`get_task_handoff(task_id)`), NOT from its inline report — the inline report is minimal; the AC verification table lives in the handoff details. Fill `{COMMIT_HASH}` with the bare hash from the implementer's commit (the template's `git diff` commands depend on it).
+
 2. Process result:
    - **PASS**: Proceed to Stage 2 (quality review)
    - **FAIL**: Re-dispatch implementer with spec issues (skip quality review)
@@ -1340,14 +1435,17 @@ Only runs if spec review passes.
      prompt: [Fill template from agents/templates/quality-review-prompt.md]
    ```
 
+   Fill `{APPROACH}` with the design-review approach stored in Step 3.7, or `None — design review was skipped` when the gate was skipped. Also fill `{COMMIT_HASH}` (bare hash) for the template's `git diff` commands.
+
 2. Process result:
-   - **PASS**: Proceed to task completion (Step 7)
+   - **PASS**: Proceed to task completion (Step 6)
    - **FAIL**: Re-dispatch implementer with quality issues
 
 **What the quality reviewer checks:**
 - Code structure, readability, appropriate abstractions
 - Test quality, edge case coverage
 - Project conventions compliance
+- Design compliance (post-check): did the implementation follow the pre-validated approach from Step 3.7? (N/A when design review was skipped)
 
 #### Review Failure Hook Integration
 
@@ -1605,9 +1703,9 @@ Or for failures:
 add_task_activity(task_id, "note", "Task review: FAIL - Missing requirement X")
 ```
 
-### 7. Complete Task
+### 6. Complete Task
 
-After reviews pass (Step 6), coordinator:
+After reviews pass (Step 5), coordinator:
 - Logs activity to ohno
 - Triggers post-task hooks
 
@@ -1615,7 +1713,7 @@ After reviews pass (Step 6), coordinator:
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
 
-### 8. Checkpoint (based on mode)
+### 7. Checkpoint (based on mode)
 
 #### Sequential Mode
 
@@ -1683,7 +1781,7 @@ Options:
 - **stop**: End session now
 ```
 
-### 9. Repeat
+### 8. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop

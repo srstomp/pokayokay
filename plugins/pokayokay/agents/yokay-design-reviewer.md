@@ -41,6 +41,7 @@ Route the task to a relevant skill using keyword analysis:
 |----------|-------|-----------|
 | schema, migration, model | database-design | `references/review-checklist.md` |
 | endpoint, REST, route, API | api-design | `references/review-checklist.md` |
+| error, exception, retry, failure | error-handling | `references/review-checklist.md` |
 | deploy, pipeline, CI | ci-cd | — |
 | auth, encryption, secret | security-audit | — |
 | module, boundary, coupling | architecture-review | — |

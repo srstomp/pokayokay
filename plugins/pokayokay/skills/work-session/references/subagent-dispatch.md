@@ -300,15 +300,56 @@ def skip_design_review(task, skip_flag=False):
 
 ```python
 if design_review.status == "APPROVED":
-    # Store approach for implementer dispatch
+    # Store approach — it is used TWICE:
+    # 1. Fills {APPROACH} in the implementer template (Step 5)
+    # 2. Fills {APPROACH} in the quality-review template (design-compliance post-check)
     approach = design_review.output
-    # Proceed to implementer with {APPROACH} filled
     proceed_to_implementation(approach=approach)
 
 elif design_review.status == "NEEDS_DISCUSSION":
-    # PAUSE for human decision
     log_activity(task_id, "note", f"Design review needs discussion: {design_review.decision_needed}")
-    pause_for_human(design_review.options)
+    if mode in ("supervised", "semi-auto"):
+        # PAUSE for human decision, then re-run the gate with the decision in {CONTEXT}
+        pause_for_human(design_review.options)
+    else:  # auto / unattended — never pause here
+        log_activity(task_id, "decision",
+            "Design review NEEDS_DISCUSSION — proceeding without validated approach")
+        proceed_to_implementation(approach=None)  # {APPROACH} gets the skip text
+```
+
+When design review is skipped or unresolved, fill `{APPROACH}` with
+`Design review skipped — follow codebase patterns` in the implementer template,
+and `None — design review was skipped` in the quality-review template. Never
+leave the literal `{APPROACH}` placeholder in a dispatched prompt.
+
+### Handling NEEDS_REDESIGN (After Implementer Dispatch)
+
+The implementer reports `NEEDS_REDESIGN` (with evidence) when the pre-validated
+approach proves infeasible. Do NOT re-dispatch the implementer against the same
+approach, and do NOT treat it as a plain FAIL.
+
+**Cap: ONE redesign cycle per task.**
+
+```python
+if implementer.status == "NEEDS_REDESIGN":
+    add_task_activity(task_id, "note", f"NEEDS_REDESIGN: {implementer.evidence}")
+    if redesign_cycles_used(task_id) >= 1:
+        # Second NEEDS_REDESIGN — stop the cycle
+        set_blocker(task_id, f"Approach infeasible after one redesign cycle: {implementer.evidence}")
+        if mode == "unattended":
+            move_to_next_task()
+        else:  # supervised / semi-auto / auto
+            pause_for_human()
+    else:
+        # Re-dispatch design reviewer with the evidence appended to {CONTEXT}
+        # under a "### Prior Approach Infeasible" heading, then re-dispatch
+        # the implementer with the revised approach.
+        redesign = dispatch_design_reviewer(task, extra_context=implementer.evidence)
+        if redesign.status == "APPROVED":
+            proceed_to_implementation(approach=redesign.output)
+        else:  # NEEDS_DISCUSSION during redesign — treat as cycle exhausted
+            set_blocker(task_id, "Redesign needs human decision")
+            pause_or_move_on(mode)
 ```
 
 ### Skip Flag
@@ -395,7 +436,7 @@ plugins/pokayokay/agents/templates/implementer-prompt.md
 | `{ACCEPTANCE_CRITERIA}` | Structured AC from task description (see below) | MUST/SHOULD/COULD list |
 | `{CONTEXT}` | Built from multiple sources | Story + handoff + deps |
 | `{RELEVANT_SKILL}` | Routing decision | Skill name and guidance |
-| `{APPROACH}` | Design review output (Step 3) | Validated implementation approach, or empty if skipped |
+| `{APPROACH}` | Design review output (Step 3) | Validated implementation approach, or `Design review skipped — follow codebase patterns` if skipped |
 | `{WORKING_DIRECTORY}` | Project root | `/path/to/project` |
 
 ### Acceptance Criteria in Dispatch
@@ -530,6 +571,25 @@ The coordinator should:
 3. Validate against acceptance criteria
 4. Update task status in ohno
 5. Proceed to next task or checkpoint
+
+---
+
+## Step 7: Two-Stage Review Dispatch
+
+Spec review (`spec-review-prompt.md`) then quality review (`quality-review-prompt.md`). Fill EVERY placeholder in both templates:
+
+| Variable | Template(s) | Source |
+|----------|-------------|--------|
+| `{TASK_ID}`, `{TASK_TITLE}` | both | ohno task |
+| `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}` | spec | ohno task (post-brainstorm) |
+| `{IMPLEMENTATION_SUMMARY}` | spec | Implementer's ohno handoff via `get_task_handoff(task_id)` — the inline report is minimal |
+| `{FILES_CHANGED}` | both | Implementer handoff / `git diff --name-only` |
+| `{COMMIT_INFO}` | both | Implementer's commit (hash + message) |
+| `{COMMIT_HASH}` | both | Bare commit hash — used in the templates' `git diff` verification commands |
+| `{APPROACH}` | quality | Design review output (Step 3), or `None — design review was skipped` |
+| `{WORKING_DIRECTORY}` | both | Task's worktree path or project root |
+
+The quality reviewer uses `{APPROACH}` for its design-compliance post-check; when it is `None`, the reviewer marks design compliance `N/A`.
 
 ---
 
