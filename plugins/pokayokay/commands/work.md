@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue] [--skip-design]"
+argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue] [--skip-design] [--skip-brainstorm] [--skip-auto-fix]"
 skill: work-session
 ---
 
@@ -19,6 +19,8 @@ Parse `$ARGUMENTS` to extract:
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
 5. **Skip design**: `--skip-design` flag (bypass the Design Review Gate for all tasks this session)
+6. **Skip brainstorm**: `--skip-brainstorm` flag (skip the Brainstorm Gate for all tasks this session)
+7. **Skip auto-fix**: `--skip-auto-fix` flag (disable auto-fixer dispatch on test failures for this session)
 
 Example arguments:
 - `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
@@ -353,7 +355,8 @@ When `--continue` flag is set, resume from previous WIP instead of starting fres
 7. **Dispatch implementer with WIP + handoff context**:
 
 ```
-Task tool (yokay-implementer):
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
   description: "Resume: {task.title}"
   mode: "bypassPermissions"
   prompt: [Fill implementer template with ADDITIONAL section:]
@@ -628,12 +631,14 @@ Coordinator maintains N concurrent implementers:
 
 4. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
    ```
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task1.title}"
      mode: "bypassPermissions"
      prompt: [template for task1]
 
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task2.title}"
      mode: "bypassPermissions"
      prompt: [template for task2]
@@ -974,7 +979,8 @@ If brainstorm triggers:
 
 1. Dispatch brainstormer:
    ```
-   Task tool (yokay-brainstormer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-brainstormer"
      description: "Brainstorm: {task.title}"
      prompt: [Fill template from agents/templates/brainstorm-prompt.md]
    ```
@@ -1109,7 +1115,8 @@ If the gate is not skipped:
 
 1. Dispatch design reviewer (read-only agent):
    ```
-   Task tool (yokay-design-reviewer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-design-reviewer"
      description: "Design review: {task.title}"
      prompt: [Fill template from agents/templates/design-review-prompt.md]
    ```
@@ -1153,7 +1160,8 @@ If the gate is not skipped:
 
 3. Dispatch subagent using Task tool:
    ```
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task.title}"
      mode: "bypassPermissions"
      prompt: [Fill template from agents/templates/implementer-prompt.md]
@@ -1233,7 +1241,8 @@ After implementer completes:
 
 3. **Dispatch fixer**: If test fails and auto-fix enabled:
    ```
-   Task tool (yokay-fixer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-fixer"
      description: "Fix test failure: {task.title}"
      mode: "bypassPermissions"
      prompt: [Include task details, test output, "Max attempts: 3"]
@@ -1354,8 +1363,10 @@ If all checks pass:
 
 1. Dispatch browser verifier:
    ```
-   Task tool (yokay-browser-verifier):
+   Task tool:
+     subagent_type: "pokayokay:yokay-browser-verifier"
      description: "Browser verify: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Include task details, server URL, changed files]
    ```
 
@@ -1427,7 +1438,8 @@ variable can never reach the hook process.
 
 1. Dispatch spec reviewer:
    ```
-   Task tool (yokay-spec-reviewer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-spec-reviewer"
      description: "Spec review: {task.title}"
      prompt: [Fill template from agents/templates/spec-review-prompt.md]
    ```
@@ -1449,8 +1461,10 @@ Only runs if spec review passes.
 
 1. Dispatch quality reviewer:
    ```
-   Task tool (yokay-quality-reviewer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-quality-reviewer"
      description: "Quality review: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Fill template from agents/templates/quality-review-prompt.md]
    ```
 
@@ -2031,7 +2045,7 @@ If audit_pending:
      - Check docs/plans/*.md, docs/concepts/*.md
      - Check epic description if scope is epic
      - Check PROJECT.md
-  2. Dispatch yokay-auditor:
+  2. Dispatch `pokayokay:yokay-auditor` (Task tool subagent_type):
      - Pass: concept doc content + scope info
      - Instruction: "Verify all requirements are implemented. Return PASS or FAIL with gap list."
   3. Process result:

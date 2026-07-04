@@ -174,7 +174,9 @@ When creating remediation tasks, assign appropriate skills:
 | Security below S2 | security-audit | security |
 | Observability below O2 | observability | chore |
 | Documentation below D2 | documentation | docs |
-| Accessibility below L4 | ux-design | chore |
+| Accessibility below L4 | feature-audit | chore |
+
+For accessibility gaps, prefer the design plugin's `/design:a11y` workflow when that plugin is installed; otherwise route the remediation task to the `feature-audit` skill.
 
 ### 8. Sync Kanban
 ```bash
@@ -191,10 +193,10 @@ npx @stevestomp/ohno-cli sync
 Do NOT automatically start working on remediation tasks.
 
 Suggest next steps but let the user choose:
-- `/yokay:work` — Start working on remediation tasks
-- `/yokay:ux [feature]` — Redesign a flow
-- `/yokay:fix [task-id]` — Fix a specific bug
-- `/yokay:spike [question]` — Investigate before fixing
+- `/pokayokay:work` — Start working on remediation tasks
+- `/design:ux [feature]` — Redesign a flow (requires the design plugin)
+- `/pokayokay:fix [task-id]` — Fix a specific bug
+- `/pokayokay:spike [question]` — Investigate before fixing
 
 The user decides what happens next.
 

@@ -6,7 +6,8 @@ When dispatching multiple implementers in parallel, use a SINGLE message with mu
 
 ```
 <task1>
-Task tool (yokay-implementer):
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
   description: "Implement: Create user authentication"
   mode: "bypassPermissions"
   prompt: |
@@ -19,7 +20,8 @@ Task tool (yokay-implementer):
 </task1>
 
 <task2>
-Task tool (yokay-implementer):
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
   description: "Implement: Add password hashing"
   mode: "bypassPermissions"
   prompt: |
@@ -32,7 +34,8 @@ Task tool (yokay-implementer):
 </task2>
 
 <task3>
-Task tool (yokay-implementer):
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
   description: "Implement: Create login endpoint"
   mode: "bypassPermissions"
   prompt: |

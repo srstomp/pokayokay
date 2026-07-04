@@ -170,6 +170,23 @@ WARNING and SUGGESTION issues should be noted but result in PASS.
 
 **For `/fix` mode**: standard review (same thresholds as `/work`).
 
+Dispatch sequentially — spec review first, quality review only if spec review passes:
+
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-spec-reviewer"
+  description: "Spec review: {task.title}"
+  prompt: [filled spec-review-prompt.md]
+```
+
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-quality-reviewer"
+  description: "Quality review: {task.title}"
+  mode: "bypassPermissions"
+  prompt: [filled quality-review-prompt.md]
+```
+
 **PASS**: proceed to Step 7.
 **FAIL**: re-dispatch implementer with issues (counts toward review cycle limit).
 

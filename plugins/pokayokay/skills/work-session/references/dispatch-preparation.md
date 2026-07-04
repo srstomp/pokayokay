@@ -133,12 +133,12 @@ if design_review.status == "APPROVED":
     proceed_to_implementation(approach=approach)
 
 elif design_review.status == "NEEDS_DISCUSSION":
-    log_activity(task_id, "note", f"Design review needs discussion: {design_review.decision_needed}")
+    add_task_activity(task_id, "note", f"Design review needs discussion: {design_review.decision_needed}")
     if mode in ("supervised", "semi-auto"):
         # PAUSE for human decision, then re-run the gate with the decision in {CONTEXT}
         pause_for_human(design_review.options)
     else:  # auto / unattended — never pause here
-        log_activity(task_id, "decision",
+        add_task_activity(task_id, "decision",
             "Design review NEEDS_DISCUSSION — proceeding without validated approach")
         proceed_to_implementation(approach=None)  # {APPROACH} gets the skip text
 ```

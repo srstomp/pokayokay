@@ -13,7 +13,7 @@
 **Update Tools:**
 - `start_task(id)` - Mark task in-progress
 - `complete_task(id, notes)` - Mark task done
-- `log_activity(message)` - Log session activity
+- `add_task_activity(task_id, type, message)` - Log task activity
 - `set_blocker(id, reason)` - Block a task
 - `resolve_blocker(id)` - Unblock a task
 

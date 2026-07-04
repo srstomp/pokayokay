@@ -166,5 +166,5 @@ Recommended priority: [first task to tackle]
 
 When testing involves:
 - **API tests** → Also load `api-design` skill
-- **Accessibility tests** → Also load `accessibility-auditor` skill
+- **Accessibility tests** → Use the design plugin's `/design:a11y` workflow (when that plugin is installed)
 - **Security tests** → Also load `security-audit` skill
