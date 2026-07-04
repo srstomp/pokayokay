@@ -12,6 +12,14 @@ echo "Testing bridge runtime normalization..."
 
 cd "$TEST_DIR"
 
+# Make sure project-dir env vars from an enclosing session don't leak in:
+# the bridge must resolve the project dir to this test's cwd/workspace so
+# WIP debounce state lands in $TEST_DIR, not the real repo.
+unset CLAUDE_PROJECT_DIR YOKAY_PROJECT_DIR CODEX_WORKSPACE_DIR 2>/dev/null || true
+
+# Persisted WIP debounce state — reset between tests that each expect a call
+WIP_STATE="$TEST_DIR/.pokayokay/wip-state.json"
+
 MOCK_BIN="$TEST_DIR/bin"
 mkdir -p "$MOCK_BIN" "$TEST_DIR/wip_calls"
 
@@ -68,13 +76,13 @@ echo '{"tool_name":"Edit","tool_input":{"file_path":"src/claude.ts"},"tool_respo
 assert_last_file "src/claude.ts"
 
 echo "Test 2: Codex-style aliases route to the same handler"
-rm -f "$TEST_DIR/wip_calls/last_call.json"
+rm -f "$TEST_DIR/wip_calls/last_call.json" "$WIP_STATE"
 echo '{"runtime":"codex","tool":"edit","input":{"file_path":"src/codex.ts"},"response":{},"event":"PostToolUse"}' |
   python3 "$BRIDGE" > /dev/null
 assert_last_file "src/codex.ts"
 
 echo "Test 3: CODEX_WORKSPACE_DIR is accepted as project dir"
-rm -f "$TEST_DIR/wip_calls/last_call.json"
+rm -f "$TEST_DIR/wip_calls/last_call.json" "$WIP_STATE"
 export CODEX_WORKSPACE_DIR="$TEST_DIR"
 echo '{"runtime":"codex","tool_name":"write","tool_input":{"file_path":"src/workspace.ts"},"tool_response":{},"hook_event":"PostToolUse"}' |
   python3 "$BRIDGE" > /dev/null
@@ -168,6 +176,28 @@ process.stdin.on("end", () => {
   if (Object.keys(parsed).length !== 0) throw new Error("expected runtime fallback for backslash traversal");
 });
 '
+
+echo "Test 12: Plugin-scoped ohno update_task_status routes to post-task hooks"
+OHNO_DONE_OUTPUT=$(echo '{"tool_name":"mcp__plugin_pokayokay_ohno__update_task_status","tool_input":{"task_id":"T-1","status":"done"},"tool_response":{},"hook_event_name":"PostToolUse"}' |
+  python3 "$BRIDGE" 2>/dev/null)
+if [[ "$OHNO_DONE_OUTPUT" == *"Hooks executed: post-task"* ]]; then
+  echo "  PASS: plugin-scoped update_task_status ran post-task hooks"
+else
+  echo "  FAIL: expected post-task hooks for plugin-scoped tool name"
+  echo "  Output: $OHNO_DONE_OUTPUT"
+  exit 1
+fi
+
+echo "Test 13: Plugin-scoped ohno set_blocker routes to on-blocker hook"
+OHNO_BLOCKER_OUTPUT=$(echo '{"tool_name":"mcp__plugin_pokayokay_ohno__set_blocker","tool_input":{"task_id":"T-1","reason":"stuck on dependency"},"tool_response":{},"hook_event_name":"PostToolUse"}' |
+  python3 "$BRIDGE" 2>/dev/null)
+if [[ "$OHNO_BLOCKER_OUTPUT" == *"Hooks executed: on-blocker"* ]]; then
+  echo "  PASS: plugin-scoped set_blocker ran on-blocker hook"
+else
+  echo "  FAIL: expected on-blocker hook for plugin-scoped tool name"
+  echo "  Output: $OHNO_BLOCKER_OUTPUT"
+  exit 1
+fi
 
 echo ""
 echo "All bridge runtime normalization tests passed!"

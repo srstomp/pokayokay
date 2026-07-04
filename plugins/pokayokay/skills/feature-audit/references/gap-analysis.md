@@ -156,12 +156,13 @@ fi
 
 ```bash
 #!/bin/bash
-# audit-all-features.sh - Audit all features from tasks.db
+# audit-all-features.sh - Audit all features from ohno
 
-DB_PATH=".claude/tasks.db"
-
-# Get all epics
-sqlite3 "$DB_PATH" "SELECT id, title FROM epics ORDER BY id" | while IFS='|' read -r id title; do
+# Get all epics from ohno (global --json flag)
+npx @stevestomp/ohno-cli epics --json | node -e '
+const epics = JSON.parse(require("fs").readFileSync(0, "utf8"));
+for (const e of epics) console.log(`${e.id}\t${e.title}`);
+' | while IFS=$'\t' read -r id title; do
     echo "========================================"
     echo "Feature: $id - $title"
     echo "========================================"
@@ -403,52 +404,22 @@ npm run audit:features
 0 9 * * 1 ./scripts/gap-report.sh | mail -s "Weekly Gap Report" team@company.com
 ```
 
-### Gap Tracking in tasks.db
+### Gap Tracking in ohno
 
-```sql
--- Add audit metadata to epics
-ALTER TABLE epics ADD COLUMN audit_level INTEGER DEFAULT 0;
-ALTER TABLE epics ADD COLUMN audit_date TEXT;
-ALTER TABLE epics ADD COLUMN audit_gaps TEXT;  -- JSON array
+ohno has no audit-specific fields, so record audit results on the entities it does have — never modify ohno's internal database directly.
 
--- Update after audit
-UPDATE epics 
-SET audit_level = 1,
-    audit_date = '2026-01-12',
-    audit_gaps = '["no_frontend", "no_navigation", "no_docs"]'
-WHERE id = 'epic-028';
+**Record results after an audit:**
 
--- Query gaps
-SELECT id, title, audit_level, audit_gaps
-FROM epics 
-WHERE audit_level < 4
-ORDER BY 
-    CASE priority 
-        WHEN 'P0' THEN 0 
-        WHEN 'P1' THEN 1 
-        WHEN 'P2' THEN 2 
-        ELSE 3 
-    END,
-    audit_level;
-```
+- Append the audit outcome to the epic description via `mcp__ohno__update_epic` — e.g. add an `Audit (2026-01-12): L1 — gaps: no_frontend, no_navigation, no_docs` line.
+- Create a remediation task per gap via `mcp__ohno__create_task` (title like `[Remediation] F028: add frontend route`, priority inherited from the feature).
+- Log the audit trail on affected tasks via `mcp__ohno__add_task_activity`.
 
-### Dashboard Query
+**Query gaps later:**
 
-```sql
--- Gap summary for dashboard
-SELECT 
-    audit_level,
-    CASE audit_level
-        WHEN 0 THEN 'Not Started'
-        WHEN 1 THEN 'Backend Only'
-        WHEN 2 THEN 'Frontend Exists'
-        WHEN 3 THEN 'Routable'
-        WHEN 4 THEN 'Accessible'
-        WHEN 5 THEN 'Complete'
-    END as level_name,
-    COUNT(*) as count,
-    GROUP_CONCAT(id) as features
-FROM epics
-GROUP BY audit_level
-ORDER BY audit_level;
-```
+- `mcp__ohno__get_epics` — scan descriptions for `Audit (...)` lines and levels below L4.
+- `mcp__ohno__get_tasks` — list open `[Remediation]` tasks, grouped by epic and priority.
+- CLI equivalent: `npx @stevestomp/ohno-cli epics --json` / `npx @stevestomp/ohno-cli tasks --json`.
+
+### Dashboard Summary
+
+Build the level summary from the same data — parse the `Audit (...)` lines out of `mcp__ohno__get_epics` output and count epics per level (0 Not Started → 5 Complete), listing feature IDs under each level.

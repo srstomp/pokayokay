@@ -24,6 +24,11 @@ Create professional TypeScript SDKs from scratch or by extraction.
 5. Write tests (unit + integration) and examples
 6. Publish to npm with proper package.json exports field
 
+## When NOT to Use
+
+- For consuming external APIs — see api-integration skill
+- For publishing to npm only — this skill covers full SDK lifecycle
+
 ## References
 
 | Reference | Description |

@@ -185,8 +185,12 @@ function enableCodexHooksFeature(content) {
     });
   }
 
+  // No [features] table exists yet, so appending at EOF is always valid
+  // TOML. Never prepend: keys after a table header belong to that table, so
+  // a leading [features] would silently swallow the user's root-level keys
+  // (model, approval_policy, sandbox_mode, ...) into the features table.
   const separator = content.trim().length ? '\n\n' : '';
-  return `[features]\n${featureLine}\n${separator}${content.trimEnd()}`;
+  return `${content.trimEnd()}${separator}[features]\n${featureLine}`;
 }
 
 function codexHookBridgeBlock(pluginPath) {
@@ -223,18 +227,18 @@ function codexHookBridgeBlock(pluginPath) {
     'statusMessage = "Reviewing pokayokay approval policy"',
     '',
     '[[hooks.PostToolUse]]',
-    'matcher = "Bash|apply_patch|Edit|Write|mcp__ohno__.*"',
+    'matcher = "Bash|apply_patch|Edit|Write|mcp__(plugin_[A-Za-z0-9_-]+_)?ohno__.*"',
     '[[hooks.PostToolUse.hooks]]',
     'type = "command"',
     `command = ${command}`,
-    'timeout = 30',
+    'timeout = 450',
     'statusMessage = "Recording pokayokay work state"',
     '',
     '[[hooks.SessionEnd]]',
     '[[hooks.SessionEnd.hooks]]',
     'type = "command"',
     `command = ${command}`,
-    'timeout = 30',
+    'timeout = 120',
     'statusMessage = "Finalizing pokayokay session"',
     POKAYOKAY_HOOKS_END,
   ].join('\n');

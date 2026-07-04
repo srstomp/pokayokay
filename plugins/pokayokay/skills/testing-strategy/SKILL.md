@@ -1,6 +1,5 @@
 ---
 name: testing-strategy
-agents: [yokay-test-runner]
 description: Use when designing test architecture, building API test suites, validating API contracts, setting up component or E2E testing, managing test data, debugging flaky tests, reviewing coverage strategy, or organizing test files. Covers test pyramid, mocking (MSW), frontend (React Testing Library, Playwright), and CI integration.
 ---
 
@@ -24,6 +23,11 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 - Follow the testing pyramid — more unit tests, fewer E2E
 - Use meaningful coverage metrics — branch coverage over line coverage
 - Prevent flaky tests — no arbitrary waits, no test interdependence
+
+## When NOT to Use
+
+- For TDD discipline during implementation — see work-session anti-rationalization reference
+- For security testing — see security-audit skill
 
 ## Quick Start Checklist
 
@@ -73,5 +77,5 @@ Comprehensive testing guidance for test architecture, coverage strategy, and tes
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-test-runner via the Task tool with `subagent_type: "pokayokay:yokay-test-runner"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

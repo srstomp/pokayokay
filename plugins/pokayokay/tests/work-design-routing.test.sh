@@ -72,7 +72,7 @@ FOUND_TYPES=0
 
 for type in "${DESIGN_TYPES[@]}"; do
   if grep -q "$type" "$WORK_FILE"; then
-    ((FOUND_TYPES++))
+    FOUND_TYPES=$((FOUND_TYPES + 1))
   fi
 done
 

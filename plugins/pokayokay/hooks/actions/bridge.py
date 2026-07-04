@@ -11,18 +11,13 @@ Output: JSON with additionalContext for Claude
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional
-
-
-class DangerousValueError(ValueError):
-    """Raised when an environment value contains dangerous shell characters."""
-    pass
 
 
 # Shell metacharacters that could enable command injection
@@ -55,17 +50,17 @@ HOOK_TIMEOUTS: Dict[str, int] = {
     "story-integration": 120,
 }
 
-# Rate limiting configuration
-RATE_LIMIT_MAX_EXECUTIONS = 10  # Max executions per hook per minute
-RATE_LIMIT_WINDOW_SECONDS = 60
-
-# Track hook executions for rate limiting (in-memory, resets on process restart)
-_hook_executions: Dict[str, List[float]] = defaultdict(list)
-
-# WIP tracking (in-memory, resets on process restart)
-_tracked_files: set = set()
-_last_wip_update: float = 0
+# WIP tracking debounce interval. The bridge runs as a fresh process per hook
+# event, so debounce state is persisted to .pokayokay/wip-state.json (see
+# load_wip_state / save_wip_state) rather than kept in module globals.
 WIP_UPDATE_INTERVAL = 5  # seconds - don't update more than every 5 seconds
+
+# Action script exit-code contract (documented in HOOKS.md):
+#   0                        -> "success"
+#   2                        -> "error"   (blocking: handle_pre_commit denies the tool call)
+#   any other nonzero (incl. 1) -> "warning" (advisory, surfaced but never blocks)
+# Script *execution* failures (unspawnable script, etc.) map to "warning" so a
+# chmod-broken hook script cannot accidentally block every commit.
 
 # Review failure tracking
 REVIEW_FAILURE_THRESHOLD = 3  # Write to memory after this many occurrences
@@ -74,37 +69,32 @@ REVIEW_FAILURE_MAX_ENTRIES = 50  # Max entries in recurring-failures.md
 
 def sanitize_env_value(value: str, field_name: str = "unknown") -> str:
     """
-    Sanitize environment variable values to prevent command injection.
+    Sanitize environment variable values passed to hook action scripts.
 
-    Removes non-printable characters and rejects values containing shell
-    metacharacters that could enable command injection in shell scripts.
+    Removes non-printable characters and neutralizes shell metacharacters by
+    replacing them with spaces (matching the FAILURE_DETAILS handling in
+    handle_review_complete). Values are passed via subprocess ``env=`` and
+    never interpolated into a shell command line by the bridge, so this is
+    defense-in-depth for scripts that mishandle quoting. Neutralizing instead
+    of rejecting matters: free-text fields like TASK_NOTES routinely contain
+    parentheses/backticks/``$``, and rejecting them would silently disable
+    every post-task hook, including auto-commit.
 
     Args:
         value: The environment variable value to sanitize
-        field_name: Name of the field for error messages
+        field_name: Name of the field (kept for call-site readability)
 
     Returns:
-        Sanitized string with only safe printable characters
-
-    Raises:
-        DangerousValueError: If value contains shell metacharacters
+        Sanitized string with metacharacters replaced by spaces
     """
     if not isinstance(value, str):
-        return str(value)
+        value = str(value)
 
     # Remove non-printable characters (except common whitespace)
     sanitized = ''.join(c for c in value if c.isprintable() or c in (' ', '\t'))
 
-    # Check for shell metacharacters
-    dangerous_found = [c for c in sanitized if c in SHELL_METACHARACTERS]
-    if dangerous_found:
-        # Log which characters were found (without exposing full value)
-        chars = ', '.join(repr(c) for c in set(dangerous_found))
-        raise DangerousValueError(
-            f"Field '{field_name}' contains dangerous shell characters: {chars}"
-        )
-
-    return sanitized
+    # Neutralize shell metacharacters with spaces instead of rejecting
+    return ''.join(' ' if c in SHELL_METACHARACTERS else c for c in sanitized)
 
 
 def get_script_dir() -> Path:
@@ -147,7 +137,19 @@ def normalize_tool_name(tool_name: str) -> str:
     if tool_name in ("Bash", "Edit", "Write", "Skill", "Task"):
         return tool_name
 
-    return aliases.get(str(tool_name).strip().lower(), tool_name)
+    lowered = str(tool_name).strip().lower()
+
+    # Plugin-scoped MCP servers get prefixed tool names (e.g.
+    # mcp__plugin_pokayokay_ohno__update_task_status when ohno is bundled via
+    # the plugin's .mcp.json). Canonicalize any server-name variant by suffix.
+    # The double-underscore separator keeps the Codex dot alias
+    # (ohno.update_task_status) on the alias-dict path below.
+    if lowered.endswith("ohno__update_task_status"):
+        return "mcp__ohno__update_task_status"
+    if lowered.endswith("ohno__set_blocker"):
+        return "mcp__ohno__set_blocker"
+
+    return aliases.get(lowered, tool_name)
 
 
 def normalize_hook_input(input_data: dict) -> dict:
@@ -351,28 +353,17 @@ def handle_permission_request(tool_name: str, tool_input: dict) -> dict:
     return {"skip": True, "reason": "approval left to runtime"}
 
 
-def check_rate_limit(hook_name: str) -> Optional[str]:
+def status_from_returncode(returncode: int) -> str:
+    """Map an action script's exit code to a result status per the contract.
+
+    0 = success, 2 = error (blocking), everything else = warning (advisory).
+    Only exactly 2 blocks so unexpected codes (126/127, signals) stay advisory.
     """
-    Check if a hook has exceeded its rate limit.
-
-    Args:
-        hook_name: Name of the hook to check
-
-    Returns:
-        None if within limits, error message if rate limited
-    """
-    now = time.time()
-    executions = _hook_executions[hook_name]
-
-    # Remove executions outside the time window
-    executions[:] = [t for t in executions if now - t < RATE_LIMIT_WINDOW_SECONDS]
-
-    if len(executions) >= RATE_LIMIT_MAX_EXECUTIONS:
-        return f"Rate limited: {hook_name} exceeded {RATE_LIMIT_MAX_EXECUTIONS} executions per minute"
-
-    # Record this execution
-    executions.append(now)
-    return None
+    if returncode == 0:
+        return "success"
+    if returncode == 2:
+        return "error"
+    return "warning"
 
 
 def get_timeout(hook_name: str) -> int:
@@ -380,17 +371,22 @@ def get_timeout(hook_name: str) -> int:
     return HOOK_TIMEOUTS.get(hook_name, HOOK_TIMEOUTS["default"])
 
 
-def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[str, str]] = None) -> Dict:
-    """Run a yokay hook action script."""
+def run_action(
+    name: str,
+    args: Optional[List[str]] = None,
+    env: Optional[Dict[str, str]] = None,
+    cwd: Optional[str] = None,
+) -> Dict:
+    """Run a yokay hook action script.
+
+    ``cwd`` overrides the working directory (defaults to the project dir);
+    story-boundary actions pass the story worktree so tests run against the
+    tree that actually contains the story's changes.
+    """
     script_path = get_script_dir() / f"{name}.sh"
 
     if not script_path.exists():
         return {"action": name, "status": "skipped", "reason": "script not found"}
-
-    # Check rate limit before executing
-    rate_limit_error = check_rate_limit(name)
-    if rate_limit_error:
-        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
 
     # Get configurable timeout for this hook
     timeout = get_timeout(name)
@@ -399,11 +395,8 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
         # Merge environment
         run_env = os.environ.copy()
         if env:
-            # Sanitize environment variables to prevent command injection
-            try:
-                sanitized_env = {k: sanitize_env_value(v, field_name=k) for k, v in env.items()}
-            except DangerousValueError as e:
-                return {"action": name, "status": "blocked", "reason": str(e)}
+            # Sanitize environment variables (neutralizes shell metacharacters)
+            sanitized_env = {k: sanitize_env_value(v, field_name=k) for k, v in env.items()}
             run_env.update(sanitized_env)
 
         # Run the script with configurable timeout
@@ -414,19 +407,21 @@ def run_action(name: str, args: Optional[List[str]] = None, env: Optional[Dict[s
             text=True,
             timeout=timeout,
             env=run_env,
-            cwd=get_project_dir()
+            cwd=cwd or get_project_dir()
         )
 
         return {
             "action": name,
-            "status": "success" if result.returncode == 0 else "warning",
+            "status": status_from_returncode(result.returncode),
             "output": result.stdout.strip(),
             "error": result.stderr.strip() if result.stderr else None
         }
     except subprocess.TimeoutExpired:
         return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
-    except Exception as e:
-        return {"action": name, "status": "error", "reason": "Script execution failed"}
+    except Exception:
+        # Execution failure is advisory, not "error": a broken script must
+        # not block every commit under the exit-code contract.
+        return {"action": name, "status": "warning", "reason": "Script execution failed"}
 
 
 def _detect_stale_session() -> Optional[dict]:
@@ -434,8 +429,10 @@ def _detect_stale_session() -> Optional[dict]:
 
     A session is considered crashed if:
     1. Chain state file exists (session was chaining)
-    2. There are in_progress tasks in ohno (not cleaned up)
-    3. No active Claude process is running this chain
+    2. The state does NOT carry a handoff_pending marker (a clean chained
+       SessionEnd sets it; its presence means this start is the expected
+       continuation, not a crash)
+    3. There are in_progress tasks in ohno (not cleaned up)
 
     Returns dict with stale_tasks and chain_id if crash detected, None otherwise.
     """
@@ -443,17 +440,34 @@ def _detect_stale_session() -> Optional[dict]:
     if not chain_state.get("chain_id"):
         return None
 
-    # Check for in_progress tasks via ohno-cli
+    # A clean SessionEnd that chained to a continuation session sets
+    # handoff_pending — in_progress tasks are then the deliberate handoff the
+    # resume flow relies on, not crash debris. Consume the marker (one-shot)
+    # so a genuine crash in THIS session is still detected on the next start.
+    # Without this, recovery would stash the handed-off changes and retire
+    # the chain state, silently killing the chain after one hop.
+    if chain_state.get("handoff_pending"):
+        chain_state.pop("handoff_pending", None)
+        save_chain_state(chain_state)
+        return None
+
+    # Check for in_progress tasks via ohno-cli (global --json flag; output is
+    # an object {"tasks": [...], "total_count": N}, not a bare list)
     try:
         result = subprocess.run(
-            ["npx", "@stevestomp/ohno-cli", "list", "--status", "in_progress", "--format", "json"],
+            ["npx", "@stevestomp/ohno-cli", "--json", "tasks", "--status", "in_progress"],
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0 and result.stdout.strip():
             import json as json_mod
-            tasks = json_mod.loads(result.stdout)
-            if isinstance(tasks, list) and len(tasks) > 0:
-                task_ids = [t.get("id", "") for t in tasks if t.get("id")]
+            data = json_mod.loads(result.stdout)
+            tasks = data.get("tasks", []) if isinstance(data, dict) else []
+            if tasks:
+                task_ids = [
+                    t.get("id", "")
+                    for t in tasks
+                    if isinstance(t, dict) and t.get("id")
+                ]
                 if task_ids:
                     return {
                         "stale_tasks": task_ids,
@@ -469,8 +483,13 @@ def handle_session_start(input_data: dict) -> dict:
     """Handle SessionStart event - run pre-session hooks and crash recovery."""
     results = []
 
-    # Reset token usage tracking for this session
-    reset_token_usage()
+    # SessionStart also fires on mid-session compaction and resume. Only a
+    # genuinely new session ("startup", "clear", or runtimes that send no
+    # source) resets the token-usage ledger — an auto-compact must not wipe
+    # the agent token data accumulated so far.
+    source = str(input_data.get("source") or "").strip().lower()
+    if source not in ("compact", "resume"):
+        reset_token_usage()
 
     # Run pre-session verification
     results.append(run_action("verify-clean"))
@@ -481,8 +500,11 @@ def handle_session_start(input_data: dict) -> dict:
         preflight_result = run_action("pre-flight", env={"WORK_MODE": work_mode})
         results.append(preflight_result)
 
-    # Detect and recover from crashed sessions
-    stale = _detect_stale_session()
+    # Detect and recover from crashed sessions. Skip on compaction (the
+    # session is still alive, its in_progress tasks are not stale) and on
+    # resume (`claude --resume` picks the old session back up — its
+    # in_progress tasks are about to be worked on, not crash debris).
+    stale = None if source in ("compact", "resume") else _detect_stale_session()
     if stale:
         recovery_env = {
             "STALE_TASKS": ",".join(stale["stale_tasks"]),
@@ -620,6 +642,92 @@ def delete_chain_state() -> None:
 
 
 # ==========================================================================
+# Task State File Functions
+# ==========================================================================
+#
+# Environment variables exported by the coordinator never reach hook
+# subprocesses (the exact propagation bug already fixed once for chain
+# state), so the active task id and the /work --worktree / --in-place
+# override flags travel through a state file instead:
+#
+# - The coordinator MAY pre-write {"force_worktree": ..., "force_inplace": ...}
+#   before marking a task in_progress.
+# - handle_task_start merges those flags with the task id and persists
+#   {task_id, force_worktree, force_inplace}.
+# - WIP tracking (Edit/Write/Bash events) and review-failure attribution
+#   read task_id from the file (env var kept as a legacy fallback).
+# - handle_task_complete clears the file.
+
+TASK_STATE_FILENAME = "pokayokay-task-state.json"
+
+
+def _task_state_path() -> Path:
+    """Get path to the task state file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(TASK_STATE_FILENAME)
+
+
+def load_task_state() -> dict:
+    """Load the active-task state. Returns {} when absent or unreadable."""
+    state_path = _task_state_path()
+    if not state_path.exists():
+        return {}
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        return state if isinstance(state, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_task_state(state: dict) -> None:
+    """Save the active-task state (atomic write, best-effort)."""
+    state_path = _task_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp_path = state_path.with_suffix(".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        tmp_path.rename(state_path)
+    except OSError:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def clear_task_state() -> None:
+    """Remove the task state file from both possible locations."""
+    project_dir = Path(get_project_dir())
+    for candidate in (
+        project_dir / PRIMARY_STATE_DIR / TASK_STATE_FILENAME,
+        project_dir / LEGACY_STATE_DIR / TASK_STATE_FILENAME,
+    ):
+        try:
+            if candidate.exists():
+                candidate.unlink()
+        except OSError:
+            pass  # Best-effort cleanup
+
+
+def get_active_task_id() -> str:
+    """Return the active task id: task state file first, env fallback.
+
+    The env fallback (CURRENT_OHNO_TASK_ID) only works when the bridge is
+    invoked from a shell that exported it (tests, direct runs) — coordinator
+    exports never reach hook subprocesses, hence the state file.
+    """
+    task_id = str(load_task_state().get("task_id") or "").strip()
+    if task_id:
+        return task_id
+    return os.environ.get("CURRENT_OHNO_TASK_ID", "")
+
+
+def _coerce_flag(value) -> str:
+    """Normalize a JSON/env truthy flag to the literal string 'true'/'false'."""
+    return "true" if str(value).strip().lower() == "true" else "false"
+
+
+# ==========================================================================
 # Token Usage Tracking
 # ==========================================================================
 
@@ -664,29 +772,37 @@ def reset_token_usage() -> None:
         pass
 
 
-def record_agent_tokens(agent_type: str, description: str, tool_response: dict) -> None:
+def record_agent_tokens(agent_type: str, description: str, tool_response) -> None:
     """Record token usage from a completed Task (subagent) tool call."""
-    # Extract usage from tool_response
-    # Claude Code includes usage data in task-notification messages
-    result_text = str(tool_response.get("result", ""))
-
-    # Parse total_tokens from the response if available
     total_tokens = 0
     tool_uses = 0
     duration_ms = 0
 
-    # The tool_response for Task contains usage info
-    if "total_tokens" in result_text:
-        import re
-        token_match = re.search(r'total_tokens["\s:]+(\d+)', result_text)
-        if token_match:
-            total_tokens = int(token_match.group(1))
-        tool_match = re.search(r'tool_uses["\s:]+(\d+)', result_text)
-        if tool_match:
-            tool_uses = int(tool_match.group(1))
-        duration_match = re.search(r'duration_ms["\s:]+(\d+)', result_text)
-        if duration_match:
-            duration_ms = int(duration_match.group(1))
+    # Claude Code exposes structured usage fields on the Task tool_response.
+    if isinstance(tool_response, dict):
+        try:
+            total_tokens = int(tool_response.get("totalTokens") or 0)
+            tool_uses = int(tool_response.get("totalToolUseCount") or 0)
+            duration_ms = int(tool_response.get("totalDurationMs") or 0)
+        except (TypeError, ValueError):
+            total_tokens = tool_uses = duration_ms = 0
+
+    # Codex fallback: scrape snake_case usage keys from the response text.
+    # (The Task output itself arrives in content blocks on Claude Code, not
+    # a top-level "result" key — extract_output_text handles both shapes.)
+    if not total_tokens:
+        result_text = extract_output_text(tool_response)
+        if "total_tokens" in result_text:
+            import re
+            token_match = re.search(r'total_tokens["\s:]+(\d+)', result_text)
+            if token_match:
+                total_tokens = int(token_match.group(1))
+            tool_match = re.search(r'tool_uses["\s:]+(\d+)', result_text)
+            if tool_match:
+                tool_uses = int(tool_match.group(1))
+            duration_match = re.search(r'duration_ms["\s:]+(\d+)', result_text)
+            if duration_match:
+                duration_ms = int(duration_match.group(1))
 
     usage = load_token_usage()
     usage["agents"].append({
@@ -708,7 +824,10 @@ def _get_memory_dir() -> Optional[Path]:
     Returns None if neither can be determined.
     """
     project_dir = get_project_dir()
-    project_key = project_dir.replace("/", "-").lstrip("-")
+    # Claude Code encodes project keys by replacing EVERY non-alphanumeric
+    # character with "-" and keeps the leading dash (verified on disk:
+    # ~/.claude/projects/-Users-steve-...; "." and "_" also become "-").
+    project_key = re.sub(r"[^A-Za-z0-9]", "-", project_dir)
     claude_memory = Path.home() / ".claude" / "projects" / project_key / "memory"
     if claude_memory.exists():
         return claude_memory
@@ -864,10 +983,15 @@ def handle_session_end(input_data: dict) -> dict:
                     # Update state file for next session
                     # Preserve all coordinator state fields (adaptive_n, failed_tasks, etc.)
                     chain_state["chain_index"] = chain_state.get("chain_index", 0) + 1
+                    # Mark the handoff as clean so the continuation session's
+                    # SessionStart doesn't mistake handed-off in_progress
+                    # tasks for a crash (see _detect_stale_session).
+                    chain_state["handoff_pending"] = True
                     save_chain_state(chain_state)
                 elif chain_action == "audit_pending":
                     # Don't end the chain - signal coordinator to run audit
                     chain_state["audit_pending"] = True
+                    chain_state["handoff_pending"] = True
                     save_chain_state(chain_state)
                 elif chain_action in ("complete", "limit_reached"):
                     # Chain is done - clean up state file
@@ -895,19 +1019,98 @@ def handle_session_end(input_data: dict) -> dict:
     return response
 
 
+def parse_mcp_payload(tool_response) -> dict:
+    """Parse an MCP tool result into a plain dict.
+
+    ohno's MCP server wraps every tool result as
+    ``{"content": [{"type": "text", "text": "<json string>"}]}`` — and some
+    runtimes deliver the content-block list directly. Extract the text via
+    extract_output_text and json.loads it. Falls back to top-level dict reads
+    (the Codex shape, where the result object arrives unwrapped) when there is
+    no parseable JSON payload. Never raises; returns {} for unusable input.
+    """
+    text = extract_output_text(tool_response)
+    if text:
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return tool_response if isinstance(tool_response, dict) else {}
+
+
+def _lookup_task(task_id: str) -> dict:
+    """Fetch task metadata (title, task_type, story_id) via the ohno CLI.
+
+    ohno's update_task_status result carries no ``task`` object and its input
+    schema rejects title/type fields, so the CLI is the only source for the
+    TASK_TITLE/TASK_TYPE/STORY_ID env vars passed to hook scripts.
+    Best-effort: short timeout, returns {} on any failure.
+    """
+    if not task_id or task_id == "unknown":
+        return {}
+    try:
+        result = subprocess.run(
+            ["npx", "@stevestomp/ohno-cli", "--json", "task", "get", task_id],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            data = json.loads(result.stdout)
+            if isinstance(data, dict):
+                return data
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError, Exception):
+        pass
+    return {}
+
+
 def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     """Handle task status change to in_progress - run pre-task hooks."""
     task_id = tool_input.get("task_id", "unknown")
 
-    # Extract task metadata from response if available
-    task_data = tool_response.get("task", {})
-    task_title = task_data.get("title", tool_input.get("title", ""))
-    task_type = task_data.get("task_type", task_data.get("type", tool_input.get("type", "feature")))
-    story_id = task_data.get("story_id", "")
+    # ohno MCP results arrive as JSON inside content blocks — parse them.
+    response_data = parse_mcp_payload(tool_response)
 
-    # Get worktree flags from environment (set by /work command)
-    force_worktree = os.environ.get("YOKAY_FORCE_WORKTREE", "false")
-    force_inplace = os.environ.get("YOKAY_FORCE_INPLACE", "false")
+    # Extract task metadata from response if available, otherwise look the
+    # task up via the ohno CLI (update_task_status results carry no task
+    # object and its input schema rejects title/type, so tool_input
+    # fallbacks alone can never populate these).
+    task_data = response_data.get("task")
+    if not isinstance(task_data, dict) or not task_data:
+        task_data = _lookup_task(task_id)
+    task_title = task_data.get("title") or tool_input.get("title", "")
+    task_type = (
+        task_data.get("task_type")
+        or task_data.get("type")
+        or tool_input.get("type")
+        or "feature"
+    )
+    story_id = task_data.get("story_id") or ""
+
+    # Worktree override flags come from the task state file: the coordinator
+    # writes them there before marking the task in_progress, because exported
+    # env vars never reach this hook subprocess. The YOKAY_* env vars remain
+    # as a legacy fallback for direct invocations.
+    task_state = load_task_state()
+    force_worktree = _coerce_flag(
+        task_state.get("force_worktree", os.environ.get("YOKAY_FORCE_WORKTREE", "false"))
+    )
+    force_inplace = _coerce_flag(
+        task_state.get("force_inplace", os.environ.get("YOKAY_FORCE_INPLACE", "false"))
+    )
+
+    # Persist the active task so later per-event bridge processes (WIP
+    # tracking, review-failure attribution) can attribute work to it.
+    save_task_state({
+        "task_id": task_id,
+        "force_worktree": force_worktree,
+        "force_inplace": force_inplace,
+    })
+
+    # Memory-informed skill routing needs the project memory dir; hook
+    # subprocesses can't compute it from Claude-internal state, so pass it
+    # explicitly (matching the curate-memory dispatch at session end).
+    memory_dir = _get_memory_dir()
 
     env = {
         "TASK_ID": task_id,
@@ -916,6 +1119,7 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
         "STORY_ID": story_id,
         "FORCE_WORKTREE": force_worktree,
         "FORCE_INPLACE": force_inplace,
+        "MEMORY_DIR": str(memory_dir) if memory_dir else "",
     }
 
     results = []
@@ -944,6 +1148,34 @@ def handle_task_start(tool_input: dict, tool_response: dict) -> dict:
     }
 
 
+def _find_story_worktree(story_id: str) -> Optional[str]:
+    """Resolve the story worktree path via ``git worktree list --porcelain``.
+
+    setup-worktree.sh names story worktrees ``.worktrees/story-<story_id>-<slug>``.
+    Returns the worktree path when one exists on disk, else None (porcelain
+    ``worktree <path>`` lines are parsed whole, so paths with spaces work).
+    """
+    if not story_id:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, timeout=10,
+            cwd=get_project_dir(),
+        )
+        if result.returncode != 0:
+            return None
+        marker = f"story-{story_id}-"
+        for line in result.stdout.splitlines():
+            if line.startswith("worktree "):
+                path = line[len("worktree "):].strip()
+                if os.path.basename(path).startswith(marker) and os.path.isdir(path):
+                    return path
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+    return None
+
+
 def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     """Handle mcp__ohno__update_task_status PostToolUse event for task completion."""
     results = []
@@ -951,14 +1183,28 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
 
     task_id = tool_input.get("task_id", "unknown")
 
-    # Extract task metadata from response if available
-    task_data = tool_response.get("task", {})
-    task_title = task_data.get("title", tool_input.get("title", ""))
-    task_type = task_data.get("type", tool_input.get("type", ""))
+    # ohno MCP results arrive as JSON inside content blocks — parse them.
+    response_data = parse_mcp_payload(tool_response)
+
+    # Extract task metadata from response if available, otherwise look the
+    # task up via the ohno CLI (update_task_status results are
+    # {success, boundaries?} with no task object).
+    task_data = response_data.get("task")
+    if not isinstance(task_data, dict) or not task_data:
+        task_data = _lookup_task(task_id)
+    task_title = task_data.get("title") or tool_input.get("title", "")
+    task_type = (
+        task_data.get("task_type")
+        or task_data.get("type")
+        or tool_input.get("type")
+        or ""
+    )
     task_notes = tool_input.get("notes", "")
 
-    # Extract boundary metadata
-    boundaries = tool_response.get("boundaries", {})
+    # Extract boundary metadata from the parsed MCP payload
+    boundaries = response_data.get("boundaries", {})
+    if not isinstance(boundaries, dict):
+        boundaries = {}
     story_completed = boundaries.get("story_completed", False)
     epic_completed = boundaries.get("epic_completed", False)
     story_id = boundaries.get("story_id")
@@ -987,14 +1233,29 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
     if task_type == "spike":
         _write_spike_result(task_id, task_title, task_notes)
 
+    # Update chain state: increment tasks_completed BEFORE the long-running
+    # story/epic boundary actions so the count survives if the runtime kills
+    # the bridge process partway through a boundary chain.
+    chain_state = load_chain_state()
+    if chain_state.get("chain_id"):
+        chain_state["tasks_completed"] = chain_state.get("tasks_completed", 0) + 1
+        save_chain_state(chain_state)
+
     # Run post-story hooks if story completed
     if story_completed:
         hooks_run.append("post-story")
-        results.append(run_action("test", env=env))
-        results.append(run_action("story-integration", env=env))
+        # The story's changes live in its worktree (setup-worktree.sh names
+        # them .worktrees/story-<story_id>-<slug>), not the main checkout —
+        # run the boundary checks there when the worktree exists.
+        story_worktree = _find_story_worktree(story_id or "")
+        boundary_env = dict(env)
+        if story_worktree:
+            boundary_env["WORKTREE_DIR"] = story_worktree
+        results.append(run_action("test", env=boundary_env, cwd=story_worktree))
+        results.append(run_action("story-integration", env=boundary_env, cwd=story_worktree))
         # Run audit-gate for story boundary
-        story_env = {**env, "BOUNDARY_TYPE": "story"}
-        results.append(run_action("audit-gate", env=story_env))
+        story_env = {**boundary_env, "BOUNDARY_TYPE": "story"}
+        results.append(run_action("audit-gate", env=story_env, cwd=story_worktree))
 
         # Compact story handoffs (memory decay)
         if story_id:
@@ -1027,11 +1288,12 @@ def handle_task_complete(tool_input: dict, tool_response: dict) -> dict:
             except Exception:
                 pass  # Best-effort
 
-    # Update chain state: increment tasks_completed
-    chain_state = load_chain_state()
-    if chain_state.get("chain_id"):
-        chain_state["tasks_completed"] = chain_state.get("tasks_completed", 0) + 1
-        save_chain_state(chain_state)
+    # The task is no longer active — clear the task state file so later
+    # Edit/Bash events don't attribute work to a finished task. Skip when a
+    # different task has already been started (overlapping task starts).
+    current_state = load_task_state()
+    if not current_state or current_state.get("task_id") in ("", None, task_id):
+        clear_task_state()
 
     # Build summary
     success_count = sum(1 for r in results if r["status"] == "success")
@@ -1073,17 +1335,37 @@ def handle_set_blocker(tool_input: dict, tool_response: dict) -> dict:
 
 def handle_pre_commit(tool_input: dict) -> dict:
     """Handle Bash pre-commit check (PreToolUse)."""
+    import re
+
     command = tool_input.get("command", "")
 
-    # Check if this is a git commit command
-    if "git commit" not in command and "git add" not in command:
+    # Match `git commit` / `git add` only when it is an actual command (at the
+    # start of the string or after a shell separator/newline/subshell open),
+    # not quoted text inside another command. Tolerates leading VAR=value
+    # environment assignments (`FOO=bar git commit`), flag-style global
+    # options (`git --no-pager commit`), and the argument-taking `-C <path>` /
+    # `-c <name=value>` global options (`git -C dir commit`). Other
+    # option-with-argument forms (and attached-argument `-Cdir`) remain
+    # unmatched — a conscious tightening vs the old substring check.
+    # The option alternatives are disjoint on the character after `-` so the
+    # repetition cannot backtrack exponentially (py/redos): `-C`/`-c` only
+    # match with a separate argument, everything else only via the second arm.
+    git_write_pattern = (
+        r'(?:^|&&|\|\||;|\||\n|\()\s*'
+        r'(?:\w+=\S*\s+)*'
+        r'git(?:\s+-(?:[Cc]\s+\S+|[^Cc\s]\S*))*'
+        r'\s+(?:commit|add)\b'
+    )
+    if not re.search(git_write_pattern, command):
         return {"skip": True, "reason": "not a commit command"}
 
     results = []
 
-    # Run pre-commit hooks
+    # Run pre-commit hooks. check-ref-sizes needs the intercepted command to
+    # decide whether unstaged files are about to be staged (add-all forms) or
+    # irrelevant to the commit (env values are metachar-sanitized in transit).
     results.append(run_action("lint"))
-    results.append(run_action("check-ref-sizes"))
+    results.append(run_action("check-ref-sizes", env={"POKAYOKAY_GIT_COMMAND": command}))
 
     # Check for failures that should block
     has_blocking_error = any(r["status"] == "error" for r in results)
@@ -1351,8 +1633,10 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     if not (is_spec_review or is_quality_review):
         return {"skip": True, "reason": "not a review task"}
 
-    # Get the agent output (tool_response contains the agent's result)
-    agent_output = str(tool_response.get("result", ""))
+    # Get the agent output. On Claude Code the Task tool_response carries the
+    # subagent output in content blocks; "result" is the Codex alias already
+    # normalized by normalize_hook_input. extract_output_text handles both.
+    agent_output = extract_output_text(tool_response)
 
     # Detect PASS/FAIL
     if ": PASS" in agent_output:
@@ -1364,8 +1648,9 @@ def handle_review_complete(tool_input: dict, tool_response: dict) -> dict:
     # Extract failure source
     failure_source = "spec-review" if is_spec_review else "quality-review"
 
-    # Get task ID from environment (set by coordinator before dispatching reviewers)
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID", "unknown")
+    # Get task ID from the task state file (written by handle_task_start;
+    # env var is a legacy fallback for direct invocations)
+    task_id = get_active_task_id() or "unknown"
 
     # Truncate failure details to prevent shell issues (2000 chars max)
     # Also remove any shell metacharacters for safety
@@ -1432,11 +1717,6 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
     if not script_path.exists():
         return {"action": name, "status": "skipped", "reason": "script not found"}
 
-    # Check rate limit before executing
-    rate_limit_error = check_rate_limit(name)
-    if rate_limit_error:
-        return {"action": name, "status": "rate_limited", "reason": rate_limit_error}
-
     # Get configurable timeout for this hook
     timeout = get_timeout(name)
 
@@ -1459,36 +1739,96 @@ def run_action_at_path(script_path: Path, env: Optional[Dict[str, str]] = None) 
 
         return {
             "action": name,
-            "status": "success" if result.returncode == 0 else "warning",
+            "status": status_from_returncode(result.returncode),
             "output": result.stdout.strip(),
             "error": result.stderr.strip() if result.stderr else None
         }
     except subprocess.TimeoutExpired:
         return {"action": name, "status": "timeout", "reason": f"exceeded {timeout}s"}
-    except Exception as e:
-        return {"action": name, "status": "error", "reason": "Script execution failed"}
+    except Exception:
+        # Execution failure is advisory, not "error": a broken script must
+        # not block every commit under the exit-code contract.
+        return {"action": name, "status": "warning", "reason": "Script execution failed"}
 
 
 # ==========================================================================
 # WIP Auto-capture Functions
 # ==========================================================================
+#
+# The bridge is spawned as a fresh process per hook event, so WIP debounce
+# state (last update time + files touched for the active task) is persisted
+# to ``.pokayokay/wip-state.json`` instead of module globals.
 
-def should_update_wip(force: bool = False) -> bool:
-    """Check if enough time has passed to update WIP (rate limiting)."""
-    global _last_wip_update
-    if force:
-        return True
-    now = time.time()
-    if now - _last_wip_update < WIP_UPDATE_INTERVAL:
-        return False
-    _last_wip_update = now
-    return True
+WIP_STATE_FILENAME = "wip-state.json"
+
+
+def _wip_state_path() -> Path:
+    """Get path to the WIP state file (prefers .pokayokay/, falls back to .claude/)."""
+    return _resolve_state_path(WIP_STATE_FILENAME)
+
+
+def _default_wip_state(task_id: str) -> dict:
+    return {"task_id": task_id, "last_update": 0.0, "files": []}
+
+
+def load_wip_state(task_id: str) -> dict:
+    """Load WIP debounce state, resetting it when the active task changes.
+
+    Falls back to a fresh state (per-event behavior) on any JSON/IO error.
+    """
+    state_path = _wip_state_path()
+    if not state_path.exists():
+        return _default_wip_state(task_id)
+
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        if not isinstance(state, dict) or state.get("task_id") != task_id:
+            return _default_wip_state(task_id)
+        files = state.get("files")
+        state["files"] = (
+            [entry for entry in files if isinstance(entry, str)]
+            if isinstance(files, list)
+            else []
+        )
+        state["last_update"] = float(state.get("last_update") or 0.0)
+        return state
+    except (json.JSONDecodeError, OSError, TypeError, ValueError):
+        return _default_wip_state(task_id)
+
+
+def save_wip_state(state: dict) -> None:
+    """Save WIP debounce state.
+
+    Uses atomic write (temp file + rename) to prevent corruption. Best-effort:
+    hooks never crash on write failure.
+    """
+    state_path = _wip_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # PID-suffixed temp name: concurrent bridge processes (one per hook
+    # event) must not clobber each other's temp file mid-write. The final
+    # os.replace is atomic; last writer wins, which is acceptable here.
+    tmp_path = state_path.with_name(f"{state_path.name}.{os.getpid()}.tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        os.replace(tmp_path, state_path)
+    except OSError:
+        if tmp_path.exists():
+            tmp_path.unlink()
 
 
 def extract_output_text(tool_response) -> str:
     """Extract text output from tool response (handles Claude and Codex formats)."""
     if isinstance(tool_response, str):
         return tool_response
+    if isinstance(tool_response, list):
+        # Bare list of MCP content blocks: [{"type": "text", "text": "..."}]
+        return "\n".join(
+            c.get("text", "") for c in tool_response if isinstance(c, dict)
+        )
     if isinstance(tool_response, dict):
         # Claude Code shape: {"content": [{"text": "..."}]} or {"content": "..."}
         content = tool_response.get("content")
@@ -1586,7 +1926,7 @@ def update_wip(task_id: str, wip_data: dict):
 
 def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) -> dict:
     """Capture file modifications to WIP."""
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    task_id = get_active_task_id()
     if not task_id or task_id == "unknown":
         return {"skip": True, "reason": "no active task"}
 
@@ -1594,25 +1934,31 @@ def handle_file_change(tool_name: str, tool_input: dict, tool_response: dict) ->
     if not file_path:
         return {"skip": True, "reason": "no file path"}
 
-    # Track this file
-    _tracked_files.add(file_path)
+    # Track this file in the persisted state
+    state = load_wip_state(task_id)
+    if file_path not in state["files"]:
+        state["files"].append(file_path)
 
-    # Rate limit WIP updates
-    if not should_update_wip():
-        return {"skip": True, "reason": "rate limited"}
+    # Debounce WIP updates across bridge invocations
+    now = time.time()
+    if now - state["last_update"] < WIP_UPDATE_INTERVAL:
+        save_wip_state(state)
+        return {"skip": True, "reason": "debounced"}
 
     wip_data = {
-        "files_modified": sorted(list(_tracked_files)),
+        "files_modified": sorted(state["files"]),
         "uncommitted_changes": True
     }
 
     update_wip(task_id, wip_data)
+    state["last_update"] = now
+    save_wip_state(state)
     return {"skip": True, "reason": "wip updated silently"}
 
 
 def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
     """Capture test results, git commits, and errors from Bash."""
-    task_id = os.environ.get("CURRENT_OHNO_TASK_ID")
+    task_id = get_active_task_id()
     if not task_id or task_id == "unknown":
         return {"skip": True, "reason": "no active task"}
 
@@ -1633,8 +1979,6 @@ def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
         if commit_hash:
             wip_data["last_commit"] = commit_hash
             wip_data["uncommitted_changes"] = False
-            # Clear tracked files after commit
-            _tracked_files.clear()
             force_update = True  # Always update immediately for commits
 
     # Detect errors (non-zero exit)
@@ -1643,10 +1987,24 @@ def handle_bash_execution(tool_input: dict, tool_response: dict) -> dict:
         if error_info:
             wip_data["errors"] = [error_info]
 
-    if wip_data and should_update_wip(force=force_update):
-        update_wip(task_id, wip_data)
+    if not wip_data:
+        return {"skip": True, "reason": "wip updated silently"}
 
-    return {"skip": True, "reason": "wip updated silently"}
+    state = load_wip_state(task_id)
+    now = time.time()
+    debounced = not force_update and now - state["last_update"] < WIP_UPDATE_INTERVAL
+
+    if not debounced:
+        update_wip(task_id, wip_data)
+        state["last_update"] = now
+
+    if force_update:
+        # Commit landed - clear tracked files so the next WIP snapshot
+        # doesn't resend already-committed files.
+        state["files"] = []
+
+    save_wip_state(state)
+    return {"skip": True, "reason": "debounced" if debounced else "wip updated silently"}
 
 
 def main():
@@ -1749,8 +2107,16 @@ def main():
 
             # Block if requested (for pre-commit failures)
             if result.get("block"):
+                block_reason = result.get("reason", "Hook check failed")
+                if hook_event == "PreToolUse":
+                    # Current hook API shape: deny via hookSpecificOutput,
+                    # merged alongside additionalContext.
+                    output["hookSpecificOutput"]["permissionDecision"] = "deny"
+                    output["hookSpecificOutput"]["permissionDecisionReason"] = block_reason
+                # Top-level decision/reason is the deprecated legacy shape,
+                # kept for older runtimes.
                 output["decision"] = "block"
-                output["reason"] = result.get("reason", "Hook check failed")
+                output["reason"] = block_reason
 
             print(json.dumps(output))
     else:
@@ -1786,8 +2152,6 @@ def format_context(result: dict) -> str:
                 "warning": "⚠️",
                 "error": "❌",
                 "skipped": "⏭️",
-                "blocked": "🚫",
-                "rate_limited": "⏳",
                 "timeout": "⏰",
             }.get(r["status"], "?")
             output = r.get("output", r.get("reason", ""))[:50]

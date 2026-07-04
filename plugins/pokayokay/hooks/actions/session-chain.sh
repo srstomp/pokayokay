@@ -34,10 +34,28 @@ if [ -z "${CHAIN_ID:-}" ]; then
 fi
 
 # Check remaining work
+# ohno-cli JSON list output is an object {"tasks": [...], "total_count": N}.
+# Unscoped chains read total_count (immune to the --limit cap). Scoped chains
+# (--epic/--story) count only in-scope rows — an unrelated todo task must not
+# keep the chain alive after the scoped work is done; the CLI has no scope
+# filter, so filter client-side over a high --limit.
 READY_COUNT=0
 if command -v npx &>/dev/null; then
-    READY_COUNT=$(npx @stevestomp/ohno-cli get-ready-count 2>/dev/null || echo "0")
+    READY_COUNT=$(npx @stevestomp/ohno-cli tasks --status todo --json --limit 1000 2>/dev/null | \
+        SCOPE_TYPE="$SCOPE_TYPE" SCOPE_ID="${SCOPE_ID:-}" python3 -c "
+import json, os, sys
+data = json.load(sys.stdin)
+scope_type = os.environ.get('SCOPE_TYPE', '')
+scope_id = os.environ.get('SCOPE_ID', '')
+if scope_type in ('story', 'epic') and scope_id:
+    key = 'story_id' if scope_type == 'story' else 'epic_id'
+    print(sum(1 for t in data.get('tasks', []) if t.get(key) == scope_id))
+else:
+    print(data.get('total_count', 0))
+" 2>/dev/null || echo "0")
 fi
+# Guard against non-numeric output before -eq tests and JSON interpolation
+case "$READY_COUNT" in ''|*[!0-9]*) READY_COUNT=0 ;; esac
 
 # Check if we should continue chaining
 NEXT_INDEX=$((CHAIN_INDEX + 1))
@@ -101,57 +119,54 @@ $([ "$ACTION" = "complete" ] && echo "All tasks in scope completed successfully.
 REPORT
 
         # Enrich report with task handoff summaries
+        # ohno-cli list output is an object {"tasks": [...], "total_count": N};
+        # task rows already carry handoff_notes (no separate handoff command).
         if command -v npx &>/dev/null; then
             # Get completed tasks and their handoffs
-            DONE_TASKS=$(npx @stevestomp/ohno-cli list --status done --format json 2>/dev/null || echo "[]")
-            if [ "$DONE_TASKS" != "[]" ] && [ -n "$DONE_TASKS" ]; then
-                echo "" >> "$REPORT_PATH"
-                echo "## Completed Tasks" >> "$REPORT_PATH"
-                echo "" >> "$REPORT_PATH"
-
-                # Parse task IDs and titles, get handoff for each
-                echo "$DONE_TASKS" | python3 -c "
-import json, sys, subprocess
-try:
-    tasks = json.load(sys.stdin)
-    if isinstance(tasks, list):
-        for t in tasks[:50]:  # Cap at 50
-            tid = t.get('id', '')
-            title = t.get('title', 'Unknown')
-            # Try to get handoff summary
-            try:
-                result = subprocess.run(
-                    ['npx', '@stevestomp/ohno-cli', 'get-handoff', tid, '--format', 'brief'],
-                    capture_output=True, text=True, timeout=5
-                )
-                handoff = result.stdout.strip() if result.returncode == 0 else 'No handoff'
-            except Exception:
-                handoff = 'No handoff'
-            print(f'- **{tid}**: {title} — {handoff}')
-except Exception:
-    pass
-" >> "$REPORT_PATH" 2>/dev/null || true
-
-                # Add failed/blocked tasks
-                BLOCKED_TASKS=$(npx @stevestomp/ohno-cli list --status blocked --format json 2>/dev/null || echo "[]")
-                if [ "$BLOCKED_TASKS" != "[]" ] && [ -n "$BLOCKED_TASKS" ]; then
-                    echo "" >> "$REPORT_PATH"
-                    echo "## Blocked Tasks" >> "$REPORT_PATH"
-                    echo "" >> "$REPORT_PATH"
-                    echo "$BLOCKED_TASKS" | python3 -c "
+            DONE_TASKS=$(npx @stevestomp/ohno-cli tasks --status done --json 2>/dev/null || echo '{"tasks":[]}')
+            DONE_LINES=$(echo "$DONE_TASKS" | python3 -c "
 import json, sys
 try:
-    tasks = json.load(sys.stdin)
-    if isinstance(tasks, list):
-        for t in tasks:
-            tid = t.get('id', '')
-            title = t.get('title', 'Unknown')
-            reason = t.get('blocker_reason', t.get('blockers', 'Unknown reason'))
-            print(f'- **{tid}**: {title} — Blocked: {reason}')
+    tasks = json.load(sys.stdin).get('tasks', [])
+    for t in tasks[:50]:  # Cap at 50
+        tid = t.get('id', '')
+        title = t.get('title', 'Unknown')
+        handoff = (t.get('handoff_notes') or '').strip()
+        handoff = handoff.splitlines()[0] if handoff else 'No handoff'
+        print(f'- **{tid}**: {title} — {handoff}')
 except Exception:
     pass
-" >> "$REPORT_PATH" 2>/dev/null || true
-                fi
+" 2>/dev/null || true)
+            if [ -n "$DONE_LINES" ]; then
+                {
+                    echo ""
+                    echo "## Completed Tasks"
+                    echo ""
+                    echo "$DONE_LINES"
+                } >> "$REPORT_PATH"
+            fi
+
+            # Add failed/blocked tasks
+            BLOCKED_TASKS=$(npx @stevestomp/ohno-cli tasks --status blocked --json 2>/dev/null || echo '{"tasks":[]}')
+            BLOCKED_LINES=$(echo "$BLOCKED_TASKS" | python3 -c "
+import json, sys
+try:
+    tasks = json.load(sys.stdin).get('tasks', [])
+    for t in tasks:
+        tid = t.get('id', '')
+        title = t.get('title', 'Unknown')
+        reason = t.get('blocker_reason', t.get('blockers', 'Unknown reason'))
+        print(f'- **{tid}**: {title} — Blocked: {reason}')
+except Exception:
+    pass
+" 2>/dev/null || true)
+            if [ -n "$BLOCKED_LINES" ]; then
+                {
+                    echo ""
+                    echo "## Blocked Tasks"
+                    echo ""
+                    echo "$BLOCKED_LINES"
+                } >> "$REPORT_PATH"
             fi
         fi
     fi
@@ -186,7 +201,7 @@ cat <<EOF
   "tasks_completed": ${TASKS_COMPLETED},
   "tasks_remaining": ${READY_COUNT},
   "report_path": "${REPORT_PATH}",
-  "continue_command": "claude --headless --prompt=\"/work --continue ${SCOPE_FLAG}\"",
+  "continue_command": "claude -p \"/work --continue ${SCOPE_FLAG}\"",
   "scope_flag": "${SCOPE_FLAG}"
 }
 EOF

@@ -8,9 +8,13 @@
 #
 # Actions:
 #   1. Stash uncommitted changes with descriptive message
-#   2. Update WIP for in_progress tasks via ohno-cli
-#   3. Log crash to ohno task_activity
-#   4. Output recovery report
+#   2. Update WIP for in_progress tasks via ohno-cli (crash note folded into WIP)
+#   3. Report stale worktree locks
+#   4. Retire the stale chain-state file so recovery does not re-fire
+#   5. Output recovery report
+#
+# Note: recovered tasks stay in_progress with saved WIP — that is what the
+# resume flow relies on. Do NOT reset them to todo.
 
 set -euo pipefail
 
@@ -43,12 +47,10 @@ if [ -n "$STALE_TASKS" ] && command -v npx &>/dev/null; then
     TASK_ID=$(echo "$TASK_ID" | xargs)  # trim whitespace
     [ -z "$TASK_ID" ] && continue
 
-    # Update WIP with crash info
-    WIP_JSON="{\"phase\":\"crashed\",\"errors\":[{\"type\":\"session_crash\",\"message\":\"Session crashed, WIP auto-saved\"}]}"
+    # Update WIP with crash info (ohno-cli has no activity command; the
+    # crash note lives in the WIP payload instead)
+    WIP_JSON="{\"phase\":\"crashed\",\"errors\":[{\"type\":\"session_crash\",\"message\":\"Session crashed. WIP saved, uncommitted changes stashed.\"}]}"
     npx @stevestomp/ohno-cli update-wip "$TASK_ID" "$WIP_JSON" 2>/dev/null || true
-
-    # Log crash to task activity
-    npx @stevestomp/ohno-cli add-activity "$TASK_ID" note "Session crashed. WIP saved, uncommitted changes stashed." 2>/dev/null || true
 
     echo "TASK_RECOVERED=${TASK_ID}"
     RECOVERED=$((RECOVERED + 1))
@@ -57,11 +59,24 @@ fi
 
 # 3. Check for stale worktree locks
 if [ -d "${PROJECT_DIR}/.worktrees" ]; then
-  for lockfile in "${PROJECT_DIR}"/.worktrees/*/locked 2>/dev/null; do
+  for lockfile in "${PROJECT_DIR}"/.worktrees/*/locked; do
     [ -f "$lockfile" ] || continue
     echo "STALE_LOCK=${lockfile}"
   done
 fi
+
+# 4. Retire the stale chain-state file so stale-session detection stops
+# re-firing on every SessionStart (_detect_stale_session requires chain_id).
+# Rename rather than delete so the state stays inspectable.
+for CHAIN_STATE in \
+  "${PROJECT_DIR}/.pokayokay/pokayokay-chain-state.json" \
+  "${PROJECT_DIR}/.claude/pokayokay-chain-state.json"; do
+  if [ -f "$CHAIN_STATE" ]; then
+    if mv "$CHAIN_STATE" "${CHAIN_STATE}.recovered" 2>/dev/null; then
+      echo "CHAIN_STATE_RETIRED=${CHAIN_STATE}.recovered"
+    fi
+  fi
+done
 
 echo "RECOVERED_COUNT=${RECOVERED}"
 echo "Recovery complete"

@@ -27,6 +27,11 @@ verified with local commands.
 | Complex task touching multiple modules | Design review, implementer, then reviewers | Upfront design review reduces expensive rework |
 | Independent backlog batch | `/work -n 2` or `-n auto` | Parallelism costs more tokens; use only when wall-clock matters |
 | Flaky test output or CI logs | Test runner or inline summarized logs | Do not paste full logs unless the failure requires it |
+| Exploration needing >8 full-file reads | Split into 6-8-file batches per dispatch, or targeted Grep questions | Oversized explorer dispatches hit prompt-size limits |
+
+Never hand one explorer more than 8 full-file reads. If an explorer returns
+PARTIAL, re-dispatch a fresh explorer with its Remaining Files list (max 1
+re-dispatch per question).
 
 ## Parallelism Limits
 

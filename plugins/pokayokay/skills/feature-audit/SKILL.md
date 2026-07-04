@@ -1,7 +1,8 @@
 ---
 name: feature-audit
-agents: [yokay-auditor]
+argument-hint: "[feature-name]"
 description: Use when verifying feature completeness against PRD requirements, identifying gaps between backend implementation and user-facing accessibility, generating remediation tasks, or auditing across frameworks (Next.js, React Router, TanStack, React Native, Expo).
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Feature Audit
@@ -28,7 +29,7 @@ Ensures features are not just implemented but actually user-accessible. Bridges 
 ## Quick Start Checklist
 
 1. Discover project framework and structure
-2. Load PRD context from `.claude/features.json` and `tasks.db`
+2. Load feature/task context from ohno (`mcp__ohno__get_epics`, `mcp__ohno__get_tasks`) or `npx @stevestomp/ohno-cli tasks`
 3. For each feature: check backend, frontend, route, navigation
 4. Assign completeness level (0-5)
 5. Generate report and remediation tasks
@@ -53,5 +54,5 @@ Ensures features are not just implemented but actually user-accessible. Bridges 
 
 ## Runtime Notes
 
-- **Claude Code**: dispatch the agents listed in this skill's frontmatter via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`.
+- **Claude Code**: dispatch yokay-auditor via the Task tool with `subagent_type: "pokayokay:yokay-auditor"`.
 - **Codex**: there is no subagent dispatch. Execute the agent's role inline — read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract directly in the current session.

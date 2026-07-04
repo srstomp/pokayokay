@@ -85,6 +85,7 @@ Read `agents/templates/implementer-prompt.md` and fill these variables:
 | `{ACCEPTANCE_CRITERIA}` | See below |
 | `{CONTEXT}` | Bug fix context block (see below) |
 | `{RELEVANT_SKILL}` | `error-handling` |
+| `{APPROACH}` | `Design review skipped — follow codebase patterns` (design review does not run in the bug-fix pipeline; do NOT put the fix strategy here — it belongs in `{CONTEXT}`) |
 | `{WORKING_DIRECTORY}` | Project root |
 | `{RESUME_CONTEXT}` | Empty |
 

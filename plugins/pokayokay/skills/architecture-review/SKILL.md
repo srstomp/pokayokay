@@ -1,6 +1,7 @@
 ---
 name: architecture-review
 description: Use when auditing project structure, planning refactors, improving code organization, analyzing dependencies and module boundaries, or identifying structural issues. TypeScript/JavaScript-primary with language-agnostic patterns.
+allowed-tools: Read, Grep, Glob, Bash, Agent
 ---
 
 # Architecture Review

@@ -4,6 +4,9 @@
 
 set -e
 
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(dirname "$TESTS_DIR")"
+
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 
@@ -14,7 +17,8 @@ cd "$TEST_DIR"
 mkdir -p .claude
 
 # Script path
-SCRIPT="/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/capture-knowledge.sh"
+SCRIPT="$PLUGIN_DIR/hooks/actions/capture-knowledge.sh"
+[ -f "$SCRIPT" ] || { echo "script not found: $SCRIPT"; exit 1; }
 
 # Test 1: Verify path traversal attack is blocked
 echo "Test 1: Path traversal attempt with ../"

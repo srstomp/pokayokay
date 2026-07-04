@@ -52,13 +52,16 @@ export async function configureMcp(env) {
     return { success: true, scope: scopes.join(', '), needsRestart: false };
   }
 
+  const localDescription = needsCodex
+    ? 'Only this project, stored in .mcp.json (Codex MCP config is global-only: ~/.codex/config.toml)'
+    : 'Only this project, stored in .mcp.json';
   const { scope } = await prompts({
     type: 'select',
     name: 'scope',
     message: 'Configure ohno MCP server?',
     choices: [
       { title: 'Global (recommended)', description: 'Available in all projects', value: 'global' },
-      { title: 'Project-local', description: 'Only this project, stored in .mcp.json', value: 'local' },
+      { title: 'Project-local', description: localDescription, value: 'local' },
       { title: 'Skip', value: 'skip' }
     ],
     initial: 0
@@ -97,18 +100,18 @@ export async function configureMcp(env) {
       configuredScopes.push('Claude local');
     }
 
-    if (needsCodex && !env.codexMcpConfigured && scope === 'global') {
+    if (needsCodex && !env.codexMcpConfigured) {
+      // Codex only loads MCP servers from ~/.codex/config.toml; a
+      // project-local .mcp.json is a Claude Code convention Codex never
+      // reads. Always write the Codex entry globally, regardless of scope.
+      if (scope === 'local') {
+        console.log(chalk.dim(`  Codex MCP config is global-only; writing to ${env.codexConfigPath}`));
+      }
       const backupPath = writeCodexMcpServer(env.codexConfigPath, 'ohno', mcpEntry);
       if (backupPath) {
         console.log(chalk.dim(`  Backed up Codex config to ${backupPath}`));
       }
       configuredScopes.push('Codex global');
-    } else if (needsCodex && !env.codexMcpConfigured) {
-      const config = readLocalMcpConfig();
-      config.mcpServers = config.mcpServers || {};
-      config.mcpServers.ohno = mcpEntry;
-      writeLocalMcpConfig(config);
-      configuredScopes.push('Codex local');
     }
 
     const resultScope = configuredScopes.join(', ') || scope;

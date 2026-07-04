@@ -87,8 +87,8 @@ if (!hooks.PostToolUse) throw new Error("PostToolUse hook missing");
 if (!hooks.SessionStart) throw new Error("SessionStart hook missing");
 const postMatcher = hooks.PostToolUse && hooks.PostToolUse[0] && hooks.PostToolUse[0].matcher;
 if (postMatcher === "*") throw new Error("Claude PostToolUse should not match every tool");
-if (postMatcher !== "Bash|Edit|Write|Skill|Task|mcp__ohno__update_task_status|mcp__ohno__set_blocker") {
-  throw new Error("Claude PostToolUse matcher should only include handled tools");
+if (postMatcher !== "Bash|Edit|Write|Skill|Task|mcp__.*ohno__update_task_status|mcp__.*ohno__set_blocker") {
+  throw new Error("Claude PostToolUse matcher should match plugin-scoped ohno tool names");
 }
 ' "$CLAUDE_HOOKS"
 echo "  PASS: Claude hooks config parses"

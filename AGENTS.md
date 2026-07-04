@@ -23,8 +23,10 @@ node cli/bin/cli.js
 # Run specific shell tests
 bash plugins/pokayokay/tests/<test-name>.test.sh
 
-# Run all shell tests
-for test in plugins/pokayokay/tests/*.test.sh; do bash "$test"; done
+# Run the full test suite (shell + node, per-test PASS/FAIL, non-zero exit on failure)
+npm test
+# or directly:
+bash plugins/pokayokay/tests/run-tests.sh
 
 # Codex-specific test suites
 bash plugins/pokayokay/tests/codex-compatibility.test.sh

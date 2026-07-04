@@ -5,7 +5,10 @@ set -euo pipefail
 
 echo "Testing design plugin integration in plan command..."
 
-PLAN_FILE="plugins/pokayokay/commands/plan.md"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(dirname "$TESTS_DIR")"
+PLAN_FILE="$PLUGIN_DIR/commands/plan.md"
+[ -f "$PLAN_FILE" ] || { echo "file not found: $PLAN_FILE"; exit 1; }
 
 # Test 1: Design Plugin Integration section exists
 echo "Test 1: Design Plugin Integration section exists"
@@ -66,8 +69,10 @@ else
 fi
 
 # Test 7: Plugin installation suggestion when not available
+# (Literal install-command text was deliberately removed in 24a6213;
+# assert the current phrasing at plan.md "Suggest design plugin installation")
 echo "Test 7: Plugin installation suggestion"
-if grep -q "claude plugin install design" "$PLAN_FILE" || grep -q "install the design plugin" "$PLAN_FILE"; then
+if grep -qi "suggest design plugin installation" "$PLAN_FILE"; then
   echo "  PASS: Installation suggestion documented"
 else
   echo "  FAIL: Installation suggestion not found"
@@ -81,7 +86,7 @@ FOUND_KEYWORDS=0
 
 for keyword in "${UI_KEYWORDS[@]}"; do
   if grep -qi "$keyword" "$PLAN_FILE"; then
-    ((FOUND_KEYWORDS++))
+    FOUND_KEYWORDS=$((FOUND_KEYWORDS + 1))
   fi
 done
 
@@ -92,12 +97,14 @@ else
   exit 1
 fi
 
-# Test 9: Design routing in keyword detection table
-echo "Test 9: Design routing in keyword detection table"
-if grep -q "ux-design" "$PLAN_FILE" || grep -q "aesthetic-ui-designer" "$PLAN_FILE"; then
-  echo "  PASS: Design skills in skill hints"
+# Test 9: Design routing documented
+# (Old ux-design/aesthetic-ui-designer skills were renamed away; design routing
+# now lives in section 5.3, delegating to the planning skill's design-integration.md)
+echo "Test 9: Design routing documented"
+if grep -q "design-integration.md" "$PLAN_FILE" || grep -q "Route design-related tasks" "$PLAN_FILE"; then
+  echo "  PASS: Design routing documented"
 else
-  echo "  FAIL: Design skills not in skill hints"
+  echo "  FAIL: Design routing not documented"
   exit 1
 fi
 
@@ -114,7 +121,7 @@ fi
 
 # Test 11: Integration with work command mentioned
 echo "Test 11: Work command integration mentioned"
-if grep -q "/work" "$PLAN_FILE" || grep -q "work command" "$PLAN_FILE"; then
+if grep -q "/work" "$PLAN_FILE" || grep -q "pokayokay:work" "$PLAN_FILE" || grep -qi "work command" "$PLAN_FILE"; then
   echo "  PASS: Work command integration mentioned"
 else
   echo "  FAIL: Work command integration not mentioned"
@@ -149,9 +156,10 @@ else
 fi
 
 # Test 15: Design availability check positioned before PRD analysis
+# (PRD analysis moved into the planner agent; the design check is now Step 1,
+# ahead of "### 2. Dispatch Planner Agent")
 echo "Test 15: Design check positioned early in workflow"
-if grep -n "Check Design Plugin Availability" "$PLAN_FILE" | head -1 | cut -d: -f1 | \
-   awk -v prd_line="$(grep -n "### 2. Read the PRD" "$PLAN_FILE" | head -1 | cut -d: -f1)" '$1 < prd_line {exit 0} {exit 1}'; then
+if grep -q "### 1. Check Design Plugin Availability" "$PLAN_FILE"; then
   echo "  PASS: Design check is early in workflow"
 else
   echo "  FAIL: Design check not positioned early enough"

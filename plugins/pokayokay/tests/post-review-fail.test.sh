@@ -9,8 +9,11 @@ trap "rm -rf $TEST_DIR" EXIT
 
 echo "Testing post-review-fail.sh hook..."
 
-# Script path
-SCRIPT="/Users/sis4m4/Projects/stevestomp/pokayokay/hooks/post-review-fail.sh"
+# Script path (repo-root hook, three levels up from plugins/pokayokay/tests)
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
+SCRIPT="$REPO_ROOT/hooks/post-review-fail.sh"
+[ -f "$SCRIPT" ] || { echo "script not found: $SCRIPT"; exit 1; }
 
 # Setup test environment
 cd "$TEST_DIR"

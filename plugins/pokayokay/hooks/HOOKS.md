@@ -48,10 +48,10 @@ Previously, hooks were "soft" - documentation telling the LLM to run them. Now t
 | post-story | Story complete | test, story-integration, audit-gate |
 | post-epic | Epic complete | audit-gate |
 | on-blocker | Task blocked | notification |
-| pre-commit | Before commit | lint, check-ref-sizes |
+| pre-commit | Before commit | lint (advisory), check-ref-sizes (blocking) |
 | post-session | Session end | sync, session-summary, curate-memory, session-chain |
-| post-command | After audit commands | verify-tasks |
-| post-review | Review FAIL | graduate-rules (failure tracking) |
+| post-command | Audit skill completes (model-invoked Skill tool only) | verify-tasks |
+| post-review | Reviewer Task reports FAIL | failure tracking, graduate-rules, post-review-fail (if present in project) |
 | file-change | Edit/Write | WIP tracking |
 | bash-complete | Bash execution | WIP tracking (tests, commits, errors) |
 
@@ -111,15 +111,22 @@ Continuing despite warnings.
 
 ## Configuration
 
-Hook behavior is controlled by `bridge.py` and the `defaults.yaml` reference. Custom hook actions can be added as shell scripts in `hooks/actions/`.
+Hook routing and action lists are hardcoded in `bridge.py` — there is no YAML
+or per-project hook configuration file (nothing reads `.yokay/hooks.yaml`).
+Shell scripts in `hooks/actions/` run only when `bridge.py` explicitly
+dispatches them; adding a new script to the directory does not wire it to any
+hook. The one configurable area is session chaining (`.pokayokay/config.json`,
+legacy `.claude/pokayokay.json`).
 
 ## Mode Behavior
 
-| Hook | supervised | semi-auto | auto |
-|------|------------|-----------|------------|
-| post-task | sync | sync, commit | sync, commit, test |
-| post-story | — | test, audit | test, audit |
-| post-epic | audit | audit | audit, docs |
+Hooks run identically in **all** work modes. Post-task actions (sync, commit,
+detect-spike, capture-knowledge) execute on every task completion regardless
+of mode — supervised mode does **not** suppress auto-commit. Mode controls
+only:
+
+- **Pause points**: supervised pauses after every task; semi-auto at story/epic boundaries; auto at epic boundaries; unattended never pauses.
+- **Pre-flight**: the pre-session pre-flight check runs only in unattended mode.
 
 ## Intelligent Hooks
 
@@ -134,14 +141,18 @@ Automatically creates git worktrees for task isolation based on task type:
 | `chore`, `docs` | Works in-place (no worktree) |
 | Unknown | Creates worktree (safer default) |
 
-**Override flags** (set via environment):
-- `YOKAY_FORCE_WORKTREE=true` - Always create worktree
-- `YOKAY_FORCE_INPLACE=true` - Never create worktree
+**Override flags** (`/work --worktree` / `--in-place`): the coordinator writes
+`force_worktree` / `force_inplace` into the task state file
+(`.pokayokay/pokayokay-task-state.json`) *before* marking the task
+`in_progress`. Hook subprocesses never inherit environment variables exported
+by the coordinator, so the state file is the only reliable channel (see "Task
+State File" below). The legacy `YOKAY_FORCE_WORKTREE` / `YOKAY_FORCE_INPLACE`
+env vars still work for direct shell invocations of the bridge.
 
 **Story worktree reuse**: If a task belongs to a story and a worktree already exists for that story, it will be reused instead of creating a new one.
 
 ### Skill Suggestions (pre-task)
-Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to performance, security, accessibility, observability, and testing.
+Analyzes task title/description to suggest relevant skills beyond the primary routed skill. Detects keywords related to security, observability, and testing, and cross-checks every suggestion against the plugin's `skills/` directory so only skills that actually exist are suggested.
 
 ### Spike Detection (post-task)
 Monitors task completion notes for uncertainty signals ("not sure", "need to investigate", etc.). When detected, suggests converting to a spike for structured investigation.
@@ -159,22 +170,30 @@ Outputs warnings when thresholds not met, suggests `/pokayokay:audit` for full a
 
 ## Post-Command Hooks
 
-Post-command hooks verify that audit commands created expected tasks. They fire after specific commands complete.
+Post-command hooks verify that audit skills created expected tasks.
 
-### Configured Commands
+**Trigger caveat**: the hook fires on the PostToolUse `Skill` event, which is
+emitted only when Claude itself invokes the skill via the Skill tool
+(model-invoked). When the *user* types the slash command (e.g.
+`/pokayokay:security auth`), Claude Code expands it into the prompt without a
+Skill tool call, so no PostToolUse event fires and this verification does not
+run. (A UserPromptSubmit-marker design could cover user-typed commands in the
+future; it is not implemented.)
 
-| Command | Prefix | Trigger |
-|---------|--------|---------|
-| `/pokayokay:security` | `Security:` | Always |
-| `/pokayokay:test --audit` | `Test:` | With `--audit` flag |
-| `/pokayokay:observe --audit` | `Observability:` | With `--audit` flag |
-| `/pokayokay:arch --audit` | `Arch:` | With `--audit` flag |
+### Configured Skills
+
+| Skill | Prefix | Trigger |
+|-------|--------|---------|
+| `pokayokay:security` | `Security:` | Always (when model-invoked) |
+| `pokayokay:test` | `Test:` | With `--audit` flag |
+| `pokayokay:observe` | `Observability:` | With `--audit` flag |
+| `pokayokay:arch` | `Arch:` | With `--audit` flag |
 
 ### How It Works
 
-1. Command runs (e.g., `/pokayokay:security auth`)
-2. Command creates tasks for findings via ohno MCP `create_task`
-3. After command completes, `post-command` hook fires
+1. Claude invokes an audit skill via the Skill tool (e.g., `pokayokay:security` with args `auth`)
+2. The skill creates tasks for findings via ohno MCP `create_task`
+3. When the Skill tool call completes, the `post-command` hook fires
 4. `verify-tasks.sh` checks if tasks with expected prefix exist
 5. Warns if no tasks found (may indicate missed task creation)
 
@@ -236,7 +255,7 @@ The yokay hook system integrates with Claude Code's native hooks via `bridge.py`
 | PostToolUse | `Skill` (audit commands) | post-command (verify-tasks) |
 | PostToolUse | `Edit` / `Write` | WIP tracking (files modified) |
 | PostToolUse | `Bash` | WIP tracking (test results, commits, errors) |
-| PreToolUse | `Bash` (git commit/add) | pre-commit (lint, check-ref-sizes) |
+| PreToolUse | `Bash` (git commit/add as an actual command, not quoted text) | pre-commit (lint advisory, check-ref-sizes blocking) |
 | PermissionRequest | `Bash` (Codex) | conservative allow/deny decisions for read-only, test, ohno, and dangerous commands |
 
 ### Boundary Metadata
@@ -260,6 +279,58 @@ The bridge script uses this to determine which hooks to run:
 - **post-story**: Runs when `story_completed: true`
 - **post-epic**: Runs when `epic_completed: true`
 
+Post-story actions (test, story-integration, audit-gate) run inside the
+story's worktree (`.worktrees/story-<story_id>-*`) when it exists — the
+story's changes live there, not in the main checkout. The bridge resolves the
+worktree via `git worktree list --porcelain` and passes it as `WORKTREE_DIR`.
+
+Note: when ohno is bundled via the plugin's `.mcp.json`, Claude Code prefixes
+the tool names (e.g. `mcp__plugin_pokayokay_ohno__update_task_status`). The
+hook matcher and `bridge.py` normalize any server-name variant to the
+canonical `mcp__ohno__*` routing keys.
+
+### Action Exit-Code Contract
+
+Action scripts in `actions/` signal severity through their exit code:
+
+| Exit code | Status | Effect |
+|-----------|--------|--------|
+| 0 | success | Normal completion |
+| 2 | error | Blocking — pre-commit denies the tool call (`permissionDecision: deny`) |
+| any other nonzero | warning | Advisory — surfaced to the agent, never blocks |
+
+Only an exact exit code 2 blocks, so unexpected codes (126/127, signal
+deaths) stay advisory. Script execution failures (e.g. an unspawnable
+script) also map to warning so a broken hook script cannot block every
+commit. By design, `lint.sh` always exits 0 — lint failures are reported
+in its output but never block — while `check-ref-sizes.sh` exits 2 on
+oversized reference files (blocking).
+
+### Task State File
+
+Environment variables exported by the coordinator cannot reach hook
+subprocesses (hooks are spawned by the runtime, not by the coordinator's
+shell — the same propagation bug chain state hit). The active task therefore
+travels through `.pokayokay/pokayokay-task-state.json`:
+
+- The coordinator may pre-write `{"force_worktree": ..., "force_inplace": ...}`
+  before marking a task `in_progress` (for `/work --worktree` / `--in-place`).
+- The pre-task hook (`handle_task_start`) merges those flags with the task id
+  and persists `{task_id, force_worktree, force_inplace}`, passing the flags
+  to `setup-worktree.sh` as `FORCE_WORKTREE`/`FORCE_INPLACE`.
+- WIP tracking (Edit/Write/Bash events) and review-failure attribution read
+  `task_id` from this file (`CURRENT_OHNO_TASK_ID` remains a fallback for
+  direct shell invocations only).
+- The post-task hook (`handle_task_complete`) clears the file.
+
+### WIP Debounce State
+
+The bridge runs as a fresh process per hook event, so WIP tracking persists
+its debounce state (active task id, last update time, files touched) to
+`.pokayokay/wip-state.json`. WIP updates are debounced to at most one every
+5 seconds; git commits force an immediate update and clear the tracked file
+list.
+
 ### Files
 
 | File | Purpose |
@@ -279,7 +350,7 @@ The bridge script uses this to determine which hooks to run:
 | `actions/story-integration.sh` | Story-level integration checks (post-story) |
 | `actions/audit-gate.sh` | Checks quality thresholds at boundaries (post-story, post-epic) |
 | `actions/verify-tasks.sh` | Verifies audit commands created tasks (post-command) |
-| `actions/lint.sh` | Runs linter (pre-commit) |
+| `actions/lint.sh` | Runs linter, advisory only (pre-commit) |
 | `actions/check-ref-sizes.sh` | Blocks commits with >500-line reference files (pre-commit) |
 | `actions/session-summary.sh` | Prints session summary with token costs (post-session) |
 | `actions/curate-memory.sh` | Enforces MEMORY.md section budgets (post-session) |

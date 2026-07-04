@@ -4,7 +4,10 @@
 
 set -e
 
-SCRIPT_PATH="/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/audit-gate.sh"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(dirname "$TESTS_DIR")"
+SCRIPT_PATH="$PLUGIN_DIR/hooks/actions/audit-gate.sh"
+[ -f "$SCRIPT_PATH" ] || { echo "script not found: $SCRIPT_PATH"; exit 1; }
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 

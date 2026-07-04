@@ -27,7 +27,7 @@ fi
 
 # 2. ohno MCP responsive (try CLI as proxy)
 if command -v npx &>/dev/null; then
-    if npx @stevestomp/ohno-cli list --limit 1 &>/dev/null; then
+    if npx @stevestomp/ohno-cli status &>/dev/null; then
         echo "CHECK=ohno_responsive OK"
     else
         echo "ISSUE=ohno_unresponsive"
@@ -41,10 +41,12 @@ else
 fi
 
 # 3. Tasks available
+# `next --json` returns a task object with an `id` when work is available,
+# or {"message":"No tasks available"} when there is none (exit 0 either way).
 if command -v npx &>/dev/null; then
-    READY_COUNT=$(npx @stevestomp/ohno-cli get-ready-count 2>/dev/null || echo "0")
-    if [ "$READY_COUNT" -gt 0 ] 2>/dev/null; then
-        echo "CHECK=tasks_available OK (${READY_COUNT} ready)"
+    NEXT_ID=$(npx @stevestomp/ohno-cli next --json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id') or '')" 2>/dev/null || echo "")
+    if [ -n "$NEXT_ID" ]; then
+        echo "CHECK=tasks_available OK (next: ${NEXT_ID})"
     else
         echo "ISSUE=no_tasks"
         echo "DETAIL=No tasks available to work on"
@@ -69,7 +71,7 @@ fi
 # 5. No stale worktree locks
 if [ -d "${PROJECT_DIR}/.worktrees" ]; then
     STALE_LOCKS=0
-    for lockfile in "${PROJECT_DIR}"/.worktrees/*/locked 2>/dev/null; do
+    for lockfile in "${PROJECT_DIR}"/.worktrees/*/locked; do
         [ -f "$lockfile" ] || continue
         STALE_LOCKS=$((STALE_LOCKS + 1))
         echo "WARNING=stale_lock"

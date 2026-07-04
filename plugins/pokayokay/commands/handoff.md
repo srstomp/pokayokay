@@ -1,5 +1,6 @@
 ---
 description: Prepare session handoff for next session or agent
+argument-hint: "[--quick]"
 skill: session-review
 ---
 
@@ -165,7 +166,7 @@ This helps identify:
 npx @stevestomp/ohno-cli task <task-id>  # View current state
 
 # Log activity
-# (Use ohno MCP log_activity tool)
+# (Use ohno MCP add_task_activity tool)
 ```
 
 ### 7. Sync Final State

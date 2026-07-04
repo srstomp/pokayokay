@@ -1,7 +1,7 @@
 ---
 name: work-session
-agents: [yokay-brainstormer, yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer, yokay-browser-verifier, yokay-test-runner]
 description: Use when starting AI development sessions, resuming interrupted work, managing multi-session projects, or orchestrating work with human checkpoint control (supervised, semi-auto, auto, or unattended modes).
+disable-model-invocation: true
 ---
 
 # Work Session
@@ -48,8 +48,9 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 
 | Reference | Description |
 |-----------|-------------|
-| [subagent-dispatch.md](references/subagent-dispatch.md) | Coordinator vs implementer roles, dispatch mechanics |
-| [session-protocol.md](references/session-protocol.md) | Session start/end checklists, MCP workflow |
+| [dispatch-preparation.md](references/dispatch-preparation.md) | Task extraction, brainstorm gate, design review gate, skill routing, template filling |
+| [review-pipeline.md](references/review-pipeline.md) | Two-stage review: spec compliance then code quality (+ design compliance) |
+| [dispatch-errors.md](references/dispatch-errors.md) | Recovery when ohno, routing, or dispatch fails |
 | [checkpoint-types.md](references/checkpoint-types.md) | PAUSE, REVIEW, NOTIFY checkpoint patterns |
 | [skill-routing.md](references/skill-routing.md) | Task type to skill mapping |
 | [operating-modes.md](references/operating-modes.md) | Supervised, semi-auto, auto, unattended details |
@@ -66,5 +67,5 @@ Orchestrate AI-assisted development with configurable human control, using ohno 
 
 ## Runtime Notes
 
-- **Claude Code**: the coordinator dispatches `yokay-*` agents via the Task tool as described in [subagent-dispatch.md](references/subagent-dispatch.md).
-- **Codex**: there is no subagent dispatch. Run the pipeline inline in the current session — for each stage, read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract. Execute stages (implement → spec review → quality review) as separate, sequential passes; do not skip review stages because dispatch is unavailable. Parallel batch execution ([parallel-execution.md](references/parallel-execution.md)) is Claude Code-only — process tasks sequentially on Codex.
+- **Claude Code**: the coordinator dispatches yokay-brainstormer, yokay-design-reviewer, yokay-implementer, yokay-fixer, yokay-spec-reviewer, yokay-quality-reviewer, yokay-browser-verifier, and yokay-test-runner via the Task tool with `subagent_type: "pokayokay:yokay-<name>"`, as described in [dispatch-preparation.md](references/dispatch-preparation.md).
+- **Codex**: there is no subagent dispatch. Run the pipeline inline in the current session — for each stage, read the corresponding `agents/yokay-<name>.md` and follow its Behavioral Defaults, Critical Rules, and Output Contract. Execute stages (design review (conditional) → implement → spec review → quality review) as separate, sequential passes; do not skip review stages because dispatch is unavailable. Parallel batch execution ([parallel-execution.md](references/parallel-execution.md)) is Claude Code-only — process tasks sequentially on Codex.

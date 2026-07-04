@@ -82,7 +82,9 @@ archives = {
     "Completed Work": "completed-work-archive.md",
     "Key Decisions": "decisions-archive.md",
     "Architecture Notes": "architecture-archive.md",
+    "Active Patterns": "active-patterns-archive.md",
     "Recent Bug Fixes": "bugfixes-archive.md",
+    "Topic Index": "topic-index-archive.md",
 }
 
 pokayokay_marker = "<!-- pokayokay:"
@@ -120,6 +122,34 @@ for line in lines:
 if current_header is not None or current_lines:
     sections.append((current_header, current_is_pokayokay, current_lines))
 
+def atomic_write(path, data):
+    """Write via temp file + rename so a mid-write kill never truncates the target."""
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+def split_entries(content_lines):
+    """Group lines into whole entries starting at top-level '- ' bullets.
+
+    Continuation lines (indented sub-bullets, wrapped text, blanks) stay
+    attached to the preceding entry so trimming never orphans them.
+    """
+    entries = []
+    current = []
+    for line in content_lines:
+        if line.startswith("- "):
+            if current:
+                entries.append(current)
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        entries.append(current)
+    return entries
+
+
 # Enforce budgets on pokayokay sections
 output_sections = []
 for header, is_pokayokay, section_lines in sections:
@@ -132,19 +162,27 @@ for header, is_pokayokay, section_lines in sections:
         output_sections.append(section_lines)
         continue
 
-    # Over budget - trim oldest content lines (keep header + comment + newest)
+    # Over budget - trim whole oldest entries (keep header + comment + newest)
     header_lines = section_lines[:2]
     content_lines = section_lines[2:]
 
     while content_lines and not content_lines[0].strip():
         content_lines.pop(0)
 
-    overflow_count = len(content_lines) - (budget - 2)
-    if overflow_count > 0 and header in archives:
-        overflow = content_lines[:overflow_count]
-        remaining = content_lines[overflow_count:]
+    entries = split_entries(content_lines)
 
-        archive_path = os.path.join(memory_dir, archives[header])
+    keep = list(entries)
+    overflow_entries = []
+    while keep and sum(len(e) for e in keep) > (budget - 2):
+        overflow_entries.append(keep.pop(0))
+
+    overflow = [line for entry in overflow_entries for line in entry]
+    remaining = [line for entry in keep for line in entry]
+
+    # Every evicted entry is preserved: sections without a dedicated archive
+    # fall back to the generic memory-archive.md instead of being discarded.
+    if overflow:
+        archive_path = os.path.join(memory_dir, archives.get(header, "memory-archive.md"))
         archive_header = "# {} Archive\n\nOverflow entries from MEMORY.md, managed by pokayokay.\n\n".format(header)
         existing = ""
         if os.path.exists(archive_path):
@@ -154,16 +192,12 @@ for header, is_pokayokay, section_lines in sections:
             existing = archive_header
 
         existing += "\n" + "\n".join(overflow) + "\n"
-        with open(archive_path, "w") as f:
-            f.write(existing)
+        atomic_write(archive_path, existing)
 
-        output_sections.append(header_lines + remaining)
-    else:
-        output_sections.append(header_lines + content_lines[:(budget - 2)])
+    output_sections.append(header_lines + remaining)
 
 output = "\n".join(line for section in output_sections for line in section)
 output = output.rstrip() + "\n"
 
-with open(memory_file, "w") as f:
-    f.write(output)
+atomic_write(memory_file, output)
 PYEOF

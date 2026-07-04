@@ -6,7 +6,10 @@ import { doctor } from '../src/doctor.js';
 const command = process.argv[2];
 
 if (command === 'doctor') {
-  doctor();
+  doctor().catch((err) => {
+    console.error(`\n  Doctor failed: ${err.message}\n`);
+    process.exit(1);
+  });
 } else if (command === 'help' || command === '--help' || command === '-h') {
   console.log(`
   pokayokay setup wizard
@@ -17,5 +20,8 @@ if (command === 'doctor') {
     npx pokayokay help     Show this help message
 `);
 } else {
-  main();
+  main().catch((err) => {
+    console.error(`\n  Setup failed: ${err.message}\n`);
+    process.exit(1);
+  });
 }

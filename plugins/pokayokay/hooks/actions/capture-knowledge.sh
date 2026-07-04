@@ -54,11 +54,21 @@ else
   echo ""
 fi
 
-# Check for GO decision in notes (spike-specific)
+# Check for GO/NO-GO decision in notes (spike-specific).
+# NO-GO must be checked FIRST (a bare "go" grep matches "no-go"), and both
+# patterns are word-anchored so prose like "going", "algorithm", or "Django"
+# never triggers a false decision match.
 if [ "$SAFE_TYPE" = "spike" ]; then
   NOTES_LOWER=$(echo "$NOTES" | tr '[:upper:]' '[:lower:]')
 
-  if echo "$NOTES_LOWER" | grep -q "go"; then
+  if echo "$NOTES_LOWER" | grep -Eq "(^|[^a-z-])no-go([^a-z]|$)"; then
+    echo ""
+    echo "## NO-GO Decision Detected"
+    echo ""
+    echo "Document why this approach was rejected to prevent revisiting."
+    echo "Add to: \`.claude/decisions/\` or PROJECT.md"
+    echo ""
+  elif echo "$NOTES_LOWER" | grep -Eq "(^|[^a-z-])go([^a-z]|$)"; then
     echo ""
     echo "## GO Decision Detected"
     echo ""
@@ -66,13 +76,6 @@ if [ "$SAFE_TYPE" = "spike" ]; then
     echo "1. Ensure implementation tasks are created"
     echo "2. Consider adding findings to PROJECT.md"
     echo "3. Link spike output to related stories"
-    echo ""
-  elif echo "$NOTES_LOWER" | grep -q "no-go"; then
-    echo ""
-    echo "## NO-GO Decision Detected"
-    echo ""
-    echo "Document why this approach was rejected to prevent revisiting."
-    echo "Add to: \`.claude/decisions/\` or PROJECT.md"
     echo ""
   fi
 fi

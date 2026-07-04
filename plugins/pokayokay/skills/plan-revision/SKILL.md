@@ -1,6 +1,7 @@
 ---
 name: plan-revision
 description: Use when revising existing implementation plans, analyzing impact of task changes, exploring modifications to project scope or dependencies, or updating task hierarchies with full impact visibility before execution.
+disable-model-invocation: true
 ---
 
 # Plan Revision
@@ -49,6 +50,12 @@ Revise existing plans with full impact visibility.
 :information_source: **Medium Risk:**
 - Dependencies need updating
 - Part of partially complete epic
+
+## When NOT to Use
+
+- **Creating a new plan** — Use `planning` to break down PRDs into epics/stories/tasks from scratch
+- **Working on tasks** — Use `work-session` to execute implementation; this skill only revises plans
+- **Reviewing completed work** — Use `session-review` for retrospective analysis
 
 ## References
 

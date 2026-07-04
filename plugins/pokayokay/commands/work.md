@@ -1,6 +1,6 @@
 ---
 description: Start or continue orchestrated work session
-argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue]"
+argument-hint: "[supervised|semi-auto|auto|unattended] [-n N|auto] [--worktree|--in-place] [--epic ID|--story ID|--all] [--continue] [--skip-design] [--skip-brainstorm] [--skip-auto-fix]"
 skill: work-session
 ---
 
@@ -18,6 +18,9 @@ Parse `$ARGUMENTS` to extract:
 2. **Parallel**: Value after `-n` or `--parallel` flag. Values: `auto`, or `1`-`5`. Default: `1`
 3. **Scope**: `--epic <id>`, `--story <id>`, or `--all` (limits which tasks to work on)
 4. **Continue**: `--continue` flag (resume from previous session's WIP)
+5. **Skip design**: `--skip-design` flag (bypass the Design Review Gate for all tasks this session)
+6. **Skip brainstorm**: `--skip-brainstorm` flag (skip the Brainstorm Gate for all tasks this session)
+7. **Skip auto-fix**: `--skip-auto-fix` flag (disable auto-fixer dispatch on test failures for this session)
 
 Example arguments:
 - `semi-auto -n 3` → mode=semi-auto, parallel=3 (fixed)
@@ -29,6 +32,7 @@ Example arguments:
 - `auto --story story-def456 -n 3` → scope=story:story-def456, parallel=3
 - `--continue` → resume from WIP, inherit previous scope
 - `--all` → work on all available tasks (no scope filter)
+- `auto --skip-design` → mode=auto, design review gate bypassed
 
 Note: `-p` is commonly reserved by AI runtime CLIs for prompt input. Use `-n` for parallel count.
 
@@ -120,7 +124,7 @@ When a session reaches context limits:
 4. SessionEnd hook spawns or prepares the next session using the active runtime:
    ```bash
    # Claude Code
-   claude --headless --prompt="/work --continue --epic epic-abc123"
+   claude -p "/work --continue --epic epic-abc123"
 
    # Codex
    codex --prompt="/work --continue --epic epic-abc123"
@@ -351,7 +355,8 @@ When `--continue` flag is set, resume from previous WIP instead of starting fres
 7. **Dispatch implementer with WIP + handoff context**:
 
 ```
-Task tool (yokay-implementer):
+Task tool:
+  subagent_type: "pokayokay:yokay-implementer"
   description: "Resume: {task.title}"
   mode: "bypassPermissions"
   prompt: [Fill implementer template with ADDITIONAL section:]
@@ -437,6 +442,24 @@ function shouldUseWorktree(task, flags) {
   return true; // Default to worktree for unknown types
 }
 ```
+
+#### Propagating Force Flags to the Worktree Hook
+
+The `setup-worktree` hook runs in a separate hook process that cannot see
+environment variables exported by the coordinator. When `--worktree` or
+`--in-place` was passed, write the flags into the task state file BEFORE
+marking the task `in_progress`:
+
+```bash
+mkdir -p .pokayokay
+printf '{"force_worktree": %s, "force_inplace": %s}\n' "true" "false" \
+  > .pokayokay/pokayokay-task-state.json
+```
+
+The bridge merges these flags with the task id on the `in_progress`
+transition and passes them to `setup-worktree.sh` as
+`FORCE_WORKTREE`/`FORCE_INPLACE`. Without flags, skip this step — the hook
+applies the smart defaults above.
 
 #### Worktree Setup Flow
 
@@ -532,12 +555,13 @@ For each task:
 3. **Route to skill** (if needed): Based on task type
 4. **Brainstorm gate** (conditional): See Brainstorm Gate section
 5. **Pre-implementation validation**: Verify description quality, dependencies, skill hint
-6. **Dispatch implementer**: Single Task tool call
-7. **Auto-fix test failures** (conditional): See Auto-Fix section
-8. **Browser verification** (conditional): See Browser Verification section
-9. **Task review**: Spec compliance + code quality
-10. **Complete task**: Mark done, trigger hooks
-11. **Checkpoint**: Based on mode
+6. **Design review gate** (conditional): See Design Review Gate section — produces the pre-validated approach
+7. **Dispatch implementer**: Single Task tool call, `{APPROACH}` filled from the design review
+8. **Auto-fix test failures** (conditional): See Auto-Fix section
+9. **Browser verification** (conditional): See Browser Verification section
+10. **Task review**: Spec compliance + code quality (incl. design compliance)
+11. **Complete task**: Mark done, trigger hooks
+12. **Checkpoint**: Based on mode
 
 ### Parallel Mode (parallel > 1)
 
@@ -599,14 +623,22 @@ Coordinator maintains N concurrent implementers:
        queued_tasks = [t for t in queued_tasks if t.id not in deferred]
    ```
 
-3. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
+3. **Design review gate (per task)**: Before batching implementer dispatches, run the Design Review Gate (Step 3.7) for EACH queued task:
+   - Apply the skip conditions per task (chore/docs type, `--skip-design`, trivial change)
+   - For non-skipped tasks, dispatch `yokay-design-reviewer` (these read-only dispatches may run in parallel)
+   - Store each task's APPROVED approach; it fills that task's `{APPROACH}` in the implementer template and later its quality-review dispatch
+   - NEEDS_DISCUSSION follows the same mode handling as sequential (auto/unattended: log and proceed without approach)
+
+4. **Parallel dispatch**: Send SINGLE message with N Task tool calls:
    ```
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task1.title}"
      mode: "bypassPermissions"
      prompt: [template for task1]
 
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task2.title}"
      mode: "bypassPermissions"
      prompt: [template for task2]
@@ -614,7 +646,7 @@ Coordinator maintains N concurrent implementers:
    ... up to N tasks
    ```
 
-3. **Track state**: Add all dispatched tasks to `active_agents`
+5. **Track state**: Add all dispatched tasks to `active_agents`
 
 #### Processing Results
 
@@ -624,9 +656,10 @@ As each agent returns:
 2. **Run task review** (spec + quality in one pass)
 3. **Handle result**:
    - PASS: Add to `completed_this_batch`, attempt commit
+   - NEEDS_REDESIGN: Handle per "Handling NEEDS_REDESIGN" (Step 4) — one redesign cycle, then block
    - FAIL: Re-dispatch or add to `failed_blocked`
 4. **Refill**: If `len(active_agents) < N` and queue not empty:
-   - Dispatch next task from queue
+   - Run the Design Review Gate (Step 3.7) for the next task, then dispatch it
    - Replenish queue from ohno if needed
 
 #### Commit Handling
@@ -946,10 +979,13 @@ If brainstorm triggers:
 
 1. Dispatch brainstormer:
    ```
-   Task tool (yokay-brainstormer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-brainstormer"
      description: "Brainstorm: {task.title}"
      prompt: [Fill template from agents/templates/brainstorm-prompt.md]
    ```
+
+   Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_TYPE}` (the ohno task's `task_type`), `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{TRIGGER_REASON}` (which trigger condition fired the gate, e.g. "Short description" or "No acceptance criteria"), `{WORKING_DIRECTORY}`.
 
 2. Process brainstorm result:
    - Update ohno task with refined requirements:
@@ -960,12 +996,12 @@ If brainstorm triggers:
      })
      ```
    - If open questions:
-     - **auto mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
+     - **auto or unattended mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
        ```
-       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto mode): {questions}")
+       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto/unattended mode): {questions}")
        ```
-     - **other modes**: PAUSE for human input
-   - If refined: Proceed to Step 4
+     - **supervised / semi-auto**: PAUSE for human input
+   - If refined: Proceed to Step 3.5 (validation), then the Design Review Gate (Step 3.7)
 
 3. Log activity:
    ```
@@ -982,7 +1018,7 @@ If brainstorm triggers:
        ▼
 ┌──────────────┐     NO      ┌──────────────┐
 │ Needs        │────────────►│ Skip to      │
-│ Brainstorm?  │             │ Implementer  │
+│ Brainstorm?  │             │ Design Review│
 └──────┬───────┘             └──────────────┘
        │ YES
        ▼
@@ -994,12 +1030,20 @@ If brainstorm triggers:
        ▼
 ┌──────────────┐     QUESTIONS   ┌──────────────┐
 │ Result?      │────────────────►│ PAUSE for    │
-└──────┬───────┘                 │ human input  │
+└──────┬───────┘                 │ human input* │
        │ REFINED                 └──────────────┘
+       │        * supervised/semi-auto only; auto/unattended
+       │          auto-resolve questions as assumptions
        ▼
 ┌──────────────┐
 │ Update ohno  │
 │ with criteria│
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Design Review│
+│  Gate (3.7)  │
 └──────┬───────┘
        │
        ▼
@@ -1040,11 +1084,70 @@ def validate_task(task):
 
 If task was just brainstormed (Step 3) and still has BLOCK issues, something went wrong. Log and skip rather than re-brainstorming.
 
+### 3.7 Design Review Gate (Conditional)
+
+Before dispatching the implementer, validate the implementation approach against the codebase. The design reviewer's APPROVED output becomes the implementer's blueprint via the `{APPROACH}` template variable, and is re-used later for the quality reviewer's design-compliance check.
+
+#### Skip Conditions
+
+Design review is skipped when ANY of these are true (keep consistent with the skip conditions in `agents/templates/design-review-prompt.md`):
+
+| Condition | Check | Rationale |
+|-----------|-------|-----------|
+| Manual skip | `--skip-design` flag passed | Human override |
+| Low-risk type | `task_type == "chore"` or `task_type == "docs"` | Low design risk |
+| Trivial change | Fewer than 3 acceptance criteria AND touches <= 1 file | Not worth a dispatch |
+
+```python
+# Pseudocode
+def skip_design_review(task, skip_flag=False):
+    if skip_flag:
+        return True  # --skip-design flag
+    if task.task_type in ["chore", "docs"]:
+        return True  # Low design risk
+    ac_count = count_acceptance_criteria(task)
+    if ac_count < 3 and estimated_files_touched(task) <= 1:
+        return True  # Trivial change
+    return False
+```
+
+**If skipped**: fill `{APPROACH}` in Step 4's implementer template with `Design review skipped — follow codebase patterns`. NEVER leave the literal `{APPROACH}` placeholder in a dispatched prompt.
+
+#### Dispatching Design Reviewer
+
+If the gate is not skipped:
+
+1. Dispatch design reviewer (read-only agent):
+   ```
+   Task tool:
+     subagent_type: "pokayokay:yokay-design-reviewer"
+     description: "Design review: {task.title}"
+     prompt: [Fill template from agents/templates/design-review-prompt.md]
+   ```
+
+   Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{CONTEXT}` (story + handoff notes + dependencies), `{WORKING_DIRECTORY}`.
+
+2. Process design review result:
+   - **APPROVED**: Store the approach (the `## Design Review: APPROVED` block). It fills:
+     - `{APPROACH}` in Step 4's implementer template
+     - `{APPROACH}` in Step 5 Stage 2's quality-review template (design-compliance post-check)
+   - **NEEDS_DISCUSSION**: Handle per mode:
+     - **supervised / semi-auto**: PAUSE — present the decision needed and options to the human, then re-run the gate with the decision appended to `{CONTEXT}`
+     - **auto / unattended**: Do NOT pause. Log the open decision and proceed WITHOUT a validated approach — fill `{APPROACH}` with the skip text:
+       ```
+       add_task_activity(task_id, "decision", "Design review NEEDS_DISCUSSION — proceeding without validated approach (auto/unattended): {decision_needed}")
+       ```
+
+3. Log activity:
+   ```
+   add_task_activity(task_id, "note", "Design review: APPROVED — approach stored for implementer")
+   ```
+
 ### 4. Dispatch Implementer Subagent
 
 **CRITICAL: Do not implement inline. Always dispatch subagent.**
 
-*Note: If brainstorm ran in Step 3, task now has refined requirements. Validation in Step 3.5 confirmed readiness.*
+*Note: If brainstorm ran in Step 3, task now has refined requirements. Validation in Step 3.5 confirmed readiness. If design review ran in Step 3.7, its approach fills `{APPROACH}`.*
 
 1. Extract full task details from ohno:
    ```
@@ -1056,20 +1159,39 @@ If task was just brainstormed (Step 3) and still has BLOCK issues, something wen
    - Acceptance criteria (from task or brainstorm output)
    - Architectural context (where this fits in the project)
    - Relevant skill (determined in Step 2 or assigned by planner)
+   - Pre-validated approach (from Step 3.7 — fills `{APPROACH}`; use `Design review skipped — follow codebase patterns` if the gate was skipped)
    - Known pitfalls (from `memory/recurring-failures.md` if file exists — include entries matching the task domain as a "## Known Pitfalls" section in the implementer prompt)
 
 3. Dispatch subagent using Task tool:
    ```
-   Task tool (yokay-implementer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-implementer"
      description: "Implement: {task.title}"
      mode: "bypassPermissions"
      prompt: [Fill template from agents/templates/implementer-prompt.md]
    ```
 
 4. Process subagent result:
-   - If questions: Answer and re-dispatch
    - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
-   - If blocked: Set blocker via ohno MCP
+   - If NEEDS_REDESIGN: The pre-validated approach proved infeasible — see "Handling NEEDS_REDESIGN" below
+   - If BLOCKED: Set blocker via ohno MCP (the report includes the implementer's specific open questions)
+
+#### Handling NEEDS_REDESIGN
+
+The implementer reports NEEDS_REDESIGN (with evidence) when the pre-validated approach from Step 3.7 proves infeasible. Do NOT re-dispatch the implementer against the same approach, and do NOT treat it as a plain FAIL.
+
+**Cap: ONE redesign cycle per task.**
+
+1. Log the implementer's infeasibility evidence:
+   ```
+   add_task_activity(task_id, "note", "NEEDS_REDESIGN: {implementer's evidence}")
+   ```
+2. Re-dispatch `yokay-design-reviewer` (Step 3.7 template) with the implementer's evidence appended to `{CONTEXT}` under a `### Prior Approach Infeasible` heading
+3. On APPROVED: re-dispatch the implementer with the revised `{APPROACH}`
+4. If the implementer returns NEEDS_REDESIGN **again** (or the redesign comes back NEEDS_DISCUSSION), stop the cycle:
+   - Set blocker: `set_blocker(task_id, "Approach infeasible after one redesign cycle: {evidence}")`
+   - **supervised / semi-auto / auto**: PAUSE for human decision
+   - **unattended**: leave the task blocked and move to the next task
 
 **Why subagent?**
 - Fresh context per task (no accumulated confusion)
@@ -1122,7 +1244,8 @@ After implementer completes:
 
 3. **Dispatch fixer**: If test fails and auto-fix enabled:
    ```
-   Task tool (yokay-fixer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-fixer"
      description: "Fix test failure: {task.title}"
      mode: "bypassPermissions"
      prompt: [Include task details, test output, "Max attempts: 3"]
@@ -1235,7 +1358,7 @@ All three conditions must pass:
 2. **Server running**: HTTP server on ports 3000-9999, or can be started via package.json
 3. **Renderable files changed**: Task modified `.html`, `.css`, `.tsx`, `.jsx`, `.vue`, `.svelte`, or files in `components/`, `views/`, `ui/`, `pages/`
 
-If any check fails, silently skip to Step 6 (Review).
+If any check fails, silently skip to Step 5 (Review).
 
 #### Verification Flow
 
@@ -1243,13 +1366,15 @@ If all checks pass:
 
 1. Dispatch browser verifier:
    ```
-   Task tool (yokay-browser-verifier):
+   Task tool:
+     subagent_type: "pokayokay:yokay-browser-verifier"
      description: "Browser verify: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Include task details, server URL, changed files]
    ```
 
 2. Process verification result:
-   - **PASS**: Continue to Step 6 (Review)
+   - **PASS**: Continue to Step 5 (Review)
    - **ISSUE**: Re-dispatch implementer with visual/functional issues
    - **SKIP**: User provided reason, continue with warning flag
 
@@ -1297,28 +1422,32 @@ This is advisory, not blocking:
 
 See `skills/browser-verification/SKILL.md` for full details.
 
-### 6. Task Review (Two-Stage)
+### 5. Task Review (Two-Stage)
 
 After implementer completes, run spec compliance and code quality reviews sequentially:
 
-#### Environment Setup for Review Hooks
+#### Task Context for Review Hooks
 
-Before dispatching reviewers, set the current task context for hook integration:
+No setup needed. When the task moved to `in_progress`, the bridge recorded its
+id in the task state file (`.pokayokay/pokayokay-task-state.json`), and the
+post-review-fail hook reads the active task from there to capture failures and
+integrate with kaizen automatically.
 
-```bash
-export CURRENT_OHNO_TASK_ID="<current-task-id>"
-```
-
-This enables the post-review-fail hook to capture failures and integrate with kaizen automatically.
+Do NOT try to `export CURRENT_OHNO_TASK_ID` from a Bash call — every Bash tool
+call is a fresh shell and hooks are spawned by the runtime, so an exported
+variable can never reach the hook process.
 
 #### Stage 1: Spec Compliance Review (Adversarial)
 
 1. Dispatch spec reviewer:
    ```
-   Task tool (yokay-spec-reviewer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-spec-reviewer"
      description: "Spec review: {task.title}"
      prompt: [Fill template from agents/templates/spec-review-prompt.md]
    ```
+
+   Fill `{IMPLEMENTATION_SUMMARY}` from the implementer's ohno handoff (`get_task_handoff(task_id)`), NOT from its inline report — the inline report is minimal; the AC verification table lives in the handoff details. Fill `{COMMIT_HASH}` with the bare hash from the implementer's commit (the template's `git diff` commands depend on it).
 
 2. Process result:
    - **PASS**: Proceed to Stage 2 (quality review)
@@ -1335,36 +1464,42 @@ Only runs if spec review passes.
 
 1. Dispatch quality reviewer:
    ```
-   Task tool (yokay-quality-reviewer):
+   Task tool:
+     subagent_type: "pokayokay:yokay-quality-reviewer"
      description: "Quality review: {task.title}"
+     mode: "bypassPermissions"
      prompt: [Fill template from agents/templates/quality-review-prompt.md]
    ```
 
+   Fill `{APPROACH}` with the design-review approach stored in Step 3.7, or `None — design review was skipped` when the gate was skipped. Also fill `{COMMIT_HASH}` (bare hash) for the template's `git diff` commands.
+
 2. Process result:
-   - **PASS**: Proceed to task completion (Step 7)
+   - **PASS**: Proceed to task completion (Step 6)
    - **FAIL**: Re-dispatch implementer with quality issues
 
 **What the quality reviewer checks:**
 - Code structure, readability, appropriate abstractions
 - Test quality, edge case coverage
 - Project conventions compliance
+- Design compliance (post-check): did the implementation follow the pre-validated approach from Step 3.7? (N/A when design review was skipped)
 
 #### Review Failure Hook Integration
 
-When either spec or quality review fails, the post-review-fail hook is invoked to analyze the failure and suggest corrective actions.
+When either spec or quality review fails, `bridge.py` detects the FAIL in the
+reviewer's Task output (PostToolUse) and invokes the post-review-fail hook
+**automatically**. Do NOT run `hooks/post-review-fail.sh` yourself — manual
+invocation risks double execution (duplicate kaizen fix-task suggestions),
+and in consuming projects the script may not exist at all.
 
-**Hook Execution:**
+The bridge resolves the hook from the *project's* `hooks/post-review-fail.sh`
+(so projects can supply their own kaizen wiring). When the script is absent,
+the failure is still tracked locally (recurring-failure detection +
+graduate-rules) and the outcome is `kaizen_action: LOGGED`.
 
-```bash
-# Set environment variables and call hook
-export TASK_ID="<current-task-id>"
-export FAILURE_DETAILS="<review-failure-details>"
-export FAILURE_SOURCE="<spec-review|quality-review>"
-
-./hooks/post-review-fail.sh
-```
-
-The hook analyzes the failure using kaizen and returns JSON with one of three actions:
+The hook result surfaces as hook output context after the reviewer's Task
+call, with a `kaizen_action` of AUTO, SUGGEST, or LOGGED (plus `fix_task`
+details when available). The coordinator's only job is to act on that
+outcome:
 
 **1. AUTO Action (High Confidence)**
 
@@ -1460,12 +1595,14 @@ Review FAIL
      │
      ▼
 ┌─────────────────┐
-│ Call post-      │
-│ review-fail.sh  │
+│ bridge.py runs  │
+│ post-review-fail│
+│ (automatic)     │
 └────────┬────────┘
          │
          ▼
-    Parse JSON
+ Read kaizen_action
+ from hook output
          │
     ┌────┴─────┬─────────────┐
     │          │             │
@@ -1605,9 +1742,9 @@ Or for failures:
 add_task_activity(task_id, "note", "Task review: FAIL - Missing requirement X")
 ```
 
-### 7. Complete Task
+### 6. Complete Task
 
-After reviews pass (Step 6), coordinator:
+After reviews pass (Step 5), coordinator:
 - Logs activity to ohno
 - Triggers post-task hooks
 
@@ -1615,7 +1752,7 @@ After reviews pass (Step 6), coordinator:
 npx @stevestomp/ohno-cli done <task-id> --notes "What was done"
 ```
 
-### 8. Checkpoint (based on mode)
+### 7. Checkpoint (based on mode)
 
 #### Sequential Mode
 
@@ -1683,7 +1820,7 @@ Options:
 - **stop**: End session now
 ```
 
-### 9. Repeat
+### 8. Repeat
 Get next task and continue until:
 - No more tasks
 - User requests stop
@@ -1693,31 +1830,22 @@ Get next task and continue until:
 
 Hooks execute automatically at lifecycle points:
 
-- **pre-session**: Verifies clean git state
-- **pre-task**: Checks for blockers
-- **post-task**: Syncs ohno, commits changes (mode-dependent)
-- **post-story**: Runs tests, mini-audit
-- **post-session**: Final sync, summary
+- **pre-session**: Verifies clean git state (plus pre-flight in unattended mode, crash recovery)
+- **pre-task**: Checks blockers, suggests skills, sets up worktree
+- **post-task**: Syncs ohno, commits, detects spikes, captures knowledge
+- **post-story**: Runs tests, story integration, audit gate
+- **post-session**: Final sync, session summary, memory curation, session chaining
 
-Hooks guarantee sync and commit execution (mode-dependent).
+Hooks run identically in **every** work mode — mode controls pause points,
+not hook behavior. Sync and commit are guaranteed on every task completion.
 
 ### Customizing Hooks
 
-Create `.yokay/hooks.yaml` in your project:
+There is no per-project hook configuration file — hook routing and action
+lists are code-controlled in the plugin's `hooks/actions/bridge.py`. Do not
+create `.yokay/hooks.yaml` or similar; nothing reads it.
 
-```yaml
-hooks:
-  post-task:
-    actions:
-      - sync
-      - commit
-      - my-custom-action
-
-  pre-commit:
-    enabled: false  # Disable linting
-```
-
-See `hooks/HOOKS.md` for full configuration.
+See `hooks/HOOKS.md` for full documentation.
 
 ## Task Completion with Worktree
 
@@ -1839,7 +1967,7 @@ When session ends with remaining work in scope:
 1. SessionEnd hook calls `session-chain.sh`
 2. Script checks remaining ready tasks via ohno
 3. If tasks remain and chain limit not reached:
-   - Spawns/prepares the next session using the active runtime, for example `claude --headless --prompt="/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
+   - Spawns/prepares the next session using the active runtime, for example `claude -p "/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
 4. If chain complete or limit reached:
    - Generates report to `.ohno/reports/chain-{id}-report.md`
    - Notifies via configured method
@@ -1914,7 +2042,7 @@ If audit_pending:
      - Check docs/plans/*.md, docs/concepts/*.md
      - Check epic description if scope is epic
      - Check PROJECT.md
-  2. Dispatch yokay-auditor:
+  2. Dispatch `pokayokay:yokay-auditor` (Task tool subagent_type):
      - Pass: concept doc content + scope info
      - Instruction: "Verify all requirements are implemented. Return PASS or FAIL with gap list."
   3. Process result:
@@ -2021,7 +2149,7 @@ If you discover a bug while working on a feature:
 
 # Overnight unattended run (NEVER pauses, for headless CLI use)
 # Run with your active runtime's non-interactive mode, for example:
-# claude --headless --dangerously-skip-permissions --prompt="..."
+# claude -p --dangerously-skip-permissions "/work unattended -n auto --all"
 # codex --prompt="..."
 /work unattended -n auto --all
 ```

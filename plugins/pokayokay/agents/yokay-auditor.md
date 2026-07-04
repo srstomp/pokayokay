@@ -51,11 +51,13 @@ Detect framework from indicators:
 
 ### 2. Load Feature Context
 
-If `.claude/` exists with planning output:
+Load epics and tasks from ohno via the CLI (Bash):
 ```bash
-cat .claude/features.json
-sqlite3 .claude/tasks.db "SELECT id, title, status FROM epics"
+npx @stevestomp/ohno-cli epics --json
+npx @stevestomp/ohno-cli tasks --json
 ```
+
+If ohno is not initialized (no `.ohno/` directory), derive the feature list from `.claude/PROJECT.md` or the PRD instead.
 
 ### 3. Scan for Evidence
 

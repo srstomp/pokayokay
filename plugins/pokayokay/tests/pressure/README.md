@@ -25,7 +25,12 @@ Each scenario file defines:
 ./run-pressure-tests.sh
 ```
 
-This runs each scenario through Claude Code and evaluates the response.
+This is an interactive manual-evaluation checklist, not an automated runner:
+the script displays each scenario (context, pressure prompt, expected behavior,
+failure indicators) and prompts you to test it yourself in a Claude Code
+session, then records your pass/fail verdicts to a timestamped `results-*.md`
+file. Nothing is executed against Claude automatically, and this directory is
+not part of the automated suite (`run-tests.sh` skips it).
 
 ## Scenario Structure
 

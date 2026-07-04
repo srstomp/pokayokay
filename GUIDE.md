@@ -15,9 +15,9 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:api` | Design REST/GraphQL APIs | api-design |
 | `/pokayokay:arch` | Review architecture | architecture-review |
 | `/pokayokay:quick` | Quick task + immediate work | - |
-| `/pokayokay:fix` | Bug diagnosis and fix | - |
+| `/pokayokay:fix` | Bug diagnosis and fix | systematic-debugging |
 | `/pokayokay:spike` | Time-boxed investigation | spike |
-| `/pokayokay:hotfix` | Production incident response | - |
+| `/pokayokay:hotfix` | Production incident response | error-handling |
 | `/pokayokay:cicd` | CI/CD pipelines | ci-cd |
 | `/pokayokay:db` | Database design | database-design |
 | `/pokayokay:test` | Testing strategy | testing-strategy |
@@ -27,6 +27,8 @@ This guide explains how pokayokay commands work together to orchestrate AI-assis
 | `/pokayokay:docs` | Documentation | documentation |
 | `/pokayokay:sdk` | SDK development | sdk-development |
 | `/pokayokay:integrate` | API integration | api-integration |
+| `/pokayokay:hooks` | View and manage hook configuration | - |
+| `/pokayokay:worktrees` | List, cleanup, switch, or remove worktrees | worktrees |
 
 ## Command Relationships
 
@@ -222,14 +224,17 @@ Sub-agents provide **isolated execution** for verbose operations. They run in se
 | `yokay-design-reviewer` | Sonnet | Read-only | Pre-implementation design review against codebase patterns |
 | `yokay-explorer` | Haiku | Read-only | Fast codebase exploration |
 | `yokay-fixer` | Sonnet | Can write | Auto-retry on test failures with targeted fixes |
-| `yokay-implementer` | Opus | Can write | TDD implementation with fresh context |
-| `yokay-planner` | Opus | Read-only | PRD analysis and structured plan generation |
+| `yokay-implementer` | Inherit | Can write | TDD implementation with fresh context |
+| `yokay-planner` | Inherit | Read-only | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Read-only | Code review and analysis |
 | `yokay-security-scanner` | Sonnet | Read-only | OWASP vulnerability scanning |
-| `yokay-spec-reviewer` | Opus | Read-only | Adversarial spec compliance review |
+| `yokay-spec-reviewer` | Inherit | Read-only | Adversarial spec compliance review |
 | `yokay-quality-reviewer` | Sonnet | Read-only | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Can write | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Standard | Test execution with concise output |
+
+Judgment-tier agents (`Inherit`) run on the session model — see the Agent
+Model Policy in `CLAUDE.md`.
 
 ### Agent vs Skill
 
@@ -403,32 +408,27 @@ Hooks guarantee critical actions execute at session lifecycle points, eliminatin
 
 ### Mode Behavior
 
-- **supervised**: sync only (no auto-commit)
-- **semi-auto**: sync, commit
-- **auto**: sync, commit, quick-test
+Hooks run identically in **all** work modes. Post-task actions (sync, commit,
+detect-spike, capture-knowledge) execute on every task completion regardless
+of mode — supervised mode does **not** suppress auto-commit. Mode controls
+only:
+
+- **Pause points**: supervised pauses after every task; semi-auto at story/epic boundaries; auto at epic boundaries; unattended never pauses.
+- **Pre-flight**: the pre-session pre-flight check runs only in unattended mode.
 
 ### Custom Hooks
 
-Custom hook actions can be added as shell scripts in `plugins/pokayokay/hooks/actions/`:
-
-```yaml
-# Example from defaults.yaml
-hooks:
-  post-task:
-    actions:
-      - sync
-      - commit
-      - my-custom-action
-
-  pre-commit:
-    enabled: false
-```
+Hook routing and action lists are hardcoded in the plugin's
+`hooks/actions/bridge.py` — there is no YAML or per-project hook
+configuration file, and shell scripts in `hooks/actions/` run only when
+`bridge.py` explicitly dispatches them. Customizing hook behavior requires
+editing `bridge.py` in a fork.
 
 See `hooks/HOOKS.md` for full documentation.
 
 ### Post-Command Hooks (Audit Task Verification)
 
-Audit commands automatically create ohno tasks for findings. Post-command hooks verify this happened:
+Audit commands automatically create ohno tasks for findings. Post-command hooks verify this happened. Note: the verification fires only when Claude invokes the audit skill via the Skill tool (model-invoked) — a user-typed slash command is expanded into the prompt without a Skill tool call and does not trigger it.
 
 | Command | Creates Tasks | Verification |
 |---------|---------------|--------------|
@@ -509,7 +509,17 @@ The more failures captured, the smarter kaizen becomes.
 - **Global**: `~/.config/kaizen/` (default if not initialized)
 
 **Hook Integration:**
-The `hooks/post-review-fail.sh` hook is built into pokayokay and requires no configuration. It automatically checks for kaizen availability.
+The bridge resolves the hook from **your project's** root: it runs
+`<project>/hooks/post-review-fail.sh` when a review fails. The script is not
+shipped inside the plugin — to enable kaizen integration, copy
+`hooks/post-review-fail.sh` from the pokayokay repository root into your own
+project's `hooks/` directory. This project-dir resolution is deliberate: it
+lets projects supply their own hook logic.
+
+Without the script, review failures degrade gracefully: they are still
+tracked locally by the graduate-rules pipeline (recurring patterns are
+promoted to `.claude/rules/pokayokay/`), and the outcome is reported as
+`kaizen_action: LOGGED`.
 
 ### Example Workflow
 

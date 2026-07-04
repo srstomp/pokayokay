@@ -404,7 +404,11 @@ merge, create PR, keep the worktree, or discard work.
 
 pokayokay includes **14 Claude Code sub-agents** that run in isolated context
 windows for verbose operations. The model column below reflects Claude Code
-agent frontmatter aliases (`haiku`, `sonnet`, `opus`).
+agent frontmatter (`haiku`, `sonnet`, or `inherit`), following the three-tier
+Agent Model Policy in `CLAUDE.md`: judgment-critical agents use
+`model: inherit` and run on the session model, so launching `/work` from a
+top-tier session keeps them on the strongest model available (set
+`CLAUDE_CODE_SUBAGENT_MODEL` to floor a weaker inherited model).
 
 | Agent | Claude model alias | Purpose |
 |-------|-------|---------|
@@ -414,19 +418,19 @@ agent frontmatter aliases (`haiku`, `sonnet`, `opus`).
 | `yokay-design-reviewer` | Sonnet | Pre-implementation design and codebase-pattern review (read-only) |
 | `yokay-explorer` | Haiku | Fast codebase exploration (read-only, 5-10x cheaper) |
 | `yokay-fixer` | Sonnet | Auto-retry on test failures with targeted fixes |
-| `yokay-implementer` | Opus | TDD implementation with fresh context |
-| `yokay-planner` | Opus | PRD analysis and structured plan generation |
+| `yokay-implementer` | Inherit (session model) | TDD implementation with fresh context |
+| `yokay-planner` | Inherit (session model) | PRD analysis and structured plan generation |
 | `yokay-reviewer` | Sonnet | Code review and analysis (read-only) |
 | `yokay-security-scanner` | Sonnet | OWASP vulnerability scanning (read-only) |
-| `yokay-spec-reviewer` | Opus | Adversarial spec compliance review |
+| `yokay-spec-reviewer` | Inherit (session model) | Adversarial spec compliance review |
 | `yokay-quality-reviewer` | Sonnet | Code quality review (after spec passes) |
 | `yokay-spike-runner` | Sonnet | Time-boxed investigations |
 | `yokay-test-runner` | Haiku | Test execution with concise output |
 
 ### Codex Agent Model Behavior
 
-Codex does not use the Claude `haiku` / `sonnet` / `opus` aliases from these
-Markdown agent files. In Codex, pokayokay currently relies on skills, hooks,
+Codex does not use the Claude `haiku` / `sonnet` / `inherit` settings from
+these Markdown agent files. In Codex, pokayokay currently relies on skills, hooks,
 and MCP integration. A Codex-native agent layer would use `.codex/agents/*.toml`
 files with OpenAI model IDs such as `gpt-5.4`, `gpt-5.4-mini`, or Codex models,
 plus optional `model_reasoning_effort`. If a Codex subagent omits model
@@ -451,6 +455,11 @@ For ambiguous or under-specified tasks, `yokay-brainstormer` runs **before** imp
 4. Requests confirmation before implementation proceeds
 
 This prevents wasted work from misunderstood requirements.
+
+For non-trivial tasks, `/work` then runs a conditional design-review gate:
+`yokay-design-reviewer` validates the implementation approach against codebase
+patterns before the implementer is dispatched (skipped for chores, docs, and
+trivial changes, or with `--skip-design`).
 
 ### Two-Stage Review
 
@@ -478,6 +487,7 @@ pokayokay includes a **guaranteed hook system** that executes actions at key lif
 | post-epic | Epic completes | Audit gate |
 | on-blocker | Task blocked | Notification |
 | pre-commit | Before git commit | Lint, check ref sizes |
+| post-command | After audit commands | Verify tasks created |
 | permission-request | Codex approval prompt | Allow obvious read-only/test/ohno commands, deny destructive/deploy commands |
 | post-session | Session ends | Sync, session summary, curate memory, session chain |
 
@@ -543,7 +553,13 @@ npm --prefix cli install
 node cli/bin/cli.js
 ```
 
-Useful checks while developing:
+Run the full test suite:
+
+```bash
+npm test    # or: bash plugins/pokayokay/tests/run-tests.sh
+```
+
+Useful individual checks while developing:
 
 ```bash
 bash plugins/pokayokay/tests/codex-compatibility.test.sh

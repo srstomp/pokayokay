@@ -4,6 +4,9 @@
 
 set -e
 
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(dirname "$TESTS_DIR")"
+
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 
@@ -27,7 +30,8 @@ export TASK_TITLE="$MALICIOUS_TITLE"
 export TASK_ID="task-123"
 
 # Run the commit script (using the fixed version)
-COMMIT_SCRIPT="/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/commit.sh"
+COMMIT_SCRIPT="$PLUGIN_DIR/hooks/actions/commit.sh"
+[ -f "$COMMIT_SCRIPT" ] || { echo "script not found: $COMMIT_SCRIPT"; exit 1; }
 
 # Execute the script
 if bash "$COMMIT_SCRIPT" 2>/dev/null; then

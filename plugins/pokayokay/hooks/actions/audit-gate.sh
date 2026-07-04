@@ -34,7 +34,7 @@ if [ "$TODOS" -gt 3 ]; then
 fi
 
 # Check for console.log in production code
-CONSOLE_LOGS=$(find src -name "*.ts" -o -name "*.tsx" -print0 2>/dev/null | xargs -0 -r grep -l "console.log" 2>/dev/null | wc -l || echo "0")
+CONSOLE_LOGS=$(find src \( -name "*.ts" -o -name "*.tsx" \) -print0 2>/dev/null | xargs -0 -r grep -l "console.log" 2>/dev/null | wc -l || echo "0")
 if [ "$CONSOLE_LOGS" -gt 5 ]; then
   QUALITY_ISSUES+=("$CONSOLE_LOGS files with console.log (O1)")
 fi

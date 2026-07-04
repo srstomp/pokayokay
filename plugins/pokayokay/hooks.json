@@ -44,7 +44,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write|mcp__ohno__.*",
+        "matcher": "Bash|apply_patch|Edit|Write|mcp__(plugin_[A-Za-z0-9_-]+_)?ohno__.*",
         "hooks": [
           {
             "type": "command",

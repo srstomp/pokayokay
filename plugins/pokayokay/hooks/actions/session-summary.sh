@@ -7,7 +7,10 @@ SUMMARY=""
 
 # Count recent commits from this session (last hour)
 RECENT_COMMITS=$(git log --oneline --since="1 hour ago" 2>/dev/null | head -10 || true)
-COMMIT_COUNT=$(echo "$RECENT_COMMITS" | grep -c . 2>/dev/null || echo "0")
+# grep -c already prints 0 on no match (while exiting 1), so no `|| echo`
+# fallback - that produced the two-line string "0\n0" when there were no
+# commits. `|| true` only swallows the nonzero exit status.
+COMMIT_COUNT=$(printf '%s' "$RECENT_COMMITS" | grep -c . || true)
 
 # Check for uncommitted changes
 UNCOMMITTED=""

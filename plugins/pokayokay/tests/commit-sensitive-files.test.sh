@@ -4,6 +4,9 @@
 
 set -e
 
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(dirname "$TESTS_DIR")"
+
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 
@@ -30,7 +33,8 @@ export TASK_TYPE="feature"
 export TASK_TITLE="test: Add feature"
 export TASK_ID="task-001"
 
-COMMIT_SCRIPT="/Users/sis4m4/Projects/stevestomp/pokayokay/plugins/pokayokay/hooks/actions/commit.sh"
+COMMIT_SCRIPT="$PLUGIN_DIR/hooks/actions/commit.sh"
+[ -f "$COMMIT_SCRIPT" ] || { echo "script not found: $COMMIT_SCRIPT"; exit 1; }
 
 if bash "$COMMIT_SCRIPT" 2>&1 | grep -q "Sensitive files detected"; then
   echo "  PASS: .env file detected and blocked"

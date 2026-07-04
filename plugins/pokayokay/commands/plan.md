@@ -101,10 +101,14 @@ This check is non-blocking - it only detects availability. The result will be us
 Delegate PRD analysis to the `yokay-planner` agent for context isolation. This keeps the (potentially large) PRD content out of the main conversation.
 
 ```
-Task tool (yokay-planner):
+Task tool:
+  subagent_type: "pokayokay:yokay-planner"
   description: "Plan: {prd_filename}"
   prompt: [Fill planner-prompt.md template with:
     - PRD_PATH: path to PRD
+    - PRD_CONTENT_IF_INLINE: the full PRD text when the user supplied content
+      directly instead of a file path (or the file is outside the agent's
+      working directory), otherwise an empty string
     - PROJECT_CONTEXT: existing codebase info (tech stack, structure)
     - DESIGN_PLUGIN_AVAILABLE: result from Step 1
     - MODE: interactive or headless
@@ -315,7 +319,7 @@ mcp__ohno__create_task:
 
 ### 5.3 Design Plugin Integration
 
-For UI/UX heavy features, check design plugin availability and create design-first workflows. See the planning skill's [design-integration.md](references/design-integration.md) reference for full detection logic, keyword lists, and workflow details.
+For UI/UX heavy features, check design plugin availability and create design-first workflows. See the planning skill's [design-integration.md](../skills/planning/references/design-integration.md) reference (`skills/planning/references/design-integration.md` from the plugin root) for full detection logic, keyword lists, and workflow details.
 
 ### 6. Create Project Context
 Create `.claude/PROJECT.md` with:

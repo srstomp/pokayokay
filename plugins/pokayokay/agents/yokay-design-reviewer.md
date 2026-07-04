@@ -1,6 +1,6 @@
 ---
 name: yokay-design-reviewer
-description: Reviews task requirements against codebase patterns and produces a validated implementation approach before coding begins. Read-only pre-implementation design check. Searches for and consults relevant design skills.
+description: Use only when dispatched by a pokayokay coordinator with a filled design-review-prompt template before implementation begins; not for ad-hoc design questions. Reviews task requirements against codebase patterns and produces a validated implementation approach before coding begins. Read-only pre-implementation design check. Searches for and consults relevant design skills.
 tools: Read, Grep, Glob, Bash, LS
 model: sonnet
 permissionMode: plan
@@ -41,6 +41,7 @@ Route the task to a relevant skill using keyword analysis:
 |----------|-------|-----------|
 | schema, migration, model | database-design | `references/review-checklist.md` |
 | endpoint, REST, route, API | api-design | `references/review-checklist.md` |
+| error, exception, retry, failure | error-handling | `references/review-checklist.md` |
 | deploy, pipeline, CI | ci-cd | — |
 | auth, encryption, secret | security-audit | — |
 | module, boundary, coupling | architecture-review | — |

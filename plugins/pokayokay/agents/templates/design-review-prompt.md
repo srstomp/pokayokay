@@ -53,6 +53,7 @@ Check these pokayokay skills for review checklists relevant to the task:
 |---------------|----------------|---------------------|
 | schema, migration, model, database | `plugins/pokayokay/skills/database-design/` | Yes |
 | endpoint, REST, route, API | `plugins/pokayokay/skills/api-design/` | Yes |
+| error, exception, retry, failure | `plugins/pokayokay/skills/error-handling/` | Yes |
 | deploy, pipeline, CI/CD | `plugins/pokayokay/skills/ci-cd/` | No |
 | auth, encryption, security | `plugins/pokayokay/skills/security-audit/` | No |
 | module, boundary, architecture | `plugins/pokayokay/skills/architecture-review/` | No |

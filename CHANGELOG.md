@@ -5,6 +5,42 @@ All notable changes to pokayokay are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-07-04
+
+### Added
+- **Design-review pipeline stage in /work** — the `yokay-design-reviewer`
+  stage is now wired into the /work pipeline ahead of implementation, with
+  `NEEDS_REDESIGN` escalation handling when the implementer finds the
+  pre-validated approach infeasible.
+- **Test runner + CI** — `tests/run-tests.sh` runs the full shell test suite
+  in one command, and a CI workflow runs it on every push.
+
+### Changed
+- **Agent model policy alignment** — agents now follow explicit model tiers:
+  `inherit` for reasoning-heavy agents, `sonnet` for standard pipeline work,
+  `haiku` for fast read-only scans (explorer, test-runner).
+- **Re-landed PR #8 skill overhaul** — restored the skill slimming work:
+  domain reference files removed, `disable-model-invocation` on process
+  skills, `allowed-tools` on read-only skills, CSO trigger-style descriptions
+  and "When NOT to Use" sections.
+
+### Fixed
+- **Hook payload and routing repair** — bridge.py now parses MCP content-block
+  responses (not just plain JSON), matches plugin-prefixed tool names
+  (`mcp__plugin_pokayokay_ohno__*` alongside `mcp__ohno__*`), and normalizes
+  Task tool output across both runtimes (Claude Code and Codex).
+- **Unattended pipeline and session chaining** — repaired the unattended work
+  mode path and session-chaining handoff so headless runs proceed and chain
+  correctly across sessions.
+- **Test suite repair** — fixed broken and stale shell tests so the whole
+  suite passes again.
+- **CLI codex and Windows fixes** — corrected Codex install handling and
+  Windows path issues in the setup wizard.
+
+### Documentation
+- **Hook documentation truth pass** — hook docs (CLAUDE.md flow diagram and
+  hook references) corrected to match what bridge.py actually routes.
+
 ## [0.25.0] - 2026-06-10
 
 ### Added

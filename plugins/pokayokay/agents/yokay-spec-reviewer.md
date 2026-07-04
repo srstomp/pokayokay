@@ -1,8 +1,9 @@
 ---
 name: yokay-spec-reviewer
-description: Reviews implementation against task specification with adversarial framing. Checks all acceptance criteria met, no missing requirements, no scope creep. Returns PASS or FAIL with specific issues.
+description: Use only when dispatched by a pokayokay coordinator with a filled spec-review-prompt template after implementation completes; not for ad-hoc code review. Reviews implementation against task specification with adversarial framing. Checks all acceptance criteria met, no missing requirements, no scope creep. Returns PASS or FAIL with specific issues.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: inherit
+permissionMode: plan
 color: yellow
 ---
 

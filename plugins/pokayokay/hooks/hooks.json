@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
-            "timeout": 30
+            "timeout": 120
           }
         ]
       }
@@ -18,7 +18,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
-            "timeout": 30
+            "timeout": 120
           }
         ]
       }
@@ -30,19 +30,19 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
-            "timeout": 30
+            "timeout": 90
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|Write|Skill|Task|mcp__ohno__update_task_status|mcp__ohno__set_blocker",
+        "matcher": "Bash|Edit|Write|Skill|Task|mcp__.*ohno__update_task_status|mcp__.*ohno__set_blocker",
         "hooks": [
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/actions/bridge.py",
-            "timeout": 30
+            "timeout": 450
           }
         ]
       }

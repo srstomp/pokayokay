@@ -2,6 +2,8 @@
 
 Shared pipeline for `/fix --thorough` and `/hotfix` commands. The coordinator has already completed diagnosis (reproduction, root cause analysis). This pipeline handles implementation, testing, and review via agents.
 
+**No design review in this pipeline.** The Design Review Gate (`yokay-design-reviewer`) is deliberately excluded from `/fix` and `/hotfix` — the graduated pipeline tiers keep bug fixes lean, and the coordinator's own diagnosis (root cause, files to change, fix strategy) fills that role. `{APPROACH}` is therefore always the skip text here, never a design-reviewer-validated approach.
+
 ## Prerequisites
 
 Before entering this pipeline, the coordinator MUST have:
@@ -76,6 +78,7 @@ Fill template variables:
 - `{ACCEPTANCE_CRITERIA}`: from Step 1
 - `{CONTEXT}`: from Step 2
 - `{RELEVANT_SKILL}`: `error-handling`
+- `{APPROACH}`: `Design review skipped — follow codebase patterns` — design review does not run in this pipeline. Do NOT put the fix strategy here; it already reaches the implementer via `{CONTEXT}` (Step 2), and labeling it design-reviewer-validated would be false.
 - `{WORKING_DIRECTORY}`: project root or worktree
 - `{RESUME_CONTEXT}`: empty
 
@@ -87,6 +90,18 @@ Task tool:
   mode: "bypassPermissions"
   prompt: [filled implementer-prompt.md]
 ```
+
+### Handling NEEDS_REDESIGN
+
+There is no design reviewer in this pipeline, so the coordinator handles the escalation itself. If the implementer reports `NEEDS_REDESIGN` (the planned fix strategy proved infeasible, with evidence):
+
+1. Log the evidence: `add_task_activity(task_id, "note", "NEEDS_REDESIGN: {evidence}")`
+2. Revise the Fix Strategy (`{PLANNED_APPROACH}` in the Step 2 context) using the implementer's evidence
+3. Re-dispatch the implementer ONCE with the revised context
+
+If the implementer reports `NEEDS_REDESIGN` again:
+- Set blocker: `set_blocker(task_id, "Fix approach infeasible after one revision: {evidence}")`
+- STOP pipeline. Return FAIL to calling command.
 
 ## Step 4: Auto-Fix Test Failures
 
@@ -129,12 +144,17 @@ Check the list of changed files for test files (files matching `*.test.*`, `*.sp
 Agents: `yokay-spec-reviewer` then `yokay-quality-reviewer`
 Templates: `agents/templates/spec-review-prompt.md`, `agents/templates/quality-review-prompt.md`
 
-Fill templates with:
+Fill templates with (cover EVERY placeholder — a literal `{...}` in a dispatched prompt breaks the reviewer's verification commands):
+- `{TASK_ID}`: from ohno task
+- `{TASK_TITLE}`: from ohno task
 - `{TASK_DESCRIPTION}`: enriched description from Step 2
 - `{ACCEPTANCE_CRITERIA}`: from Step 1 (bug fixed + regression test + all tests pass + minimal)
-- `{IMPLEMENTATION_SUMMARY}`: from implementer's report
-- `{FILES_CHANGED}`: from implementer's report
-- `{COMMIT_INFO}`: from implementer's commit
+- `{IMPLEMENTATION_SUMMARY}`: from the implementer's ohno handoff (`get_task_handoff(task_id)`) — the inline report is minimal
+- `{FILES_CHANGED}`: from implementer's handoff
+- `{COMMIT_INFO}`: from implementer's commit (hash + message)
+- `{COMMIT_HASH}`: bare commit hash — used in the templates' `git diff` verification commands
+- `{APPROACH}` (quality template only): `None — design review was skipped`
+- `{WORKING_DIRECTORY}`: task's worktree path or project root
 
 **For `/hotfix` mode**, prepend this to the review prompt:
 ```markdown
@@ -149,6 +169,23 @@ WARNING and SUGGESTION issues should be noted but result in PASS.
 ```
 
 **For `/fix` mode**: standard review (same thresholds as `/work`).
+
+Dispatch sequentially — spec review first, quality review only if spec review passes:
+
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-spec-reviewer"
+  description: "Spec review: {task.title}"
+  prompt: [filled spec-review-prompt.md]
+```
+
+```
+Task tool:
+  subagent_type: "pokayokay:yokay-quality-reviewer"
+  description: "Quality review: {task.title}"
+  mode: "bypassPermissions"
+  prompt: [filled quality-review-prompt.md]
+```
 
 **PASS**: proceed to Step 7.
 **FAIL**: re-dispatch implementer with issues (counts toward review cycle limit).
