@@ -185,8 +185,12 @@ function enableCodexHooksFeature(content) {
     });
   }
 
+  // No [features] table exists yet, so appending at EOF is always valid
+  // TOML. Never prepend: keys after a table header belong to that table, so
+  // a leading [features] would silently swallow the user's root-level keys
+  // (model, approval_policy, sandbox_mode, ...) into the features table.
   const separator = content.trim().length ? '\n\n' : '';
-  return `[features]\n${featureLine}\n${separator}${content.trimEnd()}`;
+  return `${content.trimEnd()}${separator}[features]\n${featureLine}`;
 }
 
 function codexHookBridgeBlock(pluginPath) {

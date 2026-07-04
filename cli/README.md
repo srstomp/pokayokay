@@ -14,6 +14,11 @@ This interactive wizard will:
 3. Initialize ohno in your project
 4. Optionally set up kaizen integration
 
+> **Note:** First-time Codex installation must be run from a checkout of the
+> pokayokay repo (`git clone https://github.com/srstomp/pokayokay && cd pokayokay && npx pokayokay`);
+> Codex registers the marketplace from the on-disk repo. Re-runs with the Codex
+> plugin already installed work from any directory.
+
 ## Commands
 
 | Command | Description |
@@ -49,7 +54,7 @@ If you prefer manual setup:
 ```bash
 # 1. Install plugin for Claude Code
 claude plugin marketplace add srstomp/pokayokay
-claude plugin install pokayokay@srstomp-pokayokay
+claude plugin install pokayokay@pokayokay
 
 # 2. Or configure Codex from this repository
 npx pokayokay

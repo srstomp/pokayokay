@@ -10,17 +10,29 @@ import { commandExists, getClaudeVersion, getCodexVersion } from './utils/execut
  * @returns {object} { installed: boolean, scope: 'global'|'local'|null }
  */
 function detectClaudePluginInstalled() {
-  // Check global paths
-  const globalPaths = [
-    join(homedir(), '.claude', 'plugins', 'installed', 'pokayokay'),
-    join(homedir(), '.claude', 'plugins', 'marketplaces', 'srstomp-pokayokay', 'plugins', 'pokayokay'),
-    join(homedir(), '.claude', 'plugins', 'cache', 'pokayokay', 'pokayokay')
-  ];
-
-  for (const p of globalPaths) {
-    if (existsSync(p)) {
-      return { installed: true, scope: 'global', path: p };
+  // Primary: the authoritative registry written by `claude plugin install`.
+  // Keys are "<plugin>@<marketplace>", e.g. "pokayokay@pokayokay".
+  const registryPath = join(homedir(), '.claude', 'plugins', 'installed_plugins.json');
+  if (existsSync(registryPath)) {
+    try {
+      const registry = JSON.parse(readFileSync(registryPath, 'utf-8'));
+      const plugins = registry && typeof registry.plugins === 'object' && registry.plugins !== null
+        ? registry.plugins
+        : {};
+      if (Object.keys(plugins).some((key) => key.startsWith('pokayokay@'))) {
+        return { installed: true, scope: 'global', path: registryPath };
+      }
+    } catch {
+      // Unreadable/invalid registry — fall through to the cache-path fallback.
     }
+  }
+
+  // Fallback: the on-disk plugin cache. Do NOT check marketplaces/ — the
+  // marketplace clone exists once registered even when the plugin itself is
+  // not installed, so it would produce false positives.
+  const cachePath = join(homedir(), '.claude', 'plugins', 'cache', 'pokayokay', 'pokayokay');
+  if (existsSync(cachePath)) {
+    return { installed: true, scope: 'global', path: cachePath };
   }
 
   // Check project-local
@@ -39,8 +51,7 @@ function detectClaudePluginInstalled() {
 function detectCodexPluginInstalled() {
   const globalPaths = [
     join(homedir(), '.codex', 'plugins', 'cache', 'pokayokay', 'pokayokay'),
-    join(homedir(), '.codex', 'plugins', 'installed', 'pokayokay'),
-    join(homedir(), 'plugins', 'pokayokay', '.codex-plugin', 'plugin.json')
+    join(homedir(), '.codex', 'plugins', 'installed', 'pokayokay')
   ];
 
   for (const p of globalPaths) {
@@ -55,9 +66,14 @@ function detectCodexPluginInstalled() {
   // report not installed so setup completes the missing step.
   const codexConfigPath = getCodexConfigPath();
   if (existsSync(codexConfigPath)) {
-    const content = readFileSync(codexConfigPath, 'utf-8');
-    if (/^\[plugins\."pokayokay@/m.test(content)) {
-      return { installed: true, scope: 'global', path: codexConfigPath };
+    try {
+      const content = readFileSync(codexConfigPath, 'utf-8');
+      if (/^\[plugins\."pokayokay@/m.test(content)) {
+        return { installed: true, scope: 'global', path: codexConfigPath };
+      }
+    } catch {
+      // Unreadable config (e.g. EACCES) — treat as not installed rather
+      // than aborting setup.
     }
   }
 
@@ -119,20 +135,12 @@ function detectMcpConfig(serverName) {
  * @returns {object} { configured: boolean, scope: 'global'|'local'|null }
  */
 function detectCodexMcpConfig(serverName) {
+  // Codex only loads MCP servers from ~/.codex/config.toml. Project-local
+  // .mcp.json is a Claude Code convention that Codex never reads, so it must
+  // not count as configured here.
   const globalConfig = readCodexConfig(getCodexConfigPath());
   if (isMcpConfigured(globalConfig, serverName)) {
     return { configured: true, scope: 'global' };
-  }
-
-  if (existsSync('.mcp.json')) {
-    try {
-      const localConfig = JSON.parse(readFileSync('.mcp.json', 'utf-8'));
-      if (isMcpConfigured(localConfig, serverName)) {
-        return { configured: true, scope: 'local' };
-      }
-    } catch {
-      // Invalid JSON, treat as not configured
-    }
   }
 
   return { configured: false, scope: null };

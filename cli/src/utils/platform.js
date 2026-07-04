@@ -6,14 +6,9 @@ import { join } from 'node:path';
  * @returns {string} Path to Claude config directory
  */
 export function getClaudeConfigDir() {
-  const platform = process.platform;
-
-  if (platform === 'win32') {
-    // Windows: %APPDATA%\Claude
-    return join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'Claude');
-  }
-
-  // macOS and Linux: ~/.claude
+  // Claude Code stores user settings in ~/.claude on every platform,
+  // including Windows (%USERPROFILE%\.claude). %APPDATA%\Claude is Claude
+  // Desktop's directory, which Claude Code never reads.
   return join(homedir(), '.claude');
 }
 

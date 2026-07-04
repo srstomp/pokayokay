@@ -173,7 +173,53 @@ console.log('Test 8: writeCodexHookBridgeConfig normalizes Windows-style paths')
   }
 }
 
-console.log('Test 9: installPlugin reports Codex hook bridge scope');
+console.log('Test 9: writeCodexHookBridgeConfig keeps root-level keys at root');
+{
+  const rootKeysDir = mkdtempSync(join(tmpdir(), 'pokayokay-codex-root-keys-'));
+  try {
+    const configPath = join(rootKeysDir, 'config.toml');
+    writeFileSync(
+      configPath,
+      [
+        'model = "gpt-5-codex"',
+        'approval_policy = "never"',
+        'sandbox_mode = "workspace-write"',
+        '',
+        '[mcp_servers.ohno]',
+        'command = "npx"',
+        'args = ["@stevestomp/ohno-mcp"]',
+        '',
+      ].join('\n')
+    );
+
+    writeCodexHookBridgeConfig(configPath, '/repo/plugins/pokayokay');
+
+    const result = readFileSync(configPath, 'utf8');
+    // In TOML, keys after a table header belong to that table. When no
+    // [features] table exists yet it must be APPENDED after existing content;
+    // prepending it above root-level keys silently swallows the user's
+    // model/approval_policy/sandbox_mode into the features table.
+    const firstTableIndex = result.search(/^\[/m);
+    assert.ok(firstTableIndex !== -1, 'config should contain table headers');
+    for (const rootKey of ['model = "gpt-5-codex"', 'approval_policy = "never"', 'sandbox_mode = "workspace-write"']) {
+      const keyIndex = result.indexOf(rootKey);
+      assert.ok(keyIndex !== -1, `${rootKey} should survive the write`);
+      assert.ok(
+        keyIndex < firstTableIndex,
+        `${rootKey} must stay above the first table header (root scope)`
+      );
+    }
+    assert.match(result, /\[features\]\ncodex_hooks = true/);
+    const parsed = readCodexConfig(configPath);
+    assert.equal(parsed.mcpServers.ohno.command, 'npx');
+    assert.deepEqual(parsed.mcpServers.ohno.args, ['@stevestomp/ohno-mcp']);
+    console.log('  PASS: [features] is appended after root keys, not prepended');
+  } finally {
+    rmSync(rootKeysDir, { recursive: true, force: true });
+  }
+}
+
+console.log('Test 10: installPlugin reports Codex hook bridge scope');
 {
   const pluginStepSource = readFileSync(new URL('../../../cli/src/steps/plugin.js', import.meta.url), 'utf8');
   assert.match(

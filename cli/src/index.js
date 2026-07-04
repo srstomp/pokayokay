@@ -124,8 +124,16 @@ async function chooseInstallTargets(env) {
     choices: availableTargets,
     min: 1,
     initial: [0, 1],
+  }, {
+    // Ctrl+C/Esc must abort the wizard, not fall through to installing
+    // every detected runtime via the defaults below.
+    onCancel: () => {
+      console.log('Aborted.');
+      process.exit(1);
+    },
   });
 
+  // Defaults apply only when the prompt was submitted with zero selections.
   return targets && targets.length ? targets : env.defaultInstallTargets;
 }
 
