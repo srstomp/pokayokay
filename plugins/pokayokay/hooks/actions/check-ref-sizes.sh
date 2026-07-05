@@ -50,21 +50,34 @@ if [ -z "$FILES" ]; then
       FILES=$(git diff --name-only --diff-filter=ACM 2>/dev/null | grep "$REF_PATTERN" || true)
     elif echo "$GIT_COMMAND" | grep -qE "$ADD_CMD"; then
       # `git add <pathspec>...`: gate reference files the add will stage.
-      # Extract the pathspec region of each `git add` (everything up to the
-      # next shell separator), tokenize it, and match candidates with bash
-      # glob semantics: a token gates a candidate when it names it exactly,
-      # names a parent directory, or glob-matches it (references/*.md).
-      # Scoping tokens to the add region keeps commit-message words from
-      # false-blocking, and `demo-other` never matches a demo/ candidate.
-      # Quoted pathspecs containing spaces are split — a known limitation.
+      # bridge.py neutralizes shell separators (&& ; | ( )) to spaces before
+      # we see the command, so the pathspec region cannot be bounded by them.
+      # Instead collect the tokens after the first `add`, STOPPING at the next
+      # `commit` keyword (where the commit message begins) and skipping the
+      # bare `git` word of a following compound command. This keeps commit-
+      # message text from false-blocking an unrelated add. Candidates match by
+      # exact path, parent directory, or glob (references/*.md).
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
       FILES=""
-      ADD_REGIONS=$(printf '%s' "$GIT_COMMAND" |
-        grep -oE 'git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*add[[:space:]][^;&|)]*' |
-        sed -E 's/^git[[:space:]]+(-[^[:space:]]+[[:space:]]+)*add[[:space:]]//')
-      TOKENS=$(printf '%s\n' "$ADD_REGIONS" | tr ' \t' '\n\n')
+      # Extract pathspec tokens (tr avoids for-loop glob expansion).
+      ALL_TOKENS=$(printf '%s' "$GIT_COMMAND" | tr ' \t' '\n\n')
+      PATHSPECS=""
+      seen_add=""
+      while IFS= read -r tok; do
+        [ -n "$tok" ] || continue
+        if [ -z "$seen_add" ]; then
+          [ "$tok" = "add" ] && seen_add=1
+          continue
+        fi
+        # Boundary of the pathspec list: the commit command's message follows.
+        [ "$tok" = "commit" ] && break
+        # Skip the git command word of a chained command, and option flags.
+        [ "$tok" = "git" ] && continue
+        case "$tok" in -*) continue ;; esac
+        PATHSPECS="${PATHSPECS}${PATHSPECS:+$NL}${tok}"
+      done <<< "$ALL_TOKENS"
       while IFS= read -r candidate; do
         [ -n "$candidate" ] || continue
         matched=""
@@ -72,7 +85,6 @@ if [ -z "$FILES" ]; then
           [ -n "$token" ] || continue
           token="${token#\"}"; token="${token%\"}"
           token="${token#\'}"; token="${token%\'}"
-          case "$token" in ''|-*) continue ;; esac
           token="${token#./}"
           token="${token%/}"
           if [ "$token" = "." ] || [ -z "$token" ]; then
@@ -84,7 +96,7 @@ if [ -z "$FILES" ]; then
           case "$candidate" in
             $token|$token/*) matched=1; break ;;
           esac
-        done <<< "$TOKENS"
+        done <<< "$PATHSPECS"
         [ -n "$matched" ] && FILES="${FILES}${FILES:+$NL}${candidate}"
       done <<< "$CANDIDATES"
     fi
