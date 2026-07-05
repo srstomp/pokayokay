@@ -203,6 +203,19 @@ echo "  PASS: second git add in a compound command is gated"
 git rm -q --cached src.txt
 rm -f src.txt
 
+echo "Test 5o: the word 'add' inside a commit message does not re-enter collection"
+# `git add src.txt && git commit -m "refactor and add plugins/.../big-ref.md"`
+# — `add`/`commit` are only honored as git subcommands, so the bare 'add' in
+# the message must NOT restart pathspec collection and pull in the ref path.
+echo "unrelated" > src.txt
+git add src.txt
+REENTER_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add src.txt && git commit -m \"refactor and add plugins/pokayokay/skills/demo/references/big-ref.md\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_not_blocked "$REENTER_OUTPUT"
+echo "  PASS: message word 'add' does not re-enter git-add collection"
+git rm -q --cached src.txt
+rm -f src.txt
+
 echo "Test 6: advisory failures (lint exit 1) do not block the commit"
 # Remove the violation entirely and stage a package.json whose lint fails.
 rm -f "$REF_DIR/big-ref.md"

@@ -52,13 +52,13 @@ if [ -z "$FILES" ]; then
       # `git add <pathspec>...`: gate reference files the add will stage.
       # bridge.py neutralizes shell separators (&& ; | ( )) to spaces before
       # we see the command, so the pathspec region cannot be bounded by them.
-      # Instead toggle collection at each `add`/`commit` boundary: tokens
-      # inside a `git add ...` segment are pathspecs; a `commit` ends the
-      # segment (its message must never be collected). This scans EVERY add
-      # segment in a compound command, not just the first, so a later
-      # `&& git add <oversized-ref>` cannot slip past the gate. The bare `git`
-      # word of a chained command and option flags are skipped. Candidates
-      # match by exact path, parent directory, or glob (references/*.md).
+      # Walk the token stream as a git command parser: `add`/`commit` are only
+      # honored as SUBCOMMANDS — the token following `git` past any global
+      # options — never as bare words. This scans EVERY `git add` segment in a
+      # compound command (so a later `&& git add <oversized-ref>` cannot slip
+      # past) while an `add`/`commit` word inside a commit MESSAGE (which is
+      # not a subcommand) can never start or restart pathspec collection.
+      # Candidates match by exact path, parent directory, or glob (refs/*.md).
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
@@ -66,15 +66,26 @@ if [ -z "$FILES" ]; then
       # Extract pathspec tokens (tr avoids for-loop glob expansion).
       ALL_TOKENS=$(printf '%s' "$GIT_COMMAND" | tr ' \t' '\n\n')
       PATHSPECS=""
-      collecting=""
+      expect_subcmd=""   # just saw `git`, awaiting its subcommand
+      in_add=""          # currently inside a `git add` pathspec list
+      skip_next=""       # consume the argument of a -C/-c global option
       while IFS= read -r tok; do
         [ -n "$tok" ] || continue
-        if [ "$tok" = "add" ]; then collecting=1; continue; fi
-        if [ "$tok" = "commit" ]; then collecting=""; continue; fi
-        [ -n "$collecting" ] || continue
-        # Inside an add segment: skip the git word of a chained command and
-        # option flags; everything else is a pathspec.
-        [ "$tok" = "git" ] && continue
+        if [ -n "$skip_next" ]; then skip_next=""; continue; fi
+        if [ "$tok" = "git" ]; then
+          expect_subcmd=1; in_add=""; continue
+        fi
+        if [ -n "$expect_subcmd" ]; then
+          case "$tok" in
+            -C|-c) skip_next=1; continue ;;  # global option taking an argument
+            -*) continue ;;                   # other global option: keep waiting
+          esac
+          [ "$tok" = "add" ] && in_add=1 || in_add=""
+          expect_subcmd=""
+          continue
+        fi
+        [ -n "$in_add" ] || continue
+        # Inside the add pathspec list; skip option flags (e.g. --, -f).
         case "$tok" in -*) continue ;; esac
         PATHSPECS="${PATHSPECS}${PATHSPECS:+$NL}${tok}"
       done <<< "$ALL_TOKENS"
