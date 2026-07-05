@@ -133,7 +133,7 @@ Write to `.claude/spikes/[date]-[slug].md`:
 - [Issue 2]
 
 ### Proof of Concept
-Location: `.claude/spikes/[name]/`
+Location: `.claude/spikes/[date]-[slug]/`
 ```[language]
 [Key code sample]
 ```
