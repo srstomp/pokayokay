@@ -52,11 +52,13 @@ if [ -z "$FILES" ]; then
       # `git add <pathspec>...`: gate reference files the add will stage.
       # bridge.py neutralizes shell separators (&& ; | ( )) to spaces before
       # we see the command, so the pathspec region cannot be bounded by them.
-      # Instead collect the tokens after the first `add`, STOPPING at the next
-      # `commit` keyword (where the commit message begins) and skipping the
-      # bare `git` word of a following compound command. This keeps commit-
-      # message text from false-blocking an unrelated add. Candidates match by
-      # exact path, parent directory, or glob (references/*.md).
+      # Instead toggle collection at each `add`/`commit` boundary: tokens
+      # inside a `git add ...` segment are pathspecs; a `commit` ends the
+      # segment (its message must never be collected). This scans EVERY add
+      # segment in a compound command, not just the first, so a later
+      # `&& git add <oversized-ref>` cannot slip past the gate. The bare `git`
+      # word of a chained command and option flags are skipped. Candidates
+      # match by exact path, parent directory, or glob (references/*.md).
       SCOPE="about-to-be-staged"
       CANDIDATES=$(list_working_tree_refs)
       NL=$'\n'
@@ -64,16 +66,14 @@ if [ -z "$FILES" ]; then
       # Extract pathspec tokens (tr avoids for-loop glob expansion).
       ALL_TOKENS=$(printf '%s' "$GIT_COMMAND" | tr ' \t' '\n\n')
       PATHSPECS=""
-      seen_add=""
+      collecting=""
       while IFS= read -r tok; do
         [ -n "$tok" ] || continue
-        if [ -z "$seen_add" ]; then
-          [ "$tok" = "add" ] && seen_add=1
-          continue
-        fi
-        # Boundary of the pathspec list: the commit command's message follows.
-        [ "$tok" = "commit" ] && break
-        # Skip the git command word of a chained command, and option flags.
+        if [ "$tok" = "add" ]; then collecting=1; continue; fi
+        if [ "$tok" = "commit" ]; then collecting=""; continue; fi
+        [ -n "$collecting" ] || continue
+        # Inside an add segment: skip the git word of a chained command and
+        # option flags; everything else is a pathspec.
         [ "$tok" = "git" ] && continue
         case "$tok" in -*) continue ;; esac
         PATHSPECS="${PATHSPECS}${PATHSPECS:+$NL}${tok}"

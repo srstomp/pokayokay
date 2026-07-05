@@ -68,6 +68,14 @@ Place the test alongside existing tests for the affected module.
 
 ## Step 3: Dispatch Implementer
 
+**First, record the review baseline.** Before dispatching the implementer, capture the pre-implementation commit in the task's working directory (worktree or project root):
+
+```bash
+BASE_COMMIT=$(git rev-parse HEAD)
+```
+
+Carry this value forward — chain-state or in-context — to Step 6, where it fills `{BASE_COMMIT}` in both review templates (their primary `git diff {BASE_COMMIT}` verification commands depend on it, and a missing value makes reviewers return BLOCKED or fall back to an unintended baseline).
+
 Use template: `agents/templates/implementer-prompt.md`
 Agent: `yokay-implementer`
 

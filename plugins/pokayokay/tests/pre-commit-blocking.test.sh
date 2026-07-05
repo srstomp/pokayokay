@@ -191,6 +191,15 @@ MSG_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add src.txt 
   python3 "$BRIDGE")
 assert_not_blocked "$MSG_OUTPUT"
 echo "  PASS: ref path in the commit message does not gate an unrelated add"
+
+echo "Test 5n: a later add/commit pair in a compound command is still gated"
+# `git add src.txt && git commit -m ok && git add <big-ref> && git commit -m ref`
+# — the oversized ref is staged by the SECOND add; every add segment must be
+# scanned, not just the first before the first commit.
+MULTI_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add src.txt && git commit -m ok && git add plugins/pokayokay/skills/demo/references/big-ref.md && git commit -m ref"},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$MULTI_OUTPUT"
+echo "  PASS: second git add in a compound command is gated"
 git rm -q --cached src.txt
 rm -f src.txt
 
