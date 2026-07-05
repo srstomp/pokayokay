@@ -181,6 +181,28 @@ SIBLING_GLOB_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add
 assert_not_blocked "$SIBLING_GLOB_OUTPUT"
 echo "  PASS: glob under demo-other does not match the demo/ reference"
 
+echo "Test 5m: commit message mentioning a ref path does not false-block an unrelated add"
+# bridge.py neutralizes && -> spaces, so the pathspec region cannot rely on
+# separators. The message must NOT be scanned as a pathspec: `git add src.txt`
+# is unrelated to the oversized ref merely named in the commit message.
+echo "unrelated" > src.txt
+git add src.txt
+MSG_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add src.txt && git commit -m \"fix plugins/pokayokay/skills/demo/references/big-ref.md\""},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_not_blocked "$MSG_OUTPUT"
+echo "  PASS: ref path in the commit message does not gate an unrelated add"
+
+echo "Test 5n: a later add/commit pair in a compound command is still gated"
+# `git add src.txt && git commit -m ok && git add <big-ref> && git commit -m ref`
+# — the oversized ref is staged by the SECOND add; every add segment must be
+# scanned, not just the first before the first commit.
+MULTI_OUTPUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"git add src.txt && git commit -m ok && git add plugins/pokayokay/skills/demo/references/big-ref.md && git commit -m ref"},"hook_event_name":"PreToolUse"}' |
+  python3 "$BRIDGE")
+assert_deny "$MULTI_OUTPUT"
+echo "  PASS: second git add in a compound command is gated"
+git rm -q --cached src.txt
+rm -f src.txt
+
 echo "Test 6: advisory failures (lint exit 1) do not block the commit"
 # Remove the violation entirely and stage a package.json whose lint fails.
 rm -f "$REF_DIR/big-ref.md"

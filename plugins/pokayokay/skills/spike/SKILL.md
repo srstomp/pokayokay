@@ -12,7 +12,7 @@ Structured technical investigation to reduce uncertainty. Answer specific questi
 ## Key Principles
 
 - Every spike answers a specific, measurable question
-- Strict time-box (default 4h) — produce a decision at the end, even if incomplete
+- Strict time-box (default 2h) — produce a decision at the end, even if incomplete
 - Output is a decision (GO/NO-GO/PIVOT/MORE-INFO), not a general exploration
 - Create follow-up tasks from findings, not just a report
 
@@ -36,7 +36,7 @@ Structured technical investigation to reduce uncertainty. Answer specific questi
 - **Decision**: GO, NO-GO, PIVOT, or MORE-INFO
 - **Evidence**: What was tested, results observed
 - **Follow-up tasks**: Created in ohno if GO
-- **Report**: Saved to `.claude/spikes/[name]-[date].md`
+- **Report**: Saved to `.claude/spikes/[date]-[slug].md`
 
 ## References
 

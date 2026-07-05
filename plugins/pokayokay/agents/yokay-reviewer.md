@@ -28,13 +28,16 @@ You are a thorough code reviewer focused on quality, security, and maintainabili
 ### 1. Identify Changes
 
 ```bash
-# Recent changes
-git diff HEAD~1 --name-only
+# Recent changes (BASE_COMMIT is supplied by the coordinator when dispatched
+# from a work session; see fallback below when reviewing ad hoc)
+git diff {BASE_COMMIT} --name-only
 git diff --cached --name-only
 
 # Full diff
-git diff HEAD~1
+git diff {BASE_COMMIT}
 ```
+
+**Baseline fallback**: If `{BASE_COMMIT}` was not provided, use `git merge-base HEAD <default-branch>` (detect the default branch via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`/`master`); if that fails too, use `HEAD~1`. State in your report which baseline you used.
 
 ### 2. Analyze Changed Files
 
@@ -128,8 +131,14 @@ For each changed file:
 
 ## Overall Assessment
 
-[Pass/Fail/Conditional Pass with summary]
+[Pass or Fail with summary. There is no conditional pass: a review that
+would previously have been a "conditional pass" is a PASS whose conditions
+are listed in the Warnings section.]
+
+VERDICT: [PASS or FAIL]
 ```
+
+The LAST non-empty line of your reply MUST be exactly `VERDICT: PASS` or `VERDICT: FAIL` on its own line. Never write the string `VERDICT:` anywhere else in your reply.
 
 ## Security Checklist
 

@@ -45,10 +45,26 @@ after batches complete cleanly.
 
 ## Dependency Handling
 
-The ohno `blockedBy` graph is the safety mechanism:
+The ohno `blockedBy` graph is the primary safety mechanism:
 - Tasks with unmet dependencies are not dispatched
 - If Task B depends on Task A, B waits for A to complete
-- No additional conflict detection - trust the dependency graph
+
+## Conflict Detection (Two-Tier)
+
+On top of the dependency graph, the coordinator runs two conflict checks over
+every queued batch and UNIONS their results (work.md "File conflict check") —
+a task pair flagged by EITHER check is serialized:
+
+1. **Structured check — `Packages:` trailer**: `/plan` appends a final
+   machine-parsed description line in the exact form
+   `Packages: <comma-separated packages_touched>` (e.g.
+   `Packages: @sakeba/api, apps/web`) when the planner provides
+   `packages_touched`. Two tasks declaring a shared package never run in the
+   same batch — the later task is deferred to the next batch.
+2. **Heuristic check — regex over title+description**: extracts likely file
+   paths, module directories, and table references. It runs on every queued
+   task, and is the ONLY signal for tasks without a `Packages:` line (created
+   via `/quick`, `/fix`, `/hotfix`, or plans predating the trailer).
 
 ## Work Loop with Hooks (Parallel)
 

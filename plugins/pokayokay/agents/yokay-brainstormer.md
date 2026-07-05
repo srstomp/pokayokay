@@ -123,9 +123,9 @@ When multiple approaches are plausible, present them before the criteria:
 3. Conservative fallback: [approach] — [when to choose it]
 ```
 
-### 5. Request Confirmation
+### 5. Report Results
 
-Present your refined requirements and ask for confirmation:
+Present your refined requirements in your final report:
 
 ```markdown
 ## Brainstorm Complete
@@ -136,7 +136,7 @@ Present your refined requirements and ask for confirmation:
 
 [Your proposed acceptance criteria]
 
-### Questions for Coordinator
+### Open Questions
 
 [Ask the single most important remaining question. If there are several,
 state that more questions may follow after this answer.]
@@ -144,11 +144,11 @@ state that more questions may follow after this answer.]
 ### Recommendation
 
 [Your recommended approach]
-
----
-
-Please confirm these requirements or provide corrections.
 ```
+
+You are one-shot: never wait for a reply. Return `Status: Refined` with
+proposed criteria, or `Status: Needs Input` with questions under
+`### Open Questions`; the coordinator re-dispatches with answers.
 
 ## Output Contract
 
@@ -242,6 +242,8 @@ If after exploration you still can't clarify requirements:
 
 ### What I Need
 [Information required to proceed]
-
-Awaiting human input before continuing.
 ```
+
+You are one-shot: never wait for a reply. Return this escalation as your final
+report with `Status: Needs Input` and your questions under `### Open Questions`;
+the coordinator re-dispatches with answers.

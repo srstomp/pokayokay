@@ -68,6 +68,14 @@ Place the test alongside existing tests for the affected module.
 
 ## Step 3: Dispatch Implementer
 
+**First, record the review baseline.** Before dispatching the implementer, capture the pre-implementation commit in the task's working directory (worktree or project root):
+
+```bash
+BASE_COMMIT=$(git rev-parse HEAD)
+```
+
+Carry this value forward — chain-state or in-context — to Step 6, where it fills `{BASE_COMMIT}` in both review templates (their primary `git diff {BASE_COMMIT}` verification commands depend on it, and a missing value makes reviewers return BLOCKED or fall back to an unintended baseline).
+
 Use template: `agents/templates/implementer-prompt.md`
 Agent: `yokay-implementer`
 
@@ -152,7 +160,7 @@ Fill templates with (cover EVERY placeholder — a literal `{...}` in a dispatch
 - `{IMPLEMENTATION_SUMMARY}`: from the implementer's ohno handoff (`get_task_handoff(task_id)`) — the inline report is minimal
 - `{FILES_CHANGED}`: from implementer's handoff
 - `{COMMIT_INFO}`: from implementer's commit (hash + message)
-- `{COMMIT_HASH}`: bare commit hash — used in the templates' `git diff` verification commands
+- `{BASE_COMMIT}`: commit recorded by the coordinator before implementer dispatch — primary baseline for the templates' `git diff` verification commands (working-tree-inclusive)
 - `{APPROACH}` (quality template only): `None — design review was skipped`
 - `{WORKING_DIRECTORY}`: task's worktree path or project root
 

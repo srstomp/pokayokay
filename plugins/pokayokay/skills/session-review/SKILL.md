@@ -2,7 +2,7 @@
 name: session-review
 description: Use after completing work sessions to analyze agent behavior patterns, prepare session handoffs for continuity, document completed work, identify blockers, or preserve context for the next session.
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash, Agent
+allowed-tools: Read, Grep, Glob, Bash, Agent, Write, mcp__ohno__set_handoff_notes, mcp__ohno__get_task_handoff, mcp__ohno__get_session_context, mcp__ohno__add_task_activity, mcp__plugin_pokayokay_ohno__set_handoff_notes, mcp__plugin_pokayokay_ohno__get_task_handoff, mcp__plugin_pokayokay_ohno__get_session_context, mcp__plugin_pokayokay_ohno__add_task_activity
 ---
 
 # Session Review & Handoff

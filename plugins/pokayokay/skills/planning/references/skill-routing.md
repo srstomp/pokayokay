@@ -146,54 +146,33 @@ Skills should run in this order:
 
 ## Skill State Tracking
 
-### In tasks.db
+### In ohno
 
-```sql
--- Track skill assignment at epic level
-UPDATE epics SET
-    assigned_skills = '["api-design", "testing-strategy"]',
-    skill_order = '["api-design", "testing-strategy"]',
-    current_skill = 'api-design'
-WHERE id = 'epic-001';
+ohno has no skill-specific fields, so track skill assignments on the entities it does have — never write ohno's internal database directly.
 
--- Track skill assignment at story level
-UPDATE stories SET
-    assigned_skill = 'api-design'
-WHERE id = 'story-001-01';
+- **PROJECT.md is the source of truth** for skill assignments — keep its "Skill Assignments" table (see below) up to date.
+- **Epic descriptions carry the routing state.** When planning assigns skills, append a line via `mcp__ohno__update_epic`:
 
--- Query features by skill
-SELECT e.id, e.title, e.priority
-FROM epics e
-WHERE e.assigned_skills LIKE '%api-design%'
-  AND e.current_skill = 'api-design'
-ORDER BY
-    CASE e.priority
-        WHEN 'P0' THEN 0
-        WHEN 'P1' THEN 1
-        WHEN 'P2' THEN 2
-        ELSE 3
-    END;
+```
+Skills: api-design → testing-strategy | Current: api-design
+```
+
+- **Query features by skill** with the CLI (global `--json` flag):
+
+```bash
+# Epics currently routed to api-design
+npx @stevestomp/ohno-cli epics --json | node -e '
+const epics = JSON.parse(require("fs").readFileSync(0, "utf8"));
+for (const e of epics) {
+  if ((e.description || "").includes("Current: api-design")) {
+    console.log(`${e.id}\t${e.priority}\t${e.title}`);
+  }
+}'
 ```
 
 ### Skill Transition
 
-```sql
--- When skill completes, move to next
-UPDATE epics SET
-    current_skill = (
-        SELECT json_extract(skill_order, '$[' || (
-            SELECT instr(skill_order, current_skill) + length(current_skill)
-        ) || ']')
-    ),
-    updated_at = datetime('now')
-WHERE id = 'epic-001';
-
--- Or explicitly
-UPDATE epics SET
-    current_skill = 'testing-strategy',  -- was 'api-design'
-    updated_at = datetime('now')
-WHERE id = 'epic-001';
-```
+When a skill completes its work on an epic, advance the `Current:` marker to the next skill in the `Skills:` chain via `mcp__ohno__update_epic` (or remove the marker when the chain is done), and update the PROJECT.md skill assignments table in the same pass.
 
 ---
 
@@ -203,70 +182,17 @@ WHERE id = 'epic-001';
 
 When a skill is invoked, it should:
 
-```python
-def get_my_work(skill_name: str, db_path: str) -> list:
-    """Get features assigned to this skill."""
-    
-    conn = sqlite3.connect(db_path)
-    
-    # Get epics where this skill is current
-    epics = conn.execute("""
-        SELECT id, title, priority, description
-        FROM epics
-        WHERE current_skill = ?
-          AND status != 'completed'
-        ORDER BY 
-            CASE priority 
-                WHEN 'P0' THEN 0 
-                WHEN 'P1' THEN 1 
-                WHEN 'P2' THEN 2 
-                ELSE 3 
-            END
-    """, (skill_name,)).fetchall()
-    
-    return [dict(e) for e in epics]
-```
+1. Read `.claude/PROJECT.md` and find its rows in the "Skill Assignments" table.
+2. Confirm against ohno — `mcp__ohno__get_epics` (or the CLI query above), filtering for epics whose description lists it as `Current:` and whose status isn't done.
+3. Work highest priority first (P0 → P1 → P2 → P3).
 
 ### Marking Work Complete
 
-When a skill finishes:
+When a skill finishes an epic:
 
-```python
-def complete_skill_work(skill_name: str, epic_id: str, db_path: str):
-    """Mark skill as complete, transition to next."""
-    
-    conn = sqlite3.connect(db_path)
-    
-    # Get skill order
-    result = conn.execute("""
-        SELECT skill_order, current_skill
-        FROM epics WHERE id = ?
-    """, (epic_id,)).fetchone()
-    
-    skill_order = json.loads(result['skill_order'])
-    current_idx = skill_order.index(skill_name)
-    
-    # Move to next skill or mark complete
-    if current_idx + 1 < len(skill_order):
-        next_skill = skill_order[current_idx + 1]
-        conn.execute("""
-            UPDATE epics SET
-                current_skill = ?,
-                updated_at = datetime('now')
-            WHERE id = ?
-        """, (next_skill, epic_id))
-    else:
-        # All skills complete
-        conn.execute("""
-            UPDATE epics SET
-                current_skill = NULL,
-                status = 'completed',
-                updated_at = datetime('now')
-            WHERE id = ?
-        """, (epic_id,))
-    
-    conn.commit()
-```
+1. Advance the `Current:` marker to the next skill in the `Skills:` chain via `mcp__ohno__update_epic` — or, if it was the last skill, remove the marker.
+2. Log what was done via `mcp__ohno__add_task_activity` on the affected tasks.
+3. Update PROJECT.md ("Skill Assignments" table and "Next Actions").
 
 ---
 
@@ -311,47 +237,21 @@ After those complete:
 
 ## Automation Helpers
 
-### SQL: Pending Work by Skill
+### Pending Work by Skill
 
-```sql
--- Get all pending work grouped by skill
-SELECT 
-    e.current_skill as skill,
-    e.priority,
-    COUNT(*) as feature_count,
-    GROUP_CONCAT(e.id) as features
-FROM epics e
-WHERE e.current_skill IS NOT NULL
-  AND e.status != 'completed'
-GROUP BY e.current_skill, e.priority
-ORDER BY 
-    CASE e.priority 
-        WHEN 'P0' THEN 0 
-        WHEN 'P1' THEN 1 
-        WHEN 'P2' THEN 2 
-        ELSE 3 
-    END,
-    e.current_skill;
-```
-
-### SQL: Skill Progress
-
-```sql
--- Track how much work each skill has completed
-SELECT 
-    skill,
-    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-    SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-    SUM(CASE WHEN status = 'planned' THEN 1 ELSE 0 END) as pending,
-    COUNT(*) as total
-FROM (
-    SELECT 
-        e.id,
-        e.status,
-        json_each.value as skill
-    FROM epics e, json_each(e.assigned_skills)
-) grouped
-GROUP BY skill;
+```bash
+# Group open epics by their Current: skill marker
+npx @stevestomp/ohno-cli epics --json | node -e '
+const epics = JSON.parse(require("fs").readFileSync(0, "utf8"));
+const groups = {};
+for (const e of epics) {
+  const m = (e.description || "").match(/Current: ([a-z-]+)/);
+  if (!m || e.status === "done") continue;
+  (groups[m[1]] ||= []).push(`${e.id} (${e.priority})`);
+}
+for (const [skill, features] of Object.entries(groups)) {
+  console.log(`${skill}: ${features.join(", ")}`);
+}'
 ```
 
 ### Bash: Check Next Skill
@@ -360,20 +260,18 @@ GROUP BY skill;
 #!/bin/bash
 # next-skill.sh - Determine which skill to run next
 
-DB_PATH=".claude/tasks.db"
-
 echo "=== Next Skill to Run ==="
 
-# Get P0 features with pending skills
-sqlite3 "$DB_PATH" "
-SELECT current_skill, GROUP_CONCAT(id, ', ') as features
-FROM epics
-WHERE current_skill IS NOT NULL
-  AND status != 'completed'
-  AND priority = 'P0'
-GROUP BY current_skill
-LIMIT 1;
-"
+# First open P0 epic with a pending skill marker
+npx @stevestomp/ohno-cli epics --json | node -e '
+const epics = JSON.parse(require("fs").readFileSync(0, "utf8"));
+const next = epics.find(e => e.priority === "P0" && e.status !== "done" &&
+  /Current: [a-z-]+/.test(e.description || ""));
+if (next) {
+  console.log(`${next.description.match(/Current: ([a-z-]+)/)[1]} — ${next.id}: ${next.title}`);
+} else {
+  console.log("No pending P0 skill work");
+}'
 ```
 
 ---
@@ -418,20 +316,18 @@ Pure configuration or documentation features:
 ## Integration Checklist
 
 ### planning Output
-- [ ] Every feature has `assigned_skills`
-- [ ] Every feature has `skill_order`
-- [ ] `current_skill` set to first in order
+- [ ] Every feature has assigned skills and a skill order
+- [ ] Each epic's `Skills:` line sets `Current:` to the first skill in its chain (via `mcp__ohno__update_epic`)
 - [ ] PROJECT.md includes skill assignments section
-- [ ] features.json includes skill_summary
 
 ### Skill Invocation
 - [ ] Skill reads PROJECT.md first
-- [ ] Skill queries tasks.db for assigned work
+- [ ] Skill queries ohno for assigned work (`mcp__ohno__get_epics` / `npx @stevestomp/ohno-cli epics --json`)
 - [ ] Skill updates status when complete
 - [ ] Skill transitions to next skill in order
 
 ### feature-audit Audit
 - [ ] Runs after all skills complete
 - [ ] Checks implementation matches assignments
-- [ ] Updates audit_level in tasks.db
+- [ ] Records audit results in ohno (see feature-audit's gap-analysis reference)
 - [ ] Adds remediation tasks if gaps found

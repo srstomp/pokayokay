@@ -199,7 +199,7 @@ Update the skill hints table (Section 4) to explicitly include design routing:
 - User flows, wireframes, IA → `ux-design` (task_type: `ux`)
 - Visual components, styling → `aesthetic-ui-designer` (task_type: `ui`)
 - User research, personas → `persona-creation` (task_type: `persona`)
-- Accessibility requirements → `accessibility-auditor` (task_type: `a11y`)
+- Accessibility requirements → `design:a11y` (task_type: `a11y`)
 
 When design plugin is available, these skills map to `/design:*` commands.
 When not available, tasks use standard skill-based implementation.
@@ -213,7 +213,7 @@ Add design keywords to the main keyword detection table:
 | wireframe, mockup, user flow, journey, ia | ux-design | ux |
 | visual, component, design system, tokens | aesthetic-ui-designer | ui |
 | persona, user research, empathy map | persona-creation | persona |
-| accessibility, a11y, wcag, screen reader | accessibility-auditor | a11y |
+| accessibility, a11y, wcag, screen reader | design:a11y | a11y |
 
 ## Integration with Work Command
 

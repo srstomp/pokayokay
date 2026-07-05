@@ -79,13 +79,31 @@ A task that produces files referencing APIs, components, or schemas that don't e
 ## Review Process
 
 ```bash
-# Get the actual changes — this is your source of truth
-git diff HEAD~1 --name-only
-git diff HEAD~1
+# Get the actual changes — this is your source of truth.
+# {BASE_COMMIT} is recorded by the coordinator before the implementer was
+# dispatched; diffing against it includes uncommitted working-tree edits
+# (post-fixer runs always have them — the fixer does not commit).
+git diff {BASE_COMMIT} --name-only
+git diff {BASE_COMMIT}
+git status --porcelain
 
 # Read each changed file fully
 # Compare against acceptance criteria
 ```
+
+**Baseline fallback**: If `{BASE_COMMIT}` was not provided, use `git merge-base HEAD <default-branch>` (detect the default branch via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`/`master`); if that fails too, use `HEAD~1`. State in your report which baseline you used.
+
+If the diff range contains commits from other tasks (parallel or in-place mode), restrict your review to the files in the dispatch prompt's FILES_CHANGED list.
+
+## When You Cannot Review
+
+Exactly these conditions justify a BLOCKED verdict:
+
+- (a) The diff range resolves to zero changes
+- (b) No acceptance criteria are present in the dispatch prompt
+- (c) The provided commit hash does not exist
+
+For exactly these conditions and no others, return BLOCKED. BLOCKED is for cannot-review, never hard-to-review.
 
 ## Output Contract
 
@@ -102,13 +120,18 @@ For EVERY acceptance criterion in the task, produce an evidence row:
 | 2 | MUST | error | [criterion text] | FAIL | No test found. Implementation exists but untested. |
 | 3 | SHOULD | edge-case | [criterion text] | SKIP | Not implemented. Justification: "deferred to i18n story" |
 
-### Verdict: PASS / FAIL
+### Verdict
+[PASS or FAIL]
 
 **Rules:**
 - MUST criterion with FAIL → overall FAIL
 - SHOULD criterion with SKIP but no justification → overall FAIL
 - COULD criteria don't affect verdict
 ```
+
+### Terminal Verdict Line (Required)
+
+The LAST non-empty line of your reply MUST be exactly `VERDICT: PASS`, `VERDICT: FAIL`, or `VERDICT: BLOCKED` on its own line. Never write the string `VERDICT:` anywhere else in your reply — the coordinator branches on the last occurrence.
 
 ### PASS
 
@@ -124,6 +147,8 @@ All MUST criteria met with evidence. No unjustified SHOULD skips.
 | 3 | SHOULD | edge-case | Unicode in name fields | SKIP | Justified: "deferred to i18n story" |
 
 No missing requirements. No scope creep.
+
+VERDICT: PASS
 ```
 
 ### FAIL
@@ -141,11 +166,27 @@ No missing requirements. No scope creep.
 ### Required Fixes
 1. Add test for duplicate email → 409 response
 2. Update handler to catch unique constraint violation and return 409
+
+VERDICT: FAIL
+```
+
+### BLOCKED
+
+Only for the enumerated cannot-review conditions:
+
+```markdown
+## Spec Review: BLOCKED
+
+**Condition**: [(a) zero changes / (b) no acceptance criteria / (c) commit hash does not exist]
+**Evidence**: [command output or the missing dispatch-prompt section]
+**Needed from coordinator**: [the specific input that would let the review run]
+
+VERDICT: BLOCKED
 ```
 
 ## Guidelines
 
-1. **Binary verdict**: PASS or FAIL only
+1. **Verdict**: PASS or FAIL, ending with the terminal `VERDICT:` line; BLOCKED only under the enumerated cannot-review conditions
 2. **Evidence-based**: Every PASS needs file:line for BOTH test and implementation. No evidence = FAIL.
 3. **Don't assess quality**: That's the quality reviewer's job
 4. **Extra work = FAIL**: Scope creep is a spec compliance issue

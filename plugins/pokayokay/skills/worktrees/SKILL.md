@@ -17,7 +17,7 @@ Guide for managing git worktrees in pokayokay.
 | spike | Worktree | --in-place |
 | chore | In-place | --worktree |
 | docs | In-place | --worktree |
-| test | Inherits | explicit flag |
+| test | Inherits the story worktree (tasks in the same story share it) | explicit flag |
 
 ## Key Principles
 

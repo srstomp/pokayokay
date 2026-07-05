@@ -36,7 +36,7 @@ Templates for consistent, actionable spike documentation. Keep reports concise (
 | [Metric] | [Target] | [Result] |
 
 ## Proof of Concept
-**Location**: `.claude/spikes/[name]/`
+**Location**: `.claude/spikes/[date]-[slug]/`
 
 [Brief code snippet or reference to key files]
 
@@ -90,7 +90,7 @@ Can [technology] [capability] within [constraint]?
 - [Libraries, services, or setup needed]
 
 ## Proof of Concept
-**Location**: `.claude/spikes/[name]/`
+**Location**: `.claude/spikes/[date]-[slug]/`
 
 Key patterns demonstrated:
 - [Pattern 1]
@@ -200,7 +200,7 @@ How do we integrate with [service] for [purpose]?
 - [Undocumented quirk 2]
 
 ## Client Code
-**Location**: `.claude/spikes/[name]/`
+**Location**: `.claude/spikes/[date]-[slug]/`
 
 Files created:
 - `client.ts` - API client
@@ -336,10 +336,10 @@ For stakeholder communication (< 100 words):
 ## Spike Summary: [Title]
 
 **Question**: [One line]
-**Answer**: [GO/NO-GO/PIVOT] — [One sentence]
+**Answer**: [GO/NO-GO/PIVOT/MORE-INFO] — [One sentence]
 **Key Finding**: [Most important discovery]
 **Next Step**: [Immediate action]
-**Full Report**: `.claude/spikes/[name].md`
+**Full Report**: `.claude/spikes/[date]-[slug].md`
 ```
 
 ---
@@ -366,7 +366,7 @@ For stakeholder communication (< 100 words):
 When marking spike done in ohno:
 
 ```
-[DECISION] - [One-line summary]. See .claude/spikes/[name].md
+[DECISION] - [One-line summary]. See .claude/spikes/[date]-[slug].md
 
 Created follow-ups:
 - task-xxx: [title]

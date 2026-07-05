@@ -4,7 +4,32 @@ Pre-built task templates for common gaps identified during feature audits.
 
 ## Template Usage
 
-When a gap is identified, use these templates to generate properly-structured remediation tasks that integrate with tasks.db.
+When a gap is identified, use these templates to generate properly-structured remediation tasks, created in ohno via `mcp__ohno__create_task` (CLI equivalent: `npx @stevestomp/ohno-cli create "<title>" -t <type>`). Never write ohno's internal database directly.
+
+One call per gap, using the matching markdown template below as the description source:
+
+```
+mcp__ohno__create_task({
+  story_id: "[story-id]",
+  title: "[Remediation] [F0XX]: Create /[route] page",
+  description: "Create the main page for [Feature Name] with data fetching, loading, and error states.",
+  task_type: "feature",
+  estimate_hours: 6
+})
+```
+
+| Gap | Task Title | task_type | estimate_hours | Story |
+|-----|------------|-----------|----------------|-------|
+| No frontend route | Create /[route] page | feature | 6 | [Feature] frontend |
+| No navigation link | Add [Feature] to navigation | feature | 1 | [Feature] frontend |
+| No API integration | Connect [Feature] UI to backend API | feature | 5 | [Feature] frontend |
+| No loading state | Add loading skeleton to [Feature] | feature | 2 | [Feature] polish |
+| No error state | Add error handling to [Feature] | feature | 3 | [Feature] polish |
+| No empty state | Add empty state to [Feature] | feature | 2 | [Feature] polish |
+| No documentation | Write help documentation for [Feature] | chore | 3 | [Feature] docs |
+| No mobile support | Make [Feature] mobile-responsive | feature | 6 | [Feature] polish |
+
+Prefix titles with `[Remediation] [FEATURE-ID]:` for traceability (see Task Naming Convention below).
 
 ---
 
@@ -84,21 +109,6 @@ Create screen for [Feature] and add to navigation.
 - `src/navigation/MainNavigator.tsx` (add screen)
 ```
 
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-route',
-    'story-[FEATURE]-frontend',
-    'Create /[route] page',
-    'Create the main page for [Feature Name] with data fetching, loading, and error states.',
-    'frontend',
-    6,
-    'todo'
-);
-```
-
 ---
 
 ## Gap: No Navigation Link
@@ -136,21 +146,6 @@ Add navigation link to [Feature] in the main navigation/sidebar.
 - Icon suggestion: [appropriate icon name]
 - Position: After [existing item]
 - Group: [navigation group if applicable]
-```
-
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-nav',
-    'story-[FEATURE]-frontend',
-    'Add [Feature] to navigation',
-    'Add navigation link to [Feature Name] in the main sidebar/navigation.',
-    'frontend',
-    1,
-    'todo'
-);
 ```
 
 ---
@@ -193,21 +188,6 @@ Wire up the [Feature] frontend components to call the backend API.
 - DELETE /api/[feature]/:id → useDelete[Feature]Mutation
 ```
 
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-api-integration',
-    'story-[FEATURE]-frontend',
-    'Connect [Feature] UI to backend API',
-    'Create API client and React Query hooks, wire up components to use real data.',
-    'frontend',
-    5,
-    'todo'
-);
-```
-
 ---
 
 ## Gap: No Loading State
@@ -244,21 +224,6 @@ Add skeleton/loading UI to [Feature] for better UX during data fetching.
 - `src/components/[Feature]/[Feature]Skeleton.tsx` (new)
 - `src/components/[Feature]/[Feature].tsx` (add loading check)
 - OR `app/[route]/loading.tsx` (Next.js)
-```
-
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-loading',
-    'story-[FEATURE]-polish',
-    'Add loading skeleton to [Feature]',
-    'Create skeleton component that matches content layout, show during data fetching.',
-    'frontend',
-    2,
-    'todo'
-);
 ```
 
 ---
@@ -302,21 +267,6 @@ Add proper error UI and recovery options to [Feature].
 - OR `app/[route]/error.tsx` (Next.js)
 ```
 
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-error',
-    'story-[FEATURE]-polish',
-    'Add error handling to [Feature]',
-    'Create error UI with retry option, handle different error types appropriately.',
-    'frontend',
-    3,
-    'todo'
-);
-```
-
 ---
 
 ## Gap: No Empty State
@@ -352,21 +302,6 @@ Add helpful empty state when [Feature] has no data.
 **Files to Create/Modify**:
 - `src/components/[Feature]/[Feature]Empty.tsx` (new)
 - `src/components/[Feature]/[Feature]List.tsx` (add empty check)
-```
-
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-empty',
-    'story-[FEATURE]-polish',
-    'Add empty state to [Feature]',
-    'Create helpful empty state with explanation and CTA when no data exists.',
-    'frontend',
-    2,
-    'todo'
-);
 ```
 
 ---
@@ -407,21 +342,6 @@ Create help documentation for [Feature].
 **Files to Create**:
 - `docs/features/[feature].md`
 - Update `docs/index.md` with link
-```
-
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-docs',
-    'story-[FEATURE]-docs',
-    'Write help documentation for [Feature]',
-    'Create help article with purpose, instructions, screenshots, and FAQ.',
-    'documentation',
-    3,
-    'todo'
-);
 ```
 
 ---
@@ -468,21 +388,6 @@ Ensure [Feature] works well on mobile devices.
 - Related CSS/Tailwind classes
 ```
 
-### SQL Insert
-
-```sql
-INSERT INTO tasks (id, story_id, title, description, task_type, estimate_hours, status)
-VALUES (
-    'task-[FEATURE]-mobile',
-    'story-[FEATURE]-polish',
-    'Make [Feature] mobile-responsive',
-    'Ensure layout works on mobile, touch targets adequate, all functionality accessible.',
-    'frontend',
-    6,
-    'todo'
-);
-```
-
 ---
 
 ## Gap: Full Frontend Missing
@@ -513,145 +418,72 @@ Build the complete frontend for [Feature], including all screens, components, an
 
 ---
 
-### Tasks:
+### Tasks (all Type: Frontend):
 
-#### 1. Create [Feature] page structure
-- **Type**: Frontend
-- **Hours**: 2
-- Create page file with layout
-
-#### 2. Build [Feature] list component
-- **Type**: Frontend  
-- **Hours**: 4
-- List/table of items with pagination
-
-#### 3. Build [Feature] detail component
-- **Type**: Frontend
-- **Hours**: 4
-- Detail view / edit form
-
-#### 4. Build [Feature] create/edit form
-- **Type**: Frontend
-- **Hours**: 4
-- Form with validation
-
-#### 5. Create API integration hooks
-- **Type**: Frontend
-- **Hours**: 4
-- React Query hooks for all endpoints
-
-#### 6. Add loading/error/empty states
-- **Type**: Frontend
-- **Hours**: 3
-- Polish states
-
-#### 7. Add to navigation
-- **Type**: Frontend
-- **Hours**: 1
-- Sidebar link
-
-#### 8. Mobile responsive pass
-- **Type**: Frontend
-- **Hours**: 4
-- Responsive adjustments
+| # | Task | Hours | Notes |
+|---|------|-------|-------|
+| 1 | Create [Feature] page structure | 2 | Page file with layout |
+| 2 | Build [Feature] list component | 4 | List/table of items with pagination |
+| 3 | Build [Feature] detail component | 4 | Detail view / edit form |
+| 4 | Build [Feature] create/edit form | 4 | Form with validation |
+| 5 | Create API integration hooks | 4 | React Query hooks for all endpoints |
+| 6 | Add loading/error/empty states | 3 | Polish states |
+| 7 | Add [Feature] to navigation | 1 | Sidebar link |
+| 8 | Mobile responsive pass | 4 | Responsive adjustments |
 ```
 
-### SQL Insert (Story + Tasks)
+### ohno Creation (Story + Tasks)
 
-```sql
--- Create story
-INSERT INTO stories (id, epic_id, title, description, estimate_days, status)
-VALUES (
-    'story-[FEATURE]-frontend',
-    'epic-[FEATURE]',
-    '[Feature] Frontend Implementation',
-    'Build complete frontend including pages, components, API integration, and polish.',
-    4,
-    'todo'
-);
+Create the story first, then one `mcp__ohno__create_task` per task above (with the returned story ID, `task_type: "feature"`, hours as listed):
 
--- Create tasks
-INSERT INTO tasks (id, story_id, title, task_type, estimate_hours, status) VALUES
-    ('task-[F]-f01', 'story-[FEATURE]-frontend', 'Create [Feature] page structure', 'frontend', 2, 'todo'),
-    ('task-[F]-f02', 'story-[FEATURE]-frontend', 'Build [Feature] list component', 'frontend', 4, 'todo'),
-    ('task-[F]-f03', 'story-[FEATURE]-frontend', 'Build [Feature] detail component', 'frontend', 4, 'todo'),
-    ('task-[F]-f04', 'story-[FEATURE]-frontend', 'Build [Feature] create/edit form', 'frontend', 4, 'todo'),
-    ('task-[F]-f05', 'story-[FEATURE]-frontend', 'Create API integration hooks', 'frontend', 4, 'todo'),
-    ('task-[F]-f06', 'story-[FEATURE]-frontend', 'Add loading/error/empty states', 'frontend', 3, 'todo'),
-    ('task-[F]-f07', 'story-[FEATURE]-frontend', 'Add [Feature] to navigation', 'frontend', 1, 'todo'),
-    ('task-[F]-f08', 'story-[FEATURE]-frontend', 'Mobile responsive pass', 'frontend', 4, 'todo');
-
--- Add dependencies
-INSERT INTO dependencies (blocker_task_id, blocked_task_id) VALUES
-    ('task-[F]-f01', 'task-[F]-f02'),
-    ('task-[F]-f01', 'task-[F]-f03'),
-    ('task-[F]-f02', 'task-[F]-f05'),
-    ('task-[F]-f05', 'task-[F]-f06'),
-    ('task-[F]-f06', 'task-[F]-f07'),
-    ('task-[F]-f07', 'task-[F]-f08');
 ```
+mcp__ohno__create_story({
+  epic_id: "[epic-id]",
+  title: "[Feature] Frontend Implementation",
+  description: "Build complete frontend including pages, components, API integration, and polish."
+})
+```
+
+Then chain dependencies with the returned task IDs via `mcp__ohno__add_dependency` (task_id depends on depends_on_task_id): page structure blocks list and detail components; list blocks API hooks; hooks block states; states block navigation; navigation blocks the responsive pass.
 
 ---
 
 ## Batch Remediation
 
+Batch scripts key off the `Audit (...)` lines recorded in epic descriptions (see [gap-analysis.md](gap-analysis.md), "Gap Tracking in ohno").
+
 ### All Missing Navigation
 
-```sql
--- Find all features missing navigation
-SELECT e.id, e.title 
-FROM epics e 
-WHERE e.audit_level = 3;  -- Routable but not in nav
-
--- Generate tasks for all
-INSERT INTO tasks (id, story_id, title, task_type, estimate_hours, status)
-SELECT 
-    'task-' || e.id || '-nav',
-    'story-' || e.id || '-frontend', 
-    'Add ' || e.title || ' to navigation',
-    'frontend',
-    1,
-    'todo'
-FROM epics e
-WHERE e.audit_level = 3;
+```bash
+# Find all features audited at L3 (routable but not in nav), create nav tasks
+npx @stevestomp/ohno-cli epics --json | node -e '
+const epics = JSON.parse(require("fs").readFileSync(0, "utf8"));
+for (const e of epics) {
+  if (/Audit \([^)]*\): L3/.test(e.description || "")) {
+    console.log(`${e.id}\t${e.title}`);
+  }
+}' | while IFS=$'\t' read -r id title; do
+    npx @stevestomp/ohno-cli create "[Remediation] $id: Add $title to navigation" -t feature
+done
 ```
 
 ### All Missing Documentation
 
-```sql
--- Find all features missing docs
-SELECT e.id, e.title 
-FROM epics e 
-WHERE e.audit_gaps LIKE '%no_docs%';
-
--- Generate doc tasks for all
-INSERT INTO tasks (id, story_id, title, task_type, estimate_hours, status)
-SELECT 
-    'task-' || e.id || '-docs',
-    'story-' || e.id || '-docs', 
-    'Write documentation for ' || e.title,
-    'documentation',
-    3,
-    'todo'
-FROM epics e
-WHERE e.audit_gaps LIKE '%no_docs%';
-```
+Same pattern: filter for descriptions matching `/Audit \([^)]*\):.*no_docs/` and create `[Remediation] $id: Write documentation for $title` tasks with `-t chore`.
 
 ---
 
-## Task ID Convention
+## Task Naming Convention
+
+ohno assigns task and story IDs — don't invent your own. Encode traceability in titles instead:
 
 ```
-task-[EPIC]-[TYPE][NUMBER]
+[Remediation] [FEATURE-ID]: [action]
 
 Examples:
-- task-028-f01  → Epic 028, Frontend task 1
-- task-028-b01  → Epic 028, Backend task 1
-- task-028-d01  → Epic 028, Documentation task 1
-- task-028-p01  → Epic 028, Polish task 1
-
-Story IDs:
-- story-028-frontend  → Frontend work for epic 028
-- story-028-polish    → Polish work for epic 028
-- story-028-docs      → Documentation for epic 028
+- [Remediation] F028: Create /reports page
+- [Remediation] F028: Add Reports to navigation
+- [Remediation] F028: Write documentation for Reports
 ```
+
+Group related remediation tasks under a story per feature (e.g. "F028 Frontend Remediation") so `mcp__ohno__get_tasks` output stays scannable.

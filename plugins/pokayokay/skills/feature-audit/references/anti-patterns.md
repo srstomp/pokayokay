@@ -4,7 +4,7 @@
 
 | Anti-Pattern | Problem | Fix |
 |--------------|---------|-----|
-| Trusting tasks.db status | "Done" ≠ user-facing | Always verify in codebase |
+| Trusting task status (ohno) | "Done" ≠ user-facing | Always verify in codebase |
 | Only checking file existence | File may be empty/stub | Check for real implementation |
 | Ignoring navigation | Feature unreachable | Verify menu/nav links |
 | Skipping mobile | Desktop-only isn't complete | Check responsive/native |

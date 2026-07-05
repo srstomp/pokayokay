@@ -50,105 +50,13 @@ Example arguments:
 ## Headless Configuration
 
 Headless mode enables automatic session chaining when context fills up.
+Configuration lives in `.pokayokay/config.json` (fallback:
+`.claude/pokayokay.json`), and headless/auto/unattended sessions REQUIRE an
+explicit scope (`--epic`, `--story`, or `--all`) to prevent runaway sessions —
+PAUSE and ask for one if none is given.
 
-### Configuration
-
-Read headless config from `.pokayokay/config.json` when present, falling back to `.claude/pokayokay.json` for existing Claude Code projects:
-
-```json
-{
-  "headless": {
-    "max_chains": 10,
-    "report": "on_complete",
-    "notify": "terminal"
-  }
-}
-```
-
-| Setting | Values | Default | Description |
-|---------|--------|---------|-------------|
-| `max_chains` | 1-50 | 10 | Maximum sessions to chain before stopping |
-| `report` | `on_complete`, `on_failure`, `always`, `never` | `on_complete` | When to generate chain report |
-| `notify` | `terminal`, `none` | `terminal` | How to notify on chain completion |
-
-### Scope Requirement
-
-**Headless mode requires explicit scope to prevent runaway sessions.**
-
-When running headless (auto/unattended mode or `--continue` from chain):
-- `--epic <id>`: Only work on tasks within the specified epic
-- `--story <id>`: Only work on tasks within the specified story
-- `--all`: Explicitly allow working on all available tasks
-
-If no scope is provided in auto/unattended/headless mode, PAUSE and ask:
-```markdown
-Headless/auto/unattended mode requires a scope to prevent runaway sessions.
-
-Which tasks should this session work on?
-  1. --epic <id>  (work within a specific epic)
-  2. --story <id> (work within a specific story)
-  3. --all        (all available tasks)
-```
-
-### Scope Filtering
-
-When scope is set, filter `get_next_task` and `get_next_batch` results:
-
-```python
-def get_scoped_tasks(scope):
-    if scope.type == "epic":
-        return get_tasks(epic_id=scope.id, status="todo")
-    elif scope.type == "story":
-        return get_tasks(story_id=scope.id, status="todo")  # via story filter
-    else:  # "all"
-        return get_next_batch()
-```
-
-### Session Chaining
-
-When a session reaches context limits:
-
-1. Save current WIP to ohno (automatic via hooks)
-2. Generate chain report if configured
-3. Exit with chain metadata:
-   ```json
-   {
-     "chain_id": "chain-abc123",
-     "chain_index": 3,
-     "max_chains": 10,
-     "scope": {"type": "epic", "id": "epic-abc123"},
-     "tasks_completed": 5,
-     "tasks_remaining": 8
-   }
-   ```
-4. SessionEnd hook spawns or prepares the next session using the active runtime:
-   ```bash
-   # Claude Code
-   claude -p "/work --continue --epic epic-abc123"
-
-   # Codex
-   codex --prompt="/work --continue --epic epic-abc123"
-   ```
-
-### Chain Reporting
-
-On chain completion (all tasks done or max_chains reached), generate report:
-
-```
-.ohno/reports/chain-{id}-report.md
-
-# Session Chain Report
-- Chain ID: chain-abc123
-- Sessions: 4
-- Scope: epic-4fcd1e3c (Context Efficiency Redesign)
-- Tasks completed: 12
-- Tasks failed: 1 (task-xyz: test failures)
-- Tasks remaining: 2
-- Total duration: ~45 minutes
-- Decisions made: [extracted from task handoffs]
-```
-
-Report is generated BEFORE memory decay compacts handoff details.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/chain-state.md` for
+the config schema, scope filtering, session chaining flow, and chain reporting.
 
 ## Adaptive Parallel Sizing
 
@@ -206,64 +114,15 @@ Parallel sizing: 3 → 2 (batch interrupted by context fill)
 
 ## Proactive Context Shutdown
 
-When session chaining is active (chain state file exists), the coordinator MUST
-proactively end the session when context pressure is detected — **before** quality
-degrades from repeated compaction.
+When session chaining is active (chain state file exists) and context pressure
+is detected (runtime compaction, context-limit reminders, repeated information
+loss), the coordinator MUST stop dispatching new tasks, let in-flight agents
+finish, save WIP and coordinator state to the chain state file, and end the
+session so the SessionEnd hook chains a fresh one. Non-chained
+(supervised/semi-auto) sessions do not proactively end — the user is present.
 
-### Detection
-
-Context pressure is detected when **any** of these occur:
-1. The active runtime compacts the conversation (for example, Claude Code shows "Compacting conversation..." in output)
-2. A system reminder mentions context limits
-3. You notice repeated information loss from prior context
-
-### Behavior
-
-When context pressure is detected during a chained session:
-
-1. **Stop dispatching new tasks** — do not start another batch
-2. **Wait for in-flight agents** — let current implementers finish (they have their own context)
-3. **Save WIP** for any incomplete work:
-   ```
-   For each in-progress task with uncommitted changes:
-     update_task_wip(task_id, { files_modified, last_commit, uncommitted_changes, next_step })
-   ```
-4. **Save coordinator state** to chain state file:
-   ```
-   Read existing .pokayokay/pokayokay-chain-state.json, falling back to .claude/pokayokay-chain-state.json
-   Update with:
-     adaptive_n: current parallel count
-     batches_completed: count
-     batches_failed: count
-     failed_tasks: [task IDs that failed/blocked]
-     conflict_tasks: [task IDs with git conflicts]
-     last_session_summary: "Completed X tasks, Y failed, Z conflicts"
-   Write back to .pokayokay/pokayokay-chain-state.json
-   ```
-5. **Log session summary**:
-   ```
-   add_task_activity(task_id, "note", "Session ending: context pressure detected, chaining to next session")
-   ```
-6. **End the session** — output a brief summary and stop. This triggers:
-   - SessionEnd hook → bridge.py reads chain state → session-chain.sh spawns/prepares the next runtime session
-
-### Why Proactive?
-
-Without proactive shutdown:
-- Context fills → Claude Code compacts → quality degrades → compacts again → eventually dies
-- Each compaction loses coordinator context (task state, batch tracking, decisions)
-- Subagents returning to a degraded coordinator get confused
-
-With proactive shutdown:
-- First compaction detected → graceful exit → fresh session chains with full context
-- No quality degradation
-- WIP preserved for seamless resume
-
-### Non-Chained Sessions
-
-In supervised or semi-auto sessions (no chain state file), compaction is handled
-normally by the active runtime. The coordinator does NOT need to proactively end — the user
-is present and can decide.
+Follow the shutdown steps in
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/chain-state.md`.
 
 ## Session Start
 
@@ -285,32 +144,14 @@ If mode is `auto` or `unattended` or `--continue` flag is set, verify scope:
 
 ### 1.5 Initialize Chain State (if auto/unattended + scope, NOT --continue)
 
-When starting a NEW auto or unattended session with scope (not `--continue`), write the chain state file
-so that SessionEnd hooks can spawn continuation sessions:
+When starting a NEW auto or unattended session with scope (not `--continue`),
+write `.pokayokay/pokayokay-chain-state.json` with the Write tool so that
+SessionEnd hooks can spawn continuation sessions. Skip this step when mode is
+supervised/semi-auto, when no scope is set, or when `--continue` is set (the
+state file already exists from the previous session).
 
-```
-Write .pokayokay/pokayokay-chain-state.json:
-{
-  "chain_id": "chain-<current-unix-timestamp>",
-  "chain_index": 0,
-  "scope_type": "<epic|story|all>",
-  "scope_id": "<id or empty string>",
-  "tasks_completed": 0,
-  "adaptive_n": 2,
-  "batches_completed": 0,
-  "batches_failed": 0,
-  "failed_tasks": [],
-  "conflict_tasks": [],
-  "last_session_summary": ""
-}
-```
-
-Use the Write tool. Generate chain_id from current unix timestamp.
-
-**Skip this step** if:
-- Mode is NOT auto/unattended (supervised/semi-auto don't chain)
-- No scope is set (chaining requires scope)
-- `--continue` flag is set (state file already exists from previous session)
+Use the JSON template in
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/chain-state.md`.
 
 ### 2. Get Session Context
 Use ohno MCP `get_session_context` to understand:
@@ -574,7 +415,33 @@ Coordinator maintains N concurrent implementers:
    - No unmet `blockedBy` dependencies
    - Not blocked by another task in active_agents
 
-2. **File conflict check**: Before dispatching, scan task descriptions for implicit file-level conflicts:
+2. **File conflict check**: Before dispatching, detect file-level conflicts between queued tasks. Run BOTH checks below on every queued task and UNION the conflict sets — a pair conflicts if either check flags it.
+
+   **Structured conflict check** (`Packages:` trailer): tasks created by `/plan` end their description with a machine-parsed `Packages:` line when the planner provided `packages_touched` (plan.md Section 4.5). Two tasks sharing a package never run in the same batch:
+
+   ```python
+   def detect_package_conflicts(tasks):
+       """Parse the structured 'Packages:' trailer written by /plan."""
+       import re
+       task_packages = {}  # task_id -> set of declared packages
+
+       for task in tasks:
+           m = re.search(r'^Packages:\s*(.+)$', task.description, re.MULTILINE)
+           if m:
+               task_packages[task.id] = {p.strip() for p in m.group(1).split(",") if p.strip()}
+
+       conflicts = []
+       task_ids = list(task_packages.keys())
+       for i in range(len(task_ids)):
+           for j in range(i + 1, len(task_ids)):
+               overlap = task_packages[task_ids[i]] & task_packages[task_ids[j]]
+               if overlap:
+                   conflicts.append((task_ids[i], task_ids[j], overlap))
+
+       return conflicts
+   ```
+
+   **Heuristic conflict check** (regex over title+description): runs on every queued task — including tasks with a `Packages:` line — and is the ONLY signal for tasks without one (created via `/quick`, `/fix`, `/hotfix`, or plans predating the trailer):
 
    ```python
    def detect_file_conflicts(tasks):
@@ -610,8 +477,12 @@ Coordinator maintains N concurrent implementers:
                    conflicts.append((task_ids[i], task_ids[j], overlap))
 
        return conflicts
+   ```
 
-   conflicts = detect_file_conflicts(queued_tasks)
+   **Union and defer**: merge both conflict sets, keep the first task of each conflicting pair, and defer the later task to the next batch:
+
+   ```python
+   conflicts = detect_package_conflicts(queued_tasks) + detect_file_conflicts(queued_tasks)
    if conflicts:
        # Serialize conflicting tasks, parallelize the rest
        # Keep first task in each conflict pair, defer second to next batch
@@ -649,6 +520,11 @@ Coordinator maintains N concurrent implementers:
 5. **Track state**: Add all dispatched tasks to `active_agents`
 
 #### Processing Results
+
+If a dispatch fails or returns a suspect report (tool error/timeout, empty or
+verdict-less report, questions-only, or success claimed without a commit),
+apply the Dispatch Failure Protocol in
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/dispatch-errors.md`.
 
 As each agent returns:
 
@@ -922,135 +798,18 @@ add_task_activity(task_id, "note", "Design plugin not available, user chose to c
 ### 3. Brainstorm Gate (Conditional)
 
 Before dispatching the implementer, check if the task needs brainstorming.
+The gate triggers on short descriptions (< 100 chars), missing or low-quality
+acceptance criteria, spike-type tasks, and ambiguous keywords ("investigate",
+"explore", "figure out", "look into", "research"); it is skipped for bug/chore
+tasks with AC that passes the quality check, or when `--skip-brainstorm` is set.
 
-#### Trigger Conditions
-
-Brainstorm triggers when ANY of these are true:
-
-| Condition | Check | Rationale |
-|-----------|-------|-----------|
-| Short description | `len(description) < 100 chars` | Likely underspecified |
-| No acceptance criteria | `acceptance_criteria is empty` | No clear success definition |
-| Spike type | `task_type == "spike"` | Investigation required |
-| Ambiguous keywords | Contains "investigate", "explore", "figure out" | Unclear scope |
-
-#### Skip Conditions
-
-Brainstorm is skipped when ANY of these are true:
-
-| Condition | Check | Rationale |
-|-----------|-------|-----------|
-| Bug type | `task_type == "bug"` | Usually well-defined |
-| Chore type | `task_type == "chore"` | Usually mechanical |
-| Well-specified | Has description AND criteria AND no ambiguous keywords | Ready to implement |
-| Manual skip | `--skip-brainstorm` flag passed | Human override |
-
-#### Gate Logic
-
-```python
-# Pseudocode
-def needs_brainstorm(task, skip_flag=False):
-    # Skip conditions (check first)
-    if skip_flag:
-        return False
-    if task.task_type in ["bug", "chore"]:
-        return False
-    if (len(task.description) >= 100 and
-        task.acceptance_criteria and
-        not has_ambiguous_keywords(task)):
-        return False
-
-    # Trigger conditions
-    if len(task.description) < 100:
-        return True, "Short description"
-    if not task.acceptance_criteria:
-        return True, "No acceptance criteria"
-    if task.task_type == "spike":
-        return True, "Spike investigation"
-    if has_ambiguous_keywords(task):
-        return True, "Ambiguous scope"
-
-    return False
-```
-
-#### Dispatching Brainstormer
-
-If brainstorm triggers:
-
-1. Dispatch brainstormer:
-   ```
-   Task tool:
-     subagent_type: "pokayokay:yokay-brainstormer"
-     description: "Brainstorm: {task.title}"
-     prompt: [Fill template from agents/templates/brainstorm-prompt.md]
-   ```
-
-   Template variables: `{TASK_ID}`, `{TASK_TITLE}`, `{TASK_TYPE}` (the ohno task's `task_type`), `{TASK_DESCRIPTION}`, `{ACCEPTANCE_CRITERIA}`, `{TRIGGER_REASON}` (which trigger condition fired the gate, e.g. "Short description" or "No acceptance criteria"), `{WORKING_DIRECTORY}`.
-
-2. Process brainstorm result:
-   - Update ohno task with refined requirements:
-     ```
-     update_task(task_id, {
-       description: refined_description,
-       acceptance_criteria: proposed_criteria
-     })
-     ```
-   - If open questions:
-     - **auto or unattended mode**: Auto-resolve — log open questions as assumptions, proceed with brainstormer's best judgment.
-       ```
-       add_task_activity(task_id, "decision", "Auto-resolved open questions as assumptions (auto/unattended mode): {questions}")
-       ```
-     - **supervised / semi-auto**: PAUSE for human input
-   - If refined: Proceed to Step 3.5 (validation), then the Design Review Gate (Step 3.7)
-
-3. Log activity:
-   ```
-   add_task_activity(task_id, "note", "Brainstorm: Refined requirements")
-   ```
-
-#### Brainstorm Flow
-
-```
-┌──────────────┐
-│  Get Task    │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐     NO      ┌──────────────┐
-│ Needs        │────────────►│ Skip to      │
-│ Brainstorm?  │             │ Design Review│
-└──────┬───────┘             └──────────────┘
-       │ YES
-       ▼
-┌──────────────┐
-│ Brainstormer │
-│  Subagent    │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐     QUESTIONS   ┌──────────────┐
-│ Result?      │────────────────►│ PAUSE for    │
-└──────┬───────┘                 │ human input* │
-       │ REFINED                 └──────────────┘
-       │        * supervised/semi-auto only; auto/unattended
-       │          auto-resolve questions as assumptions
-       ▼
-┌──────────────┐
-│ Update ohno  │
-│ with criteria│
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ Design Review│
-│  Gate (3.7)  │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ Implementer  │
-└──────────────┘
-```
+Apply the trigger/skip conditions, AC quality check, brainstormer dispatch, and
+result processing in
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/dispatch-preparation.md`
+(Step 2: Brainstorm Gate). On **Refined**, update the ohno task and proceed to
+Step 3.5 (validation), then the Design Review Gate (Step 3.7); on
+**Needs Input**, PAUSE in supervised/semi-auto or auto-resolve the questions as
+logged assumptions in auto/unattended.
 
 ### 3.5 Pre-Implementation Validation
 
@@ -1154,7 +913,13 @@ If the gate is not skipped:
    task = get_task(task_id)
    ```
 
-2. Prepare context for subagent:
+2. Record the review baseline BEFORE dispatching:
+   ```bash
+   BASE_COMMIT=$(git rev-parse HEAD)
+   ```
+   Run this in the task's working directory (worktree or project root). Carry the value forward — chain-state or in-context — to the Step 5 review dispatches, where it fills `{BASE_COMMIT}` in both review templates. The implementer also records its own base commit (step 0 of its prompt); if the two differ, trust yours and note the discrepancy.
+
+3. Prepare context for subagent:
    - Task description (full text)
    - Acceptance criteria (from task or brainstorm output)
    - Architectural context (where this fits in the project)
@@ -1162,7 +927,7 @@ If the gate is not skipped:
    - Pre-validated approach (from Step 3.7 — fills `{APPROACH}`; use `Design review skipped — follow codebase patterns` if the gate was skipped)
    - Known pitfalls (from `memory/recurring-failures.md` if file exists — include entries matching the task domain as a "## Known Pitfalls" section in the implementer prompt)
 
-3. Dispatch subagent using Task tool:
+4. Dispatch subagent using Task tool:
    ```
    Task tool:
      subagent_type: "pokayokay:yokay-implementer"
@@ -1171,10 +936,11 @@ If the gate is not skipped:
      prompt: [Fill template from agents/templates/implementer-prompt.md]
    ```
 
-4. Process subagent result:
+5. Process subagent result:
    - If complete: Proceed to Step 4.5 (Auto-Fix Test Failures)
    - If NEEDS_REDESIGN: The pre-validated approach proved infeasible — see "Handling NEEDS_REDESIGN" below
    - If BLOCKED: Set blocker via ohno MCP (the report includes the implementer's specific open questions)
+   - If the dispatch itself failed or the report is suspect (tool error/timeout, empty or verdict-less report, questions-only, success claimed without a commit): apply the Dispatch Failure Protocol in `${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/dispatch-errors.md`
 
 #### Handling NEEDS_REDESIGN
 
@@ -1447,11 +1213,12 @@ variable can never reach the hook process.
      prompt: [Fill template from agents/templates/spec-review-prompt.md]
    ```
 
-   Fill `{IMPLEMENTATION_SUMMARY}` from the implementer's ohno handoff (`get_task_handoff(task_id)`), NOT from its inline report — the inline report is minimal; the AC verification table lives in the handoff details. Fill `{COMMIT_HASH}` with the bare hash from the implementer's commit (the template's `git diff` commands depend on it).
+   Fill `{IMPLEMENTATION_SUMMARY}` from the implementer's ohno handoff (`get_task_handoff(task_id)`), NOT from its inline report — the inline report is minimal; the AC verification table lives in the handoff details. Fill `{BASE_COMMIT}` with the baseline recorded in Step 4 before the implementer was dispatched (the template's primary `git diff {BASE_COMMIT}` command depends on it), and `{COMMIT_INFO}` with the implementer's commit (hash + message).
 
-2. Process result:
-   - **PASS**: Proceed to Stage 2 (quality review)
-   - **FAIL**: Re-dispatch implementer with spec issues (skip quality review)
+2. Process result — branch on the reviewer's final `VERDICT:` line (`VERDICT: PASS | FAIL | BLOCKED`), not on prose or evidence rows:
+   - **VERDICT: PASS**: Proceed to Stage 2 (quality review)
+   - **VERDICT: FAIL**: Re-dispatch implementer with spec issues (skip quality review)
+   - **VERDICT: BLOCKED**: The reviewer could not review (missing input — see the agent's enumerated cannot-review conditions). BLOCKED does NOT consume a review cycle and does NOT re-dispatch the implementer. Fix the input the reviewer named (e.g. fill the missing `{ACCEPTANCE_CRITERIA}`, correct `{BASE_COMMIT}` or the commit reference) and re-dispatch the reviewer ONCE. If still BLOCKED, mark the task blocked: `set_blocker(task_id, "Review blocked: {reviewer's stated reason}")`
 
 **What the spec reviewer checks:**
 - All acceptance criteria met against actual code (not implementer's claims)
@@ -1471,11 +1238,12 @@ Only runs if spec review passes.
      prompt: [Fill template from agents/templates/quality-review-prompt.md]
    ```
 
-   Fill `{APPROACH}` with the design-review approach stored in Step 3.7, or `None — design review was skipped` when the gate was skipped. Also fill `{COMMIT_HASH}` (bare hash) for the template's `git diff` commands.
+   Fill `{APPROACH}` with the design-review approach stored in Step 3.7, or `None — design review was skipped` when the gate was skipped. Fill `{ACCEPTANCE_CRITERIA}` from the task (input for the reviewer's Test-AC Mapping check). Also fill `{BASE_COMMIT}` with the Step 4 baseline for the template's `git diff` commands.
 
-2. Process result:
-   - **PASS**: Proceed to task completion (Step 6)
-   - **FAIL**: Re-dispatch implementer with quality issues
+2. Process result — branch on the reviewer's final `VERDICT:` line (`VERDICT: PASS | FAIL | BLOCKED`), not on prose or evidence rows:
+   - **VERDICT: PASS**: Proceed to task completion (Step 6)
+   - **VERDICT: FAIL**: Re-dispatch implementer with quality issues
+   - **VERDICT: BLOCKED**: Same handling as Stage 1 — no review cycle consumed, no implementer re-dispatch. Fix the reviewer's stated missing input and re-dispatch the reviewer ONCE; if still BLOCKED, `set_blocker(task_id, "Review blocked: {reviewer's stated reason}")`
 
 **What the quality reviewer checks:**
 - Code structure, readability, appropriate abstractions
@@ -1487,151 +1255,14 @@ Only runs if spec review passes.
 
 When either spec or quality review fails, `bridge.py` detects the FAIL in the
 reviewer's Task output (PostToolUse) and invokes the post-review-fail hook
-**automatically**. Do NOT run `hooks/post-review-fail.sh` yourself — manual
-invocation risks double execution (duplicate kaizen fix-task suggestions),
-and in consuming projects the script may not exist at all.
+**automatically** — do NOT run `hooks/post-review-fail.sh` yourself. The hook
+result surfaces as hook output context with a `kaizen_action` of AUTO
+(fix task auto-created — create it in ohno and block the current task),
+SUGGEST (prompt in supervised/semi-auto, auto-resolve in auto/unattended), or
+LOGGED (log and continue re-dispatch behavior).
 
-The bridge resolves the hook from the *project's* `hooks/post-review-fail.sh`
-(so projects can supply their own kaizen wiring). When the script is absent,
-the failure is still tracked locally (recurring-failure detection +
-graduate-rules) and the outcome is `kaizen_action: LOGGED`.
-
-The hook result surfaces as hook output context after the reviewer's Task
-call, with a `kaizen_action` of AUTO, SUGGEST, or LOGGED (plus `fix_task`
-details when available). The coordinator's only job is to act on that
-outcome:
-
-**1. AUTO Action (High Confidence)**
-
-Hook detects a well-known failure pattern and auto-creates a fix task.
-
-```json
-{
-  "action": "AUTO",
-  "fix_task": {
-    "title": "Fix: Missing error handling in API endpoint",
-    "description": "Review failed due to missing error handling...",
-    "type": "bug",
-    "estimate": 2
-  }
-}
-```
-
-Coordinator behavior:
-1. Create fix task in ohno:
-   ```bash
-   npx @stevestomp/ohno-cli create "${fix_task.title}" \
-     -t ${fix_task.type} \
-     --description "${fix_task.description}" \
-     -e ${fix_task.estimate} \
-     --source "kaizen-fix"
-   ```
-2. Block current task on the fix task:
-   ```bash
-   npx @stevestomp/ohno-cli dep add <current-task-id> <fix-task-id>
-   npx @stevestomp/ohno-cli block <current-task-id> "Blocked by fix task ${fix_task_id}"
-   ```
-3. Log activity:
-   ```bash
-   add_task_activity(task_id, "note", "Review failed, fix task auto-created: ${fix_task_id}")
-   ```
-4. Get next task and continue work loop
-
-**2. SUGGEST Action (Medium Confidence)**
-
-Hook has a suggestion but needs user confirmation.
-
-```json
-{
-  "action": "SUGGEST",
-  "fix_task": {
-    "title": "Fix: Improve test coverage for edge cases",
-    "description": "Review suggests adding tests for...",
-    "type": "test",
-    "estimate": 3
-  },
-  "confidence": "medium"
-}
-```
-
-Coordinator behavior:
-1. Present suggestion to user:
-   ```markdown
-   Review failed. Suggested fix task:
-   - Title: ${fix_task.title}
-   - Type: ${fix_task.type}
-   - Estimate: ${fix_task.estimate}h
-   - Description: ${fix_task.description}
-
-   Create fix task? (yes/no/customize)
-   ```
-2. Handle user response:
-   - **yes**: Create fix task, block current task, get next task
-   - **no**: Continue with existing re-dispatch behavior (max 3 cycles)
-   - **customize**: Let user modify fix_task details, then create
-
-**3. LOGGED Action (Low Confidence)**
-
-Hook cannot confidently suggest a fix task, only logs the failure.
-
-```json
-{
-  "action": "LOGGED",
-  "message": "Failure logged to kaizen database"
-}
-```
-
-Coordinator behavior:
-1. Log activity:
-   ```bash
-   add_task_activity(task_id, "note", "Review failed: ${FAILURE_DETAILS}")
-   ```
-2. Continue with existing re-dispatch behavior (max 3 cycles)
-
-**Hook Integration Flow:**
-
-```
-Review FAIL
-     │
-     ▼
-┌─────────────────┐
-│ bridge.py runs  │
-│ post-review-fail│
-│ (automatic)     │
-└────────┬────────┘
-         │
-         ▼
- Read kaizen_action
- from hook output
-         │
-    ┌────┴─────┬─────────────┐
-    │          │             │
-    ▼          ▼             ▼
-┌──────┐  ┌─────────┐  ┌──────────┐
-│ AUTO │  │ SUGGEST │  │ LOGGED   │
-└───┬──┘  └────┬────┘  └─────┬────┘
-    │          │              │
-    ▼          ▼              │
-┌──────────┐  ┌──────────┐   │
-│ Create   │  │ Prompt   │   │
-│ fix task │  │ user     │   │
-└─────┬────┘  └────┬─────┘   │
-      │            │         │
-      │       ┌────┴─────┐   │
-      │       │          │   │
-      │      yes        no   │
-      │       │          │   │
-      ▼       ▼          ▼   ▼
-┌─────────────────────────────┐
-│ Block current task          │
-│ Get next task               │
-└─────────────────────────────┘
-                  OR
-┌─────────────────────────────┐
-│ Re-dispatch implementer     │
-│ (existing behavior)         │
-└─────────────────────────────┘
-```
+Follow the per-action coordinator behavior in
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/kaizen-review-failures.md`.
 
 #### Review Loop
 
@@ -1728,7 +1359,10 @@ Review FAIL
 **Re-dispatch rules:**
 - Include specific issues from review
 - Reference original acceptance criteria
-- Maximum 3 review cycles (then escalate to human)
+- Maximum 3 review cycles (BLOCKED verdicts don't count), then escalate per mode:
+  - **supervised / semi-auto**: PAUSE — present the review history and options to the human. Also pause when a reviewer returns BLOCKED twice for the same task.
+  - **auto / unattended**: Do NOT pause. Call `mcp__ohno__set_needs_rework(task_id, reason)` (or `set_blocker` when rework does not apply), log via `add_task_activity`, and continue to the next task.
+- **Hard rule**: A task whose review did not end in PASS is NEVER marked done.
 
 #### Logging Reviews to ohno
 
@@ -1962,115 +1596,23 @@ Use ohno MCP to log:
 
 ### 3. Session Chaining (if headless)
 
-When session ends with remaining work in scope:
-
-1. SessionEnd hook calls `session-chain.sh`
-2. Script checks remaining ready tasks via ohno
-3. If tasks remain and chain limit not reached:
-   - Spawns/prepares the next session using the active runtime, for example `claude -p "/work --continue <scope-flag>"` or `codex --prompt="/work --continue <scope-flag>"`
-4. If chain complete or limit reached:
-   - Generates report to `.ohno/reports/chain-{id}-report.md`
-   - Notifies via configured method
-   - Deletes chain state file
-
-#### Chain State File
-
-Chain state is communicated between the coordinator and hooks via `.pokayokay/pokayokay-chain-state.json`, with `.claude/pokayokay-chain-state.json` retained as a legacy fallback.
-
-**The coordinator MUST write this file at session start** when running auto mode with scope.
-Use the Write tool to create it:
-
-```json
-{
-  "chain_id": "chain-<unix-timestamp>",
-  "chain_index": 0,
-  "scope_type": "all",
-  "scope_id": "",
-  "tasks_completed": 0,
-  "adaptive_n": 2,
-  "batches_completed": 0,
-  "batches_failed": 0,
-  "failed_tasks": [],
-  "conflict_tasks": [],
-  "last_session_summary": ""
-}
-```
-
-- `chain_id`: Generate as `chain-<unix-timestamp>` (e.g., `chain-1738764000`)
-- `chain_index`: Start at 0, auto-incremented by bridge.py on each chain
-- `scope_type`: "epic", "story", or "all" (from `--epic`, `--story`, or `--all` flag)
-- `scope_id`: The epic/story ID (empty string for "all")
-- `tasks_completed`: Starts at 0, auto-incremented by bridge.py on each task completion
-- `adaptive_n`: Current parallel count (written by coordinator before shutdown)
-- `batches_completed`: Successful batch count (for adaptive sizing decisions)
-- `batches_failed`: Failed batch count (for adaptive sizing decisions)
-- `failed_tasks`: Task IDs that failed or got blocked (skip on resume)
-- `conflict_tasks`: Task IDs with git conflicts (flag for manual resolution)
-- `last_session_summary`: Brief summary of what the last session accomplished
-
-**When `--continue`**: Read the existing state file. Do NOT overwrite it — bridge.py
-already incremented `chain_index` and tracks `tasks_completed`. Restore coordinator state
-from extended fields (`adaptive_n`, `failed_tasks`, etc.).
-
-**When NOT auto or no scope**: Do NOT write the state file. Non-chaining sessions
-should not have a state file.
-
-Bridge.py handles:
-- Reading the state file on SessionEnd to pass to session-chain.sh
-- Incrementing `tasks_completed` on each task completion
-- Incrementing `chain_index` when spawning the next session
-- Deleting the state file when the chain completes or hits the limit
+When a session ends with remaining work in scope, the SessionEnd hook calls
+`session-chain.sh`, which spawns/prepares the next runtime session
+(`/work --continue <scope-flag>`) until the scope completes or the chain limit
+is reached. Chain state is communicated between the coordinator and hooks via
+`.pokayokay/pokayokay-chain-state.json` (legacy fallback:
+`.claude/pokayokay-chain-state.json`).
 
 ### 4. Chain Completion Audit
 
-When all tasks in scope are done, the chain runs a completeness audit before declaring success.
+When all tasks in scope are done, the chain runs a completeness audit
+(dispatching `pokayokay:yokay-auditor` against the concept doc / PRD) before
+declaring success; audit state is tracked via the `audit_pending` /
+`audit_passed` chain-state fields.
 
-#### How It Works
-
-1. `session-chain.sh` detects `READY_COUNT == 0` but `CHAIN_AUDITED != true`
-2. Returns `audit_pending` instead of `complete`
-3. `bridge.py` sets `chain_state.audit_pending = true` (does NOT delete chain state)
-4. On next session start (via chain continue), coordinator detects `audit_pending`:
-
-**Coordinator audit logic (run at session start when `--continue` and audit_pending):**
-
-```
-Read chain state → check audit_pending == true
-
-If audit_pending:
-  1. Find the concept doc / PRD:
-     - Check docs/plans/*.md, docs/concepts/*.md
-     - Check epic description if scope is epic
-     - Check PROJECT.md
-  2. Dispatch `pokayokay:yokay-auditor` (Task tool subagent_type):
-     - Pass: concept doc content + scope info
-     - Instruction: "Verify all requirements are implemented. Return PASS or FAIL with gap list."
-  3. Process result:
-     - PASS:
-       - Set chain_state.audit_passed = true
-       - Set chain_state.audit_pending = false
-       - Save chain state
-       - Session ends → session-chain.sh sees CHAIN_AUDITED=true → "complete"
-     - FAIL with gaps:
-       - Create remediation tasks in ohno for each gap
-       - Set chain_state.audit_pending = false (audit ran, even if failed)
-       - Continue working on remediation tasks
-       - When those complete, audit runs again (next chain end)
-```
-
-#### Chain State Fields
-
-The following fields are added to the chain state for audit tracking:
-
-```json
-{
-  "audit_pending": false,
-  "audit_passed": false
-}
-```
-
-- `audit_pending`: Set to `true` by bridge.py when all tasks done but audit not yet run
-- `audit_passed`: Set to `true` by coordinator when audit passes. Passed to session-chain.sh as `CHAIN_AUDITED`
+For the chain state file schema, field-by-field ownership (coordinator vs
+bridge.py), and the full audit logic, read
+`${CLAUDE_PLUGIN_ROOT}/skills/work-session/references/chain-state.md`.
 
 ## Modes Reference
 
@@ -2111,7 +1653,7 @@ At time-box end, MUST produce decision:
 - **MORE-INFO**: (Rare) Create follow-up spike, max 1 re-spike
 
 ### 4. Output Location
-Save spike report to `.claude/spikes/[name]-[date].md`
+Save spike report to `.claude/spikes/[date]-[slug].md`
 
 ## Bug Discovery During Work
 

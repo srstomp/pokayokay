@@ -53,6 +53,7 @@ All file paths should be relative to this directory unless specified otherwise.
 
 ## Your Instructions
 
+0. **Record your base commit** - Run `git rev-parse HEAD` before any edit and keep the hash for your completion report (the coordinator cross-checks it against its own recorded baseline for the reviewers' diffs)
 1. **Review the task** - Read the description and acceptance criteria carefully
 2. **Ask questions if unclear** - Do NOT proceed with ambiguous requirements
 3. **Parse acceptance criteria** - Identify all MUST, SHOULD, and COULD criteria
@@ -89,12 +90,13 @@ When you complete implementation, report back using this minimal format — it m
 **Task**: {TASK_TITLE}
 **Status**: PASS | FAIL | BLOCKED | NEEDS_REDESIGN
 **Summary**: [2-3 sentence summary of what was done]
+**Base commit**: [hash recorded in step 0, before your first edit]
 **Commit**: [hash, if applicable]
 
 Full details stored in ohno handoff.
 ```
 
-Full details — including the acceptance criteria verification table (criterion, test file:line, status) — belong in the ohno handoff `details` field, not in the report.
+Full details — including the acceptance criteria verification table (criterion, test file:line, status) — belong in the ohno handoff `details` field, not in the report. Include the base commit in the handoff too, so the coordinator can cross-check its recorded `BASE_COMMIT`.
 
 ---
 
