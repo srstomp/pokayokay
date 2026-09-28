@@ -1,9 +1,7 @@
 {
   "skill": "work-session",
   "version": 1,
-  "baseline_model": "claude-haiku-4-5-20251001",
-  "eval_model": "claude-haiku-4-5-20251001",
-  "current_best_score": null,
+  "eval_model": "claude-opus-5-5",
   "scenarios": [
     {
       "id": "fresh-session-start",
